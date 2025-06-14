@@ -11,7 +11,7 @@ const Header: React.FC = () => {
           <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
             <Syringe size={24} className="text-white" />
           </div>
-          <span className="text-2xl font-bold text-gray-800">VaccineSystem</span>
+          <span className="text-2xl font-bold text-gray-800">KidTrack</span>
         </div>
 
         {/* Navigation */}

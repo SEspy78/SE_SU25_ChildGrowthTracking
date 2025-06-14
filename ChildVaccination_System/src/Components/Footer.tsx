@@ -8,9 +8,9 @@ const Footer: React.FC = () => {
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
           {/* Logo & About */}
           <div className="mr-10">
-            <h2 className="mb-4 text-2xl font-bold text-black">Vaccination System</h2>
+            <h2 className="mb-4 text-2xl font-bold text-black">KidTrack</h2>
             <p className="text-sm leading-relaxed font-bold text-gray-600">
-             Phần mềm quản lý tiêm chủng SMED quản lý tổng thể, toàn diện quy trình tiêm chủng dịch vụ tại các cơ sở tiêm, đáp ứng nhu cầu quản trị vận hành, đồng thời tăng hiệu suất kinh doanh và chăm sóc khách hàng tại cơ sở.
+             Phần mềm quản lý tiêm chủng KidTrack quản lý tổng thể, toàn diện quy trình tiêm chủng dịch vụ tại các cơ sở tiêm, đáp ứng nhu cầu quản trị vận hành, đồng thời tăng hiệu suất kinh doanh và chăm sóc khách hàng tại cơ sở.
             </p>
           </div>
 
