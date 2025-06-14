@@ -29,7 +29,7 @@ const FeaturesSection: React.FC = () => (
   <section id="features" className="py-16 md:py-20 bg-white">
     <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
       <h2 className="mb-8 text-2xl md:text-4xl font-bold text-center text-gray-800">
-        Lợi ích của Phần mềm quản lý tiêm chủng Vaccination system.
+        Lợi ích của Phần mềm quản lý tiêm chủng KidTrack.
       </h2>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         {features.map((feature, index) => (

@@ -8,7 +8,7 @@ const HeroSection: React.FC = () => (
       <div className="mb-12 text-center md:w-1/2 md:text-left md:mb-0">
         <h1 className="mb-6 text-3xl font-bold leading-tight text-gray-800 md:text-4xl lg:text-5xl">
           Hệ thống quản lý cơ sở tiêm chủng <br />
-          <span className="text-blue-600">Vaccination System</span>
+          <span className="text-blue-600">KID TRACK </span>
         </h1>
         <p className="max-w-lg mb-8 text-sm text-gray-600 md:text-base">
           Quản lý lịch tiêm, chỉ định mũi tiêm và theo dõi sức khoẻ trẻ em một cách dễ dàng và chính xác.
