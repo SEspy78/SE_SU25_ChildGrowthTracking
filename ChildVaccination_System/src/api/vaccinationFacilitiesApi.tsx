@@ -23,10 +23,21 @@ export type GetAllFacilitiesResponse = {
   pageSize: number;
 };
 
+export type GetByIdFacilitiesResponse = {
+  success: boolean;
+  message: string;
+  data: Facility;
+};
+
 
 export const facilityApi = {
   getAll: async () => {
     const res :GetAllFacilitiesResponse = await axiosClient.get("api/VaccinationFacilities?pageIndex=1&pageSize=10");
     return res ;
   },
+
+  getById:async (id: number) =>{
+     const response: GetByIdFacilitiesResponse = await axiosClient.get(`api/VaccinationFacilities/${id}`);
+    return response;
+  }
 };

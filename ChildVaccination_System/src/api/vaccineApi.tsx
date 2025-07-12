@@ -1,6 +1,6 @@
 import axiosClient from "./axiosClient";
 
-export type Vaccine = {
+export interface Vaccine {
   vaccineId: number;
   name: string;
   description: string;
@@ -15,8 +15,24 @@ export type Vaccine = {
   status: string;
   createdAt: string;
   updatedAt: string;
-  diseaseIds: number[];
-};
+  diseases: any[]; 
+}
+
+export interface FacilityVaccine {
+  facilityVaccineId: number;
+  facilityId: number;
+  vaccineId: number;
+  price: number;
+  availableQuantity: number;
+  batchNumber: number;
+  expiryDate: string;
+  importDate: string;
+  status: string; 
+  createdAt: string;
+  updatedAt: string;
+  vaccine: Vaccine;
+}
+
 
 export const vaccineApi = {
   getAll: async (): Promise<Vaccine[]> => {
@@ -28,3 +44,36 @@ export const vaccineApi = {
     return response;
   },
 };
+
+export interface FacilityVaccineResponse {
+  totalCount: number;
+  data: FacilityVaccine[];
+}
+
+export interface CreateFacilityVaccineRequest {
+  facilityId: number;
+  vaccineId: number;
+  price:0;
+  availableQuantity: number;
+  batchNumber: 0;
+  expiryDate: string; 
+  importDate: string;
+  status: string; 
+}
+
+
+
+export const facilityVaccineApi = {
+      getAll: async (id: number) => {
+   const res :FacilityVaccineResponse = await axiosClient.get(`api/FacilityVaccines?facilityId=${id}`);
+  return res;
+  },
+getById: async (id: number) => {
+   const res :FacilityVaccineResponse = await axiosClient.get(`api/FacilityVaccines?facilityId=${id}`);
+  return res;
+  },
+ create: async (payload: CreateFacilityVaccineRequest): Promise<FacilityVaccine> => {
+    return  await axiosClient.post("api/FacilityVaccines", payload);
+  }
+
+}

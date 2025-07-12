@@ -1,15 +1,18 @@
-import { Outlet, Link, useNavigate } from "react-router-dom";
+import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { getItemWithExpiry, removeItem } from "@/lib/storage";
 import { useEffect, useState } from "react";
 import { 
   Users, 
   Building2, 
   Syringe, 
-  BarChart2 
+  Package,
+  Calendar
 } from "lucide-react";
+
 
 export default function ManagerLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [userInfo, setUserInfo] = useState<{ accountName: string } | null>(null);
 
   useEffect(() => {
@@ -37,8 +40,9 @@ export default function ManagerLayout() {
 
   <nav className="space-y-2">
     <Link
-      to="/manger/staff-management"
-      className="flex items-center gap-3 px-4 py-2 rounded-md text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200"
+      to="/manager/staffs-management"
+      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
+        ${location.pathname === "/manager/staffs-management" ? "bg-blue-100 text-blue-700 font-semibold" : "text-gray-700 hover:bg-blue-100 hover:text-blue-700"}`}
     >
       <Users className="w-5 h-5" />
       Quản lý nhân viên
@@ -46,18 +50,38 @@ export default function ManagerLayout() {
 
     <Link
       to="/manager/facility-management"
-      className="flex items-center gap-3 px-4 py-2 rounded-md text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200"
+      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
+        ${location.pathname === "/manager/facility-management" ? "bg-blue-100 text-blue-700 font-semibold" : "text-gray-700 hover:bg-blue-100 hover:text-blue-700"}`}
     >
       <Building2 className="w-5 h-5" />
-      Quản lý cơ sở
+       Cơ sở 
     </Link>
 
     <Link
-      to="/manager/vaccines"
-      className="flex items-center gap-3 px-4 py-2 rounded-md text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200"
+      to="/manager/vaccines-management"
+      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
+        ${location.pathname === "/manager/vaccines-management" ? "bg-blue-100 text-blue-700 font-semibold" : "text-gray-700 hover:bg-blue-100 hover:text-blue-700"}`}
     >
       <Syringe className="w-5 h-5" />
       Quản lý vaccine cơ sở 
+    </Link>
+    
+    <Link
+      to="/manager/vaccine-packages"
+      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
+        ${location.pathname === "/manager/vaccine-packages" ? "bg-blue-100 text-blue-700 font-semibold" : "text-gray-700 hover:bg-blue-100 hover:text-blue-700"}`}
+    >
+      <Package className="w-5 h-5" />
+      Gói vaccines
+    </Link>
+
+     <Link
+      to="/manager/vaccines-management"
+      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
+        ${location.pathname === "/manager/vaccines-management" ? "bg-blue-100 text-blue-700 font-semibold" : "text-gray-700 hover:bg-blue-100 hover:text-blue-700"}`}
+    >
+      <Calendar className="w-5 h-5" />
+       Schedules
     </Link>
     
   </nav>

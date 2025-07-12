@@ -23,7 +23,7 @@ export default function LoginPage() {
       } else if (res.role === "Doctor") {
         navigate("/doctor/dashboard");
       } else if (res.role === "Manager") {
-        navigate("/manager/staff-management");
+        navigate("/manager/staffs-management");
       } else if (res.role === "Staff") {
         navigate("/staff/dashboard");
       }

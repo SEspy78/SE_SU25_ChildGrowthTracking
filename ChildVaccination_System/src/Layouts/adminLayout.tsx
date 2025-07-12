@@ -1,9 +1,7 @@
-import { Outlet, Link, useNavigate } from "react-router-dom";
+import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { getItemWithExpiry, removeItem } from "@/lib/storage";
 import { useEffect, useState } from "react";
 import {
-  ChevronDown,
-  ChevronUp,
   Users,
   Building2,
   Syringe,
@@ -13,6 +11,7 @@ import {
 
 export default function AdminLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [userInfo, setUserInfo] = useState<{ accountName: string } | null>(null);
   const [facilityMenuOpen, setFacilityMenuOpen] = useState(false);
 
@@ -41,16 +40,18 @@ export default function AdminLayout() {
 
   <nav className="space-y-2">
     <Link
-      to="/admin/accounts"
-      className="flex items-center gap-3 px-4 py-2 rounded-md text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200"
+      to="/admin/members"
+      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
+        ${location.pathname.startsWith('/admin/accounts') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-blue-100 hover:text-blue-700'}`}
     >
       <Users className="w-5 h-5" />
-      Quản lý tài khoản
+      Quản lí người dùng 
     </Link>
 
     <Link
       to="/admin/facilities"
-      className="flex items-center gap-3 px-4 py-2 rounded-md text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200"
+      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
+        ${location.pathname.startsWith('/admin/facilities') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-blue-100 hover:text-blue-700'}`}
     >
       <Building2 className="w-5 h-5" />
       Quản lý cơ sở
@@ -58,7 +59,8 @@ export default function AdminLayout() {
 
     <Link
       to="/admin/vaccines"
-      className="flex items-center gap-3 px-4 py-2 rounded-md text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200"
+      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
+        ${location.pathname.startsWith('/admin/vaccines') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-blue-100 hover:text-blue-700'}`}
     >
       <Syringe className="w-5 h-5" />
       Quản lý vaccine
@@ -66,7 +68,8 @@ export default function AdminLayout() {
 
     <Link
       to="/admin/statistics"
-      className="flex items-center gap-3 px-4 py-2 rounded-md text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200"
+      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
+        ${location.pathname.startsWith('/admin/statistics') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-blue-100 hover:text-blue-700'}`}
     >
       <BarChart2 className="w-5 h-5" />
       Thống kê
@@ -84,7 +87,7 @@ export default function AdminLayout() {
             <span className="text-gray-600 text-2xl font-normal">Welcome, <b >{userInfo?.accountName}</b></span>
             <button
               onClick={handleLogout}
-              className="bg-red-500 shadow-md rounded-md hover:cursor-pointer text-white px-4 py-2 rounded hover:bg-red-600"
+              className="bg-red-500 shadow-md rounded-md hover:cursor-pointer text-white px-4 py-2  hover:bg-red-600"
             >
               Đăng xuất
             </button>

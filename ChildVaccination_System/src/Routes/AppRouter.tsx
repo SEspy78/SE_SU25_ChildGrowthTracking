@@ -16,7 +16,11 @@ import AdminLayout from "@/Layouts/adminLayout";
 import VaccineManagement from "@/Pages/Admin/vaccineManagePage";
 import ManagerLayout from "@/Layouts/mangerLayout";
 import FacilityManagement from "@/Pages/Admin/facilitiesManagement";
-
+import StaffManagement from "@/Pages/Manager/staffManagement";
+import FacilityDetail from "@/Pages/Manager/facilityMangement";
+import FacilityVaccinePage from "@/Pages/Manager/facilityVaccinesManagement";
+import VaccinePackageManagement from "@/Pages/Manager/vaccinePackageManagement";
+import MemberManagement from "@/Pages/Admin/memberManagement";
 const App: React.FC = () => {
   return (
     <Router>
@@ -63,6 +67,7 @@ const App: React.FC = () => {
     </ProtectedRoute>
   }>
     <Route path="dashboard" element={<TodaySchedule />} />
+    <Route path="members" element={<MemberManagement />} />
     <Route path="vaccines" element={<VaccineManagement />} />
     <Route path="facilities" element={<FacilityManagement />} />
     </Route>
@@ -76,8 +81,10 @@ const App: React.FC = () => {
     </ProtectedRoute>
   }>
     <Route path="staffs-management" element={<TodaySchedule />} />
-    <Route path="vaccines-management" element={<VaccineManagement />} />
-    <Route path="facility-management" element={<VaccineManagement />} />
+    <Route path="vaccines-management" element={<FacilityVaccinePage />} />
+    <Route path="facility-management" element={<FacilityDetail />} />
+    <Route path="vaccine-packages" element={<VaccinePackageManagement />} />
+    
     </Route>
     {/* Manager */}
 

@@ -27,12 +27,11 @@ const VaccineManagement: React.FC = () => {
   const handleDelete = (id: number) => {
     if (confirm("Bạn có chắc muốn xoá vaccine này không?")) {
       setVaccines((prev) => prev.filter((v) => v.vaccineId !== id));
-      // TODO: Gọi API xoá ở đây nếu cần
     }
   };
 
   const handleUpdate = (id: number) => {
-    // TODO: Chuyển hướng hoặc mở modal chỉnh sửa
+    
     alert(`Cập nhật vaccine với ID: ${id}`);
   };
 
@@ -48,18 +47,21 @@ const VaccineManagement: React.FC = () => {
 
         {!loading && !error && (
           <div className="overflow-x-auto">
-            <table className="min-w-full border rounded-lg overflow-hidden shadow-sm">
-              <thead className="bg-blue-100 text-blue-800">
+            <table className="min-w-full border-1 border-black shadow-sm">
+              <thead className="bg-blue-100  text-blue-800">
                 <tr>
                   <th className="px-4 py-2 text-left border">Tên vaccine</th>
                   <th className="px-4 py-2 text-left border">Nhà sản xuất</th>
+                  <th className="px-4 py-2 text-left border">Độ tuổi</th>
+                   <th className="px-4 py-2 text-left border">Loại</th>
                   <th className="px-4 py-2 text-center border">Số liều</th>
+                  <th className="px-4 py-2 text-center border">Tác dụng phụ</th>
                   <th className="px-4 py-2 text-right border">Giá (₫)</th>
                   <th className="px-4 py-2 text-center border">Trạng thái</th>
-                  <th className="px-4 py-2 text-center border"></th>
+                  <th className="px-9 py-2 text-center border"></th>
                 </tr>
               </thead>
-              <tbody className="bg-white text-gray-800">
+              <tbody className="bg-white border-1 border-black text-gray-800">
                 {vaccines.map((vaccine) => (
                   <tr
                     key={vaccine.vaccineId}
@@ -67,8 +69,13 @@ const VaccineManagement: React.FC = () => {
                   >
                     <td className="px-4 py-2 border">{vaccine.name}</td>
                     <td className="px-4 py-2 border">{vaccine.manufacturer}</td>
+                    <td className="px-4 py-2 border">{vaccine.ageGroup}</td>
+                     <td className="px-4 py-2 border">{vaccine.category}</td>
                     <td className="px-4 py-2 text-center border">
                       {vaccine.numberOfDoses}
+                    </td>
+                    <td className="px-4 py-2 text-center border">
+                      {vaccine.sideEffects}
                     </td>
                     <td className="px-4 py-2 text-right border">
                       {vaccine.price.toLocaleString("vi-VN")}₫

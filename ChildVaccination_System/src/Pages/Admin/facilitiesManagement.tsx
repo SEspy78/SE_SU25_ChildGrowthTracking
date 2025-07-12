@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { facilityApi } from "@/api/vaccinationFacilitiesApi";
-import type { GetAllFacilitiesResponse,Facility } from "@/api/vaccinationFacilitiesApi";
+import type { Facility } from "@/api/vaccinationFacilitiesApi";
 
 const FacilityManagement: React.FC = () => {
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  
 useEffect(() => {
   const fetchFacilities = async () => {
     try {
