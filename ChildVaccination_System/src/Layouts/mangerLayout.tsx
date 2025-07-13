@@ -76,20 +76,18 @@ export default function ManagerLayout() {
     </Link>
 
      <Link
-      to="/manager/vaccines-management"
+      to="/manager/schedule-slots"
       className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
-        ${location.pathname === "/manager/vaccines-management" ? "bg-blue-100 text-blue-700 font-semibold" : "text-gray-700 hover:bg-blue-100 hover:text-blue-700"}`}
+        ${location.pathname === "/manager/schedule-slots" ? "bg-blue-100 text-blue-700 font-semibold" : "text-gray-700 hover:bg-blue-100 hover:text-blue-700"}`}
     >
       <Calendar className="w-5 h-5" />
-       Schedules
+       Lịch khám
     </Link>
     
   </nav>
 </aside>
 
-      {/* Main Content */}
       <main className="flex-1 p-6 overflow-y-auto">
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
           </div>
@@ -104,7 +102,6 @@ export default function ManagerLayout() {
           </div>
         </div>
 
-        {/* Render nội dung page */}
         <Outlet />
       </main>
     </div>

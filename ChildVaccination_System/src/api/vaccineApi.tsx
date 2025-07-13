@@ -53,7 +53,7 @@ export interface FacilityVaccineResponse {
 export interface CreateFacilityVaccineRequest {
   facilityId: number;
   vaccineId: number;
-  price:0;
+  price: number;
   availableQuantity: number;
   batchNumber: 0;
   expiryDate: string; 

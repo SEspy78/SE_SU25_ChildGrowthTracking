@@ -86,7 +86,6 @@ const FacilityVaccinePage: React.FC = () => {
     }));
   };
 
-  // Hàm sinh số lô ngẫu nhiên 6 chữ số
   const generateRandomBatchNumber = () => {
     return Math.floor(100000 + Math.random() * 900000);
   };

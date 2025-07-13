@@ -70,12 +70,28 @@ export interface VaccinePackageResponse {
   data: VaccinePackage[];
 }
 
+export interface addRequest {
+  facilityVaccineId: number;
+  quantity: number;
+}
+
+
 export const vaccinePackageApi = {
   getAll: async (id : number): Promise<VaccinePackageResponse> => {
     return await axiosClient.get(`api/VaccinePackages?facilityId=${id}`);
-  }
-  ,
+  },
+  getById: async (packageId: number): Promise<VaccinePackage> => {
+    return await axiosClient.get(`api/VaccinePackages/${packageId}`);
+  },
+   delete: async (packageId: number): Promise<VaccinePackage> => {
+    return await axiosClient.delete(`api/VaccinePackages/${packageId}`);
+  },
   create: async (payload: CreateVaccinePackageRequest): Promise<any> => {
-    return await axiosClient.post("api/VaccinePackages", payload);
+    return await axiosClient.post("api/VaccinePackages/with-vaccines", payload);
+  },
+
+  addVaccineToPackage: async (packageId: number, payload: addRequest): Promise<any> => {
+    return await axiosClient.post(`api/VaccinePackages/${packageId}/vaccines`, payload);
   }
-};
+
+}
