@@ -22,6 +22,7 @@ import FacilityVaccinePage from "@/Pages/Manager/facilityVaccinesManagement";
 import VaccinePackageManagement from "@/Pages/Manager/vaccinePackageManagement";
 import MemberManagement from "@/Pages/Admin/memberManagement";
 import ScheduleSlotPage from "@/Pages/Manager/scheduleSlot";
+import SurveyManagement from "@/Pages/Manager/surveyManagement";
 const App: React.FC = () => {
   return (
     <Router>
@@ -39,7 +40,7 @@ const App: React.FC = () => {
         </ProtectedRoute>
       }
     >
-      <Route path="dashboard" element={<TodaySchedule />} />
+      <Route path="appointments" element={<TodaySchedule />} />
       <Route path="appointments/:id/step-1" element={<VaccinationDetailPage />} />
       <Route path="appointments/:id/step-2" element={<HealthSurvey />} />
       <Route path="appointments/:id/step-3" element={<Payment />} />
@@ -56,7 +57,12 @@ const App: React.FC = () => {
         </ProtectedRoute>
       }
     >
-      <Route path="dashboard" element={<TodaySchedule />} />
+      <Route path="appointments" element={<TodaySchedule />} />
+      <Route path="appointments/:id/step-1" element={<VaccinationDetailPage />} />
+      <Route path="appointments/:id/step-2" element={<HealthSurvey />} />
+      <Route path="appointments/:id/step-3" element={<Payment />} />
+      <Route path="appointments/:id/step-4" element={<ConfirmVaccination />} />
+      <Route path="appointments/:id/step-5" element={<FinishVaccination />} />
     </Route>
     {/* Doctor */}
 
@@ -81,6 +87,7 @@ const App: React.FC = () => {
       <ManagerLayout />
     </ProtectedRoute>
   }>
+    <Route path="survey-management" element={<SurveyManagement />} />
     <Route path="staffs-management" element={<TodaySchedule />} />
     <Route path="vaccines-management" element={<FacilityVaccinePage />} />
     <Route path="facility-management" element={<FacilityDetail />} />

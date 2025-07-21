@@ -40,7 +40,7 @@ const FacilityVaccinePage: React.FC = () => {
     availableQuantity: 0,
     expiryDate: "",
     importDate: "",
-    status: "true",
+    status: "active",
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
@@ -211,12 +211,12 @@ const FacilityVaccinePage: React.FC = () => {
               <label className="block mb-1 font-medium">Trạng thái</label>
               <select
                 name="status"
-                value={form.status || "true"}
+                value={form.status}
                 onChange={handleFormChange}
                 className="w-full border px-2 py-1 rounded"
               >
-                <option value="true">Đang sử dụng</option>
-                <option value="false">Ngừng SD</option>
+                <option value="active">Đang sử dụng</option>
+                <option value="inactive">Ngừng SD</option>
               </select>
             </div>
           </div>
@@ -260,7 +260,7 @@ const FacilityVaccinePage: React.FC = () => {
                   <td className="px-4 py-3">{new Date(item.expiryDate).toLocaleDateString()}</td>
                   <td className="px-4 py-3">{item.price.toLocaleString()}</td>
                   <td className="px-4 py-3">
-                    {item.status === "true" ? (
+                    {item.status === "active" ? (
                       <span className="text-green-600 font-medium">Đang sử dụng</span>
                     ) : (
                       <span className="text-gray-500">Ngừng SD</span>
@@ -292,7 +292,7 @@ const FacilityVaccinePage: React.FC = () => {
                               <div><span className="font-medium">Tác dụng phụ:</span> {selectedVaccine.sideEffects}</div>
                               <div><span className="font-medium">Chống chỉ định:</span> {selectedVaccine.contraindications}</div>
                               <div><span className="font-medium">Giá:</span> {selectedVaccine.price?.toLocaleString()} VNĐ</div>
-                              <div><span className="font-medium">Trạng thái:</span> {selectedVaccine.status === "true" ? "Đang sử dụng" : "Ngừng SD"}</div>
+                              <div><span className="font-medium">Trạng thái:</span> {selectedVaccine.status === "Approved" ? "Approved" : "UnApproved"}</div>
                               <div><span className="font-medium">Ngày tạo:</span> {new Date(selectedVaccine.createdAt).toLocaleDateString()}</div>
                               <div><span className="font-medium">Ngày cập nhật:</span> {new Date(selectedVaccine.updatedAt).toLocaleDateString()}</div>
                             </div>

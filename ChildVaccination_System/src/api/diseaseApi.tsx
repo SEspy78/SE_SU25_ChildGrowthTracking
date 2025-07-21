@@ -10,9 +10,13 @@ export type Disease = {
   treatment: string;
 };
 
+export type DiseaseResponse = {
+  data: Disease[];
+};
+
 
 export const diseaseApi = {
-  getAll: async (): Promise<Disease[]> => {
+  getAll: async (): Promise<DiseaseResponse> => {
     return await axiosClient.get("api/Diseases");
   },
 

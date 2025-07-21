@@ -13,6 +13,27 @@ import { facilityVaccineApi, vaccineApi, type FacilityVaccine, type Vaccine } fr
 import { getUserInfo } from "@/lib/storage";
  import { X } from "lucide-react";
 const VaccinePackageManagement: React.FC = () => {
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" }>({ show: false, message: "", type: "success" });
+  const handleDeletePackage = async (packageId: number, name: string) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa gói ${name}?`)) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await vaccinePackageApi.deleteVaccinePackage(packageId);
+      // reload list
+      const userInfo = getUserInfo();
+      if (userInfo?.facilityId) {
+        const res = await vaccinePackageApi.getAll(userInfo.facilityId);
+        setPackages(res.data);
+      }
+      setToast({ show: true, message: `Đã xóa gói ${name} thành công!`, type: "success" });
+    } catch (err) {
+      setToast({ show: true, message: `Xóa gói ${name} thất bại!`, type: "error" });
+    } finally {
+      setLoading(false);
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+    }
+  };
   // Không lưu user vào state, luôn lấy mới từ localStorage khi cần
   const [packages, setPackages] = useState<VaccinePackage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -244,7 +265,10 @@ const VaccinePackageManagement: React.FC = () => {
                     <td className="px-4 py-2">
                       <button
                         className="px-3 py-1 bg-red-600 text-white rounded hover:cursor-pointer hover:bg-red-700 transition font-semibold"
-                        onClick={e => { e.stopPropagation(); alert('Xóa gói vaccine (chưa triển khai)'); }}
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleDeletePackage(pkg.packageId, pkg.name);
+                        }}
                       >
                         Xóa gói vaccine
                       </button>
@@ -366,6 +390,12 @@ const VaccinePackageManagement: React.FC = () => {
           </table>
         </div>
       )}
+    {/* Toast thông báo nhỏ */}
+    {toast.show && (
+      <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded shadow-lg text-white font-semibold transition ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}>
+        {toast.message}
+      </div>
+    )}
     </div>
     </div>
   );

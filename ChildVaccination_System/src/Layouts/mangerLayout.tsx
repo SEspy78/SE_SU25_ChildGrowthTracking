@@ -6,9 +6,9 @@ import {
   Building2, 
   Syringe, 
   Package,
-  Calendar
+  Calendar,
+  File
 } from "lucide-react";
-
 
 export default function ManagerLayout() {
   const navigate = useNavigate();
@@ -20,7 +20,7 @@ export default function ManagerLayout() {
     if (!stored) {
       navigate("/login");
     } else {
-      setUserInfo(stored);
+      setUserInfo(stored);  
     }
   }, [navigate]);
 
@@ -31,71 +31,80 @@ export default function ManagerLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gradient-to-br from-blue-50 via-green-50 to-yellow-50 animate-fadeIn">
       {/* Sidebar */}
-   <aside className="w-64 bg-white shadow-lg p-6 space-y-6 transition-all duration-300 ease-in-out">
-  <h2 className="text-xl font-bold text-blue-700 mb-4 tracking-wide">
-    Manager DashBoard
-  </h2>
+      <aside className="w-64 bg-white shadow-xl p-6 space-y-6 transition-all duration-500 ease-in-out animate-slideInLeft">
+        <h2 className="text-2xl font-bold text-teal-700 mb-4 tracking-wide flex items-center gap-2">
+          <Syringe className="w-14 h-14 text-teal-700 animate-pulse" />
+          KidTrack Manager
+        </h2>
 
-  <nav className="space-y-2">
-    <Link
-      to="/manager/staffs-management"
-      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
-        ${location.pathname === "/manager/staffs-management" ? "bg-blue-100 text-blue-700 font-semibold" : "text-gray-700 hover:bg-blue-100 hover:text-blue-700"}`}
-    >
-      <Users className="w-5 h-5" />
-      Quản lý nhân viên
-    </Link>
+        <nav className="space-y-2">
+          <Link
+            to="/manager/staffs-management"
+            className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-md
+              ${location.pathname === "/manager/staffs-management" ? "bg-teal-100 text-teal-800 font-semibold" : "text-gray-700 hover:bg-teal-100 hover:text-teal-800"}`}
+          >
+            <Users className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" />
+            Quản lý nhân viên 
+          </Link>
 
-    <Link
-      to="/manager/facility-management"
-      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
-        ${location.pathname === "/manager/facility-management" ? "bg-blue-100 text-blue-700 font-semibold" : "text-gray-700 hover:bg-blue-100 hover:text-blue-700"}`}
-    >
-      <Building2 className="w-5 h-5" />
-       Cơ sở 
-    </Link>
+          <Link
+            to="/manager/facility-management"
+            className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-md
+              ${location.pathname === "/manager/facility-management" ? "bg-teal-100 text-teal-800 font-semibold" : "text-gray-700 hover:bg-teal-100 hover:text-teal-800"}`}
+          >
+            <Building2 className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" />
+            Trung tâm tiêm chủng
+          </Link>
 
-    <Link
-      to="/manager/vaccines-management"
-      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
-        ${location.pathname === "/manager/vaccines-management" ? "bg-blue-100 text-blue-700 font-semibold" : "text-gray-700 hover:bg-blue-100 hover:text-blue-700"}`}
-    >
-      <Syringe className="w-5 h-5" />
-      Quản lý vaccine cơ sở 
-    </Link>
-    
-    <Link
-      to="/manager/vaccine-packages"
-      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
-        ${location.pathname === "/manager/vaccine-packages" ? "bg-blue-100 text-blue-700 font-semibold" : "text-gray-700 hover:bg-blue-100 hover:text-blue-700"}`}
-    >
-      <Package className="w-5 h-5" />
-      Gói vaccines
-    </Link>
+          <Link
+            to="/manager/vaccines-management"
+            className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-md
+              ${location.pathname === "/manager/vaccines-management" ? "bg-teal-100 text-teal-800 font-semibold" : "text-gray-700 hover:bg-teal-100 hover:text-teal-800"}`}
+          >
+            <Syringe className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" />
+            Quản lý vaccine
+          </Link>
 
-     <Link
-      to="/manager/schedule-slots"
-      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
-        ${location.pathname === "/manager/schedule-slots" ? "bg-blue-100 text-blue-700 font-semibold" : "text-gray-700 hover:bg-blue-100 hover:text-blue-700"}`}
-    >
-      <Calendar className="w-5 h-5" />
-       Lịch khám
-    </Link>
-    
-  </nav>
-</aside>
+            <Link
+            to="/manager/survey-management"
+            className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-md
+              ${location.pathname === "/manager/survey-management" ? "bg-teal-100 text-teal-800 font-semibold" : "text-gray-700 hover:bg-teal-100 hover:text-teal-800"}`}
+          >
+            <File className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" />
+            Khảo sát tiêm chủng
+          </Link>
+          
+          <Link
+            to="/manager/vaccine-packages"
+            className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-md
+              ${location.pathname === "/manager/vaccine-packages" ? "bg-teal-100 text-teal-800 font-semibold" : "text-gray-700 hover:bg-teal-100 hover:text-teal-800"}`}
+          >
+            <Package className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" />
+            Gói tiêm chủng trẻ em
+          </Link>
 
-      <main className="flex-1 p-6 overflow-y-auto">
+          <Link
+            to="/manager/schedule-slots"
+            className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-md
+              ${location.pathname === "/manager/schedule-slots" ? "bg-teal-100 text-teal-800 font-semibold" : "text-gray-700 hover:bg-teal-100 hover:text-teal-800"}`}
+          >
+            <Calendar className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" />
+            Lịch tiêm chủng
+          </Link>
+        </nav>
+      </aside>
+
+      <main className="flex-1 p-6 overflow-y-auto animate-fadeIn">
         <div className="flex justify-between items-center mb-6">
           <div>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-gray-600">Xin chào, <b>{userInfo?.accountName}</b></span>
+            <span className="text-gray-600 text-lg">Xin chào, <b>{userInfo?.accountName}</b></span>
             <button
               onClick={handleLogout}
-              className="bg-red-500 hover:cursor-pointer text-white px-4 py-2 rounded hover:bg-red-600"
+              className="bg-red-500 hover:cursor-pointer text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-300 transform hover:scale-105"
             >
               Đăng xuất
             </button>

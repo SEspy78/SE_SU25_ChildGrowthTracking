@@ -1,22 +1,35 @@
 import { useParams } from "react-router-dom"
 import AppointmentDetail from "./appointmentDetail"
-
-const appointments = [
-  { id: 1, time: "09:00", name: "James Wilson", age: "4", vaccine: "MMR", status: "Scheduled" },
-  { id: 2, time: "09:30", name: "Emma Davis", age: "2", vaccine: "DPT", status: "Completed" },
-  { id: 3, time: "10:00", name: "Lucas Smith", age: "18m", vaccine: "Polio", status: "Scheduled" },
-  { id: 4, time: "10:30", name: "Sophia Brown", age: "3", vaccine: "Hepatitis B", status: "Canceled" },
-  { id: 5, time: "11:00", name: "Oliver Taylor", age: "1", vaccine: "DPT", status: "Examined" },
-]
+import { useEffect, useState } from "react"
+import { appointmentApi } from "@/api/appointmentAPI"
+import type { Appointment } from "@/api/appointmentAPI"
 
 export default function VaccinationDetailPage() {
   const { id } = useParams()
-  const appointment = appointments.find((a) => a.id === Number(id))
+  const [appointment, setAppointment] = useState<Appointment | null>(null)
+  const [loading, setLoading] = useState(true)
 
+  useEffect(() => {
+    const fetchAppointment = async () => {
+      try {
+        setLoading(true)
+        const res = await appointmentApi.getAllAppointments()
+        const found = res.appointments.find((a) => a.appointmentId === Number(id))
+        setAppointment(found || null)
+      } catch (error) {
+        setAppointment(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAppointment()
+  }, [id])
+
+  if (loading) return <div className="p-8">Loading...</div>
   if (!appointment) return <div className="p-8">Appointment not found.</div>
 
   return (
-    <div >
+    <div>
       <AppointmentDetail appointment={appointment} />
     </div>
   )

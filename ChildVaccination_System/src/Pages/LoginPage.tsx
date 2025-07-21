@@ -21,11 +21,11 @@ export default function LoginPage() {
       if (res.role === "Admin") {
         navigate("/admin/dashboard");
       } else if (res.role === "Doctor") {
-        navigate("/doctor/dashboard");
+        navigate("/doctor/appointments");
       } else if (res.role === "Manager") {
         navigate("/manager/staffs-management");
       } else if (res.role === "Staff") {
-        navigate("/staff/dashboard");
+        navigate("/staff/appointments");
       }
     } catch (err: any) {
       setError("Tên tài khoản hoặc mật khẩu không đúng.");

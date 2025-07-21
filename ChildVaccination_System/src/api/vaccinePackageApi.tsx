@@ -83,7 +83,7 @@ export const vaccinePackageApi = {
   getById: async (packageId: number): Promise<VaccinePackage> => {
     return await axiosClient.get(`api/VaccinePackages/${packageId}`);
   },
-   delete: async (packageId: number): Promise<VaccinePackage> => {
+   deleteVaccinePackage: async (packageId: number): Promise<VaccinePackage> => {
     return await axiosClient.delete(`api/VaccinePackages/${packageId}`);
   },
   create: async (payload: CreateVaccinePackageRequest): Promise<any> => {
@@ -91,7 +91,7 @@ export const vaccinePackageApi = {
   },
 
   addVaccineToPackage: async (packageId: number, payload: addRequest): Promise<any> => {
-    return await axiosClient.post(`api/VaccinePackages/${packageId}/vaccines`, payload);
+    return await axiosClient.put(`api/VaccinePackages/${packageId}/vaccines/add`, payload);
   }
 
 }
