@@ -16,13 +16,13 @@ import AdminLayout from "@/Layouts/adminLayout";
 import VaccineManagement from "@/Pages/Admin/vaccineManagePage";
 import ManagerLayout from "@/Layouts/mangerLayout";
 import FacilityManagement from "@/Pages/Admin/facilitiesManagement";
-import StaffManagement from "@/Pages/Manager/staffManagement";
 import FacilityDetail from "@/Pages/Manager/facilityMangement";
 import FacilityVaccinePage from "@/Pages/Manager/facilityVaccinesManagement";
 import VaccinePackageManagement from "@/Pages/Manager/vaccinePackageManagement";
 import MemberManagement from "@/Pages/Admin/memberManagement";
 import ScheduleSlotPage from "@/Pages/Manager/scheduleSlot";
 import SurveyManagement from "@/Pages/Manager/surveyManagement";
+import DoctorConfirmVaccination from "@/Pages/Doctor/doctorVaccination";
 const App: React.FC = () => {
   return (
     <Router>
@@ -35,7 +35,7 @@ const App: React.FC = () => {
     <Route
       path="/staff"
       element={
-        <ProtectedRoute allowedRoles={["Staff"]}>
+        <ProtectedRoute allowedRoles={["FacilityStaff"]} allowedPositions={["Staff"]}>
           <StaffLayout />
         </ProtectedRoute>
       }
@@ -52,7 +52,7 @@ const App: React.FC = () => {
     <Route
       path="/doctor"
       element={
-        <ProtectedRoute allowedRoles={["Doctor"]}>
+        <ProtectedRoute allowedRoles={["FacilityStaff"]} allowedPositions={["Doctor"]}>
           <DoctorLayout />
         </ProtectedRoute>
       }
@@ -61,7 +61,7 @@ const App: React.FC = () => {
       <Route path="appointments/:id/step-1" element={<VaccinationDetailPage />} />
       <Route path="appointments/:id/step-2" element={<HealthSurvey />} />
       <Route path="appointments/:id/step-3" element={<Payment />} />
-      <Route path="appointments/:id/step-4" element={<ConfirmVaccination />} />
+      <Route path="appointments/:id/step-4" element={<DoctorConfirmVaccination />} />
       <Route path="appointments/:id/step-5" element={<FinishVaccination />} />
     </Route>
     {/* Doctor */}
@@ -83,7 +83,7 @@ const App: React.FC = () => {
 
     {/* Manager */}
  <Route path="/manager" element={
-    <ProtectedRoute allowedRoles={["Manager"]}>
+    <ProtectedRoute allowedRoles={["FacilityStaff"]} allowedPositions={["Manager"]}>
       <ManagerLayout />
     </ProtectedRoute>
   }>

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { vaccineApi } from "@/api/vaccineApi";
 import type { Vaccine } from "@/api/vaccineApi";
 import { Pencil, Trash2 } from "lucide-react";
-
 const VaccineManagement: React.FC = () => {
   const [vaccines, setVaccines] = useState<Vaccine[]>([]);
   const [loading, setLoading] = useState<boolean>(false);

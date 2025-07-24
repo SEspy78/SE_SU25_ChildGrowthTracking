@@ -62,6 +62,6 @@ export const appointmentApi = {
     },
     
     updateAppointmentStatus: async (appointmentId: number, payload:updateStatusPayload): Promise<any> => {
-      return await axiosClient.put(`api/FacilityAppointment/${appointmentId}/status`, { payload });
+      return await axiosClient.put(`api/FacilityAppointment/${appointmentId}/status`,  payload );
     },
 }

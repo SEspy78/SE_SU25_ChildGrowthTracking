@@ -16,7 +16,6 @@ export default function StaffLayout() {
 
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar cố định */}
       <aside
         className="w-64 bg-blue-800 text-white px-6 py-8 flex flex-col justify-between"
         style={{ position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 20 }}

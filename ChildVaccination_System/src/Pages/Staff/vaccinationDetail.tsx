@@ -13,9 +13,13 @@ export default function VaccinationDetailPage() {
     const fetchAppointment = async () => {
       try {
         setLoading(true)
-        const res = await appointmentApi.getAllAppointments()
-        const found = res.appointments.find((a) => a.appointmentId === Number(id))
-        setAppointment(found || null)
+        if (id) {
+          const res = await appointmentApi.getAppointmentById(Number(id));
+          const appointmentData = (res as any).data || res;
+          setAppointment(appointmentData);
+        } else {
+          setAppointment(null);
+        }
       } catch (error) {
         setAppointment(null)
       } finally {

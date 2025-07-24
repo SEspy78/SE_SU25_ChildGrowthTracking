@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react"
 import { surveyAPI } from "@/api/surveyAPI"
-import type { Survey, Question, createQuestionPayload } from "@/api/surveyAPI"
+import type { Survey, Question, createQuestionPayload, createSurveyPayload } from "@/api/surveyAPI"
 
 export default function SurveyManagement() {
   const [surveys, setSurveys] = useState<Survey[]>([])
@@ -13,17 +13,28 @@ export default function SurveyManagement() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [newQuestion, setNewQuestion] = useState<createQuestionPayload>({
     questionText: "",
-    questionType: "text",
+    questionType: "Text",
     isRequired: false
   })
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState("")
-  const [showDropdown, setShowDropdown] = useState(false)
+  const [showDropdown, setShowDropdown] = useState<false | 'questionType' | 'status'>(false)
   const popupRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const questionInputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const dropdownButtonRef = useRef<HTMLButtonElement>(null)
+  const [showCreateSurvey, setShowCreateSurvey] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState("")
+  const [newSurvey, setNewSurvey] = useState<createSurveyPayload>({
+    title: "",
+    description: "",
+    startDate: "",
+    endDate: "",
+    status: "Active",
+  })
+  
 
   useEffect(() => {
     const fetchSurveys = async () => {
@@ -39,6 +50,33 @@ export default function SurveyManagement() {
     }
     fetchSurveys()
   }, [])
+
+
+  const handleCreateSurvey = async () => {
+    if (!newSurvey.title.trim() || !newSurvey.startDate || !newSurvey.endDate) {
+      setCreateError("Title, Start Date, and End Date are required.")
+      return
+    }
+    setCreating(true)
+    setCreateError("")
+    try {
+      await surveyAPI.createSurvey(newSurvey)
+      setShowCreateSurvey(false)
+      setNewSurvey({
+        title: "",
+        description: "",
+        startDate: "",
+        endDate: "",
+        status: "Active",
+      })
+      const res = await surveyAPI.getAllSurveys()
+      setSurveys(res.data)
+    } catch {
+      setCreateError("Failed to create survey.")
+    } finally {
+      setCreating(false)
+    }
+  }
 
   const handleView = async (survey: Survey) => {
     setSelectedSurvey(survey)
@@ -67,7 +105,7 @@ export default function SurveyManagement() {
       await surveyAPI.addQuestion(selectedSurvey.surveyId, newQuestion)
       const res = await surveyAPI.getSurveybyId(selectedSurvey.surveyId)
       setQuestions(res.data)
-      setNewQuestion({ questionText: "", questionType: "text", isRequired: false })
+      setNewQuestion({ questionText: "", questionType: "Text", isRequired: false })
       setShowAddForm(false)
       questionInputRef.current?.focus()
     } catch {
@@ -81,7 +119,7 @@ export default function SurveyManagement() {
     setShowPopup(false)
     setSelectedSurvey(null)
     setQuestions([])
-    setNewQuestion({ questionText: "", questionType: "text", isRequired: false })
+    setNewQuestion({ questionText: "", questionType: "Text", isRequired: false })
     setAddError("")
     setShowAddForm(false)
     setShowDropdown(false)
@@ -130,8 +168,15 @@ export default function SurveyManagement() {
 
   return (
     <div className="p-4 sm:p-8">
-      <div className={`transition-all duration-300 ${showPopup ? 'blur-sm' : ''}`}>
+      <div className={`transition-all duration-300 ${(showPopup || showCreateSurvey ) ? 'blur-sm' : ''}`}>
         <h2 className="text-2xl font-bold mb-6">Survey Management</h2>
+        <button
+          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg mb-4 transition-colors duration-200 cursor-pointer"
+          onClick={() => setShowCreateSurvey(true)}
+          type="button"
+        >
+          Tạo khảo sát mới 
+        </button>
         {loading ? (
           <div>Loading...</div>
         ) : error ? (
@@ -140,12 +185,12 @@ export default function SurveyManagement() {
           <table className="min-w-full bg-white rounded-xl shadow overflow-hidden mb-8">
             <thead className="bg-gray-100">
               <tr>
-                <th className="p-4 text-left">Title</th>
-                <th className="p-4 text-left">Description</th>
-                <th className="p-4 text-left">Start Date</th>
-                <th className="p-4 text-left">End Date</th>
-                <th className="p-4 text-left">Status</th>
-                <th className="p-4 text-left">Actions</th>
+                <th className="p-4 text-left">Tiêu đề</th>
+                <th className="p-4 text-left">Mô tả</th>
+                <th className="p-4 text-left">Ngày bắt đầu</th>
+                <th className="p-4 text-left">Ngày kết thúc</th>
+                <th className="p-4 text-left">Trạng thái</th>
+                <th className="p-4 text-left"></th>
               </tr>
             </thead>
             <tbody>
@@ -164,13 +209,12 @@ export default function SurveyManagement() {
                         className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded mr-2 transition-colors duration-200 cursor-pointer"
                         onClick={() => handleView(survey)}
                       >
-                        View
+                        Xem
                       </button>
                       <button
                         className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors duration-200 cursor-pointer"
-                        // ...existing code...
                       >
-                        Delete
+                        Xóa
                       </button>
                     </td>
                   </tr>
@@ -180,7 +224,163 @@ export default function SurveyManagement() {
           </table>
         )}
       </div>
+      {showCreateSurvey && (
+          <div
+  className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+  role="dialog"
+  aria-modal="true"
+>
+        <div
+          ref={popupRef}
+          role="dialog"
+          aria-labelledby="popup-title"
+          aria-modal="false"
+          className="bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full max-w-2xl mx-auto mt-4 transition-all duration-300 transform translate-y-0 opacity-100 z-10 relative border border-gray-200"
+          style={{ animation: showCreateSurvey ? 'slideIn 0.3s ease-out' : 'none' }}
+        >
+          <style>
+            {`
+              @keyframes slideIn {
+                from { transform: translateY(-20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+              }
+            `}
+          </style>
+        
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold">Tạo khảo sát mới</h3>
+            <button
+              className="text-gray-400 hover:text-gray-600 text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full w-8 h-8 flex items-center justify-center cursor-pointer"
+              onClick={() => setShowCreateSurvey(false)}
+              type="button"
+              aria-label="Close create survey popup"
+            >
+              ×
+            </button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Tiêu đề</label>
+              <input
+                className="w-full border rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                value={newSurvey.title}
+                onChange={e => setNewSurvey(s => ({ ...s, title: e.target.value }))}
+                disabled={creating}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Mô tả</label>
+              <textarea
+                className="w-full border rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                value={newSurvey.description}
+                onChange={e => setNewSurvey(s => ({ ...s, description: e.target.value }))}
+                disabled={creating}
+              />
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">Ngày bắt đầu</label>
+                <input
+                  type="date"
+                  className="w-full border rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                  value={newSurvey.startDate}
+                  onChange={e => setNewSurvey(s => ({ ...s, startDate: e.target.value }))}
+                  disabled={creating}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">Ngày kết thúc</label>
+                <input
+                  type="date"
+                  className="w-full border rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                  value={newSurvey.endDate}
+                  onChange={e => setNewSurvey(s => ({ ...s, endDate: e.target.value }))}
+                  disabled={creating}
+                />
+              </div>
+            </div>
+            <div>
+             <div>
+  <label className="block text-sm font-medium mb-1">Trạng thái</label>
+  <div className="relative" style={{ zIndex: 60 }}>
+    <button
+      type="button"
+      className={`w-full border rounded-lg px-3 py-2 text-gray-700 bg-white text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${creating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+      onClick={() => setShowDropdown(showDropdown === 'status' ? false : 'status')}
+      disabled={creating}
+      aria-expanded={showDropdown === 'status'}
+      aria-haspopup="listbox"
+    >
+      <span>{newSurvey.status === 'Active' ? 'Hoạt động' : 'Ngừng hoạt động'}</span>
+      <span className="text-gray-600">▼</span>
+    </button>
+    {showDropdown === 'status' && (
+      <ul
+        className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto"
+        role="listbox"
+      >
+        {[
+          { value: 'Active', label: 'Hoạt động' },
+          { value: 'Inactive', label: 'Ngừng hoạt động' }
+        ].map(opt => (
+          <li
+            key={opt.value}
+            className={`px-3 py-2 border-b border-gray-200 last:border-b-0 text-gray-700 hover:bg-blue-50 cursor-pointer transition-colors duration-200 ${newSurvey.status === opt.value ? 'bg-blue-100 font-medium' : ''}`}
+            onClick={() => {
+              setNewSurvey(s => ({ ...s, status: opt.value }));
+              setShowDropdown(false);
+            }}
+            role="option"
+            aria-selected={newSurvey.status === opt.value}
+          >
+            {opt.label}
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</div>
+            </div>
+            {createError && (
+              <div className="text-red-500 text-sm">{createError}</div>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                onClick={() => setShowCreateSurvey(false)}
+                type="button"
+                disabled={creating}
+              >
+                Cancel
+              </button>
+              <button
+                className={`bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors duration-200 ${creating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'}`}
+                onClick={handleCreateSurvey}
+                disabled={creating}
+                type="button"
+              >
+                {creating ? "Creating..." : "Create Survey"}
+              </button>
+            </div>
+          </div>
+        </div>
+        </div>
+      )}
+
+
+
+
+
+
+
+
+
       {showPopup && selectedSurvey && (
+        <div
+  className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+  role="dialog"
+  aria-modal="true"
+>
         <div
           ref={popupRef}
           role="dialog"
@@ -266,21 +466,21 @@ export default function SurveyManagement() {
                         type="button"
                         ref={dropdownButtonRef}
                         className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-700 bg-white text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${adding ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
-                        onClick={() => setShowDropdown(!showDropdown)}
+                        onClick={() => setShowDropdown(showDropdown === 'questionType' ? false : 'questionType')}
                         disabled={adding}
-                        aria-expanded={showDropdown}
+                        aria-expanded={showDropdown === 'questionType'}
                         aria-haspopup="listbox"
                       >
-                        <span>{newQuestion.questionType === 'text' ? 'Text' : newQuestion.questionType === 'YesNo' ? 'Yes/No' : 'Multiple Choice'}</span>
+                        <span>{newQuestion.questionType === 'Text' ? 'Text' : newQuestion.questionType === 'YesNo' ? 'Yes/No' : 'Multiple Choice'}</span>
                         <span className="text-gray-600">▼</span>
                       </button>
-                      {showDropdown && (
+                      {showDropdown === 'questionType' && (
                         <ul
                           className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-20 max-h-40 overflow-y-auto"
                           role="listbox"
                           aria-labelledby="question-type"
                         >
-                          {['text', 'YesNo', 'MultipleChoice'].map(type => (
+                          {['Text', 'YesNo', 'MultipleChoice'].map(type => (
                             <li
                               key={type}
                               className={`px-3 py-2 border-b border-gray-200 last:border-b-0 text-gray-700 hover:bg-blue-50 cursor-pointer transition-colors duration-200 ${newQuestion.questionType === type ? 'bg-blue-100 font-medium' : ''}`}
@@ -288,7 +488,7 @@ export default function SurveyManagement() {
                               role="option"
                               aria-selected={newQuestion.questionType === type}
                             >
-                              {type === 'text' ? 'Text' : type === 'YesNo' ? 'Yes/No' : 'Multiple Choice'}
+                              {type === 'Text' ? 'Text' : type === 'YesNo' ? 'Yes/No' : 'Multiple Choice'}
                             </li>
                           ))}
                         </ul>
@@ -338,6 +538,7 @@ export default function SurveyManagement() {
               Close
             </button>
           </div>
+        </div>
         </div>
       )}
     </div>

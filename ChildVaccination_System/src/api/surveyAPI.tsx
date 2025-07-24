@@ -89,7 +89,7 @@ export const surveyAPI = {
     return await axiosClient.post(`api/Survey/${surveyId}/questions`, payload);
   },
 
-  createSurvey: async (payload: Question[]): Promise<any> => {
+  createSurvey: async (payload: createSurveyPayload): Promise<any> => {
     return await axiosClient.post("api/Survey", payload);
   },
 
