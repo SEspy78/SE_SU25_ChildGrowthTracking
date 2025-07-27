@@ -77,8 +77,8 @@ export interface addRequest {
 
 
 export const vaccinePackageApi = {
-  getAll: async (id : number): Promise<VaccinePackageResponse> => {
-    return await axiosClient.get(`api/VaccinePackages?facilityId=${id}`);
+  getAll: async (facilityId: number): Promise<VaccinePackageResponse> => {
+    return await axiosClient.get(`api/VaccinePackages?facilityId=${facilityId}`);
   },
   getById: async (packageId: number): Promise<VaccinePackage> => {
     return await axiosClient.get(`api/VaccinePackages/${packageId}`);
