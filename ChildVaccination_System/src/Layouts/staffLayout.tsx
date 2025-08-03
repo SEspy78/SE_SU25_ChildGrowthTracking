@@ -44,7 +44,7 @@ export default function StaffLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8 bg-gray-50 overflow-y-auto" style={{ marginLeft: '16rem' }}>
+      <main className="flex-1 bg-gray-50 overflow-y-auto" style={{ marginLeft: '16rem' }}>
         <Outlet />
       </main>
     </div>

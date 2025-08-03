@@ -8,7 +8,7 @@ import { vaccinePackageApi, type VaccinePackage } from "@/api/vaccinePackageApi"
 import { diseaseApi } from "@/api/diseaseApi";
 import { useNavigate } from "react-router-dom";
 import { getUserInfo } from "@/lib/storage";
-import { Collapse, Button as AntButton } from "antd";
+import { Collapse } from "antd";
 import { CaretRightOutlined } from "@ant-design/icons";
 
 const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => void }> = ({
@@ -21,6 +21,11 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
   const [vaccinePackages, setVaccinePackages] = useState<VaccinePackage[]>([]);
   const [loadingPackages, setLoadingPackages] = useState<boolean>(false);
   const [errorPackages, setErrorPackages] = useState<string>("");
+  const [vaccineProfiles, setVaccineProfiles] = useState<VaccineProfile[]>([]);
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
+  const [errorProfiles, setErrorProfiles] = useState<string>("");
+  const [vaccineMap, setVaccineMap] = useState<Record<number, string>>({});
+  const [diseaseMap, setDiseaseMap] = useState<Record<number, string>>({});
 
   const handleConfirmByRole = () => {
     navigate(`/staff/appointments/${appointment.appointmentId}/step-2`);
@@ -37,12 +42,6 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
       navigate("/staff/appointments");
     }
   };
-
-  const [vaccineProfiles, setVaccineProfiles] = useState<VaccineProfile[]>([]);
-  const [loadingProfiles, setLoadingProfiles] = useState(false);
-  const [errorProfiles, setErrorProfiles] = useState<string>("");
-  const [vaccineMap, setVaccineMap] = useState<Record<number, string>>({});
-  const [diseaseMap, setDiseaseMap] = useState<Record<number, string>>({});
 
   const getVaccineName = useCallback(async (id: number) => {
     if (vaccineMap[id]) return vaccineMap[id];
@@ -82,7 +81,6 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
   // Fetch vaccine packages
   useEffect(() => {
     const fetchVaccinePackages = async () => {
-      // Assuming facilityId = 5 based on JSON data; replace with actual facilityId if available
       const facilityId = appointment.facilityVaccines[0]?.facilityId || 5;
       setLoadingPackages(true);
       setErrorPackages("");
@@ -90,7 +88,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
         const response = await vaccinePackageApi.getAll(facilityId);
         setVaccinePackages(response.data || []);
       } catch {
-        setErrorPackages("Không thể tải danh sách gói vaccine.");
+        setErrorPackages("Không thể tải danh sách gói vắc xin.");
       } finally {
         setLoadingPackages(false);
       }
@@ -100,13 +98,14 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
 
   // Function to calculate age
   const calculateAge = (birthDate: string) => {
+    if (!birthDate) return "N/A";
     const birth = new Date(birthDate);
     const today = new Date();
+    if (isNaN(birth.getTime())) return "N/A";
     const diffMs = today.getTime() - birth.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffMonths = Math.floor(diffDays / 30.436875); // Average month length
+    const diffMonths = Math.floor(diffDays / 30.436875);
     const diffWeeks = Math.floor(diffDays / 7);
-
     if (diffMonths >= 12) {
       const years = Math.floor(diffMonths / 12);
       return `${years} tuổi`;
@@ -117,7 +116,6 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
     }
   };
 
-  // Extract vaccine names from facilityVaccines
   const vaccineNames = Array.isArray(appointment.facilityVaccines)
     ? appointment.facilityVaccines.map((fv: FacilityVaccine) => fv.vaccine.name)
     : [];
@@ -129,7 +127,6 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
     ? packageData.packageVaccines.map(pv => pv.facilityVaccine.vaccine.name)
     : [];
 
-  // Combine individual vaccines and package details
   const vaccineDisplayParts: string[] = [];
   if (vaccineNames.length > 0) {
     vaccineDisplayParts.push(vaccineNames.join(", "));
@@ -142,7 +139,10 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
   }
   const vaccineDisplay = vaccineDisplayParts.length > 0
     ? vaccineDisplayParts.join(", ")
-    : "Không có vaccine";
+    : "Không có vắc xin";
+
+  // Calculate total doses
+  const totalDoses = vaccineProfiles.length;
 
   return (
     <div>
@@ -155,8 +155,8 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
           Quay lại
         </Button>
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl justify-center font-bold text-gray-800 mb-6">
-            Vaccination Process
+          <h2 className="text-3xl font-bold text-gray-800 mb-6 bg-gradient-to-r from-blue-500 to-green-500 text-white p-4 rounded-t-lg">
+            Quy trình tiêm chủng
           </h2>
 
           <div className="mb-8">
@@ -165,18 +165,21 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
 
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-              Appointment Details
+              Thông tin cuộc hẹn
             </h3>
             {loadingPackages ? (
-              <div className="text-gray-600 text-center py-4">Đang tải gói vaccine...</div>
+              <div className="flex justify-center items-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-blue-500"></div>
+                <span className="ml-4 text-gray-600">Đang tải gói vắc xin...</span>
+              </div>
             ) : errorPackages ? (
-              <div className="text-red-600 text-center py-4">{errorPackages}</div>
+              <div className="bg-red-100 text-red-700 p-4 rounded-lg text-center">{errorPackages}</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
                   <div className="flex items-center">
                     <span className="font-medium text-gray-600 w-32">Tên bé:</span>
-                    <span className="text-gray-800">
+                    <span className="text-gray-800 font-medium">
                       {child.fullName} ({calculateAge(child.birthDate)})
                     </span>
                   </div>
@@ -199,7 +202,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center">
-                    <span className="font-medium text-gray-600 w-32">Nhóm Máu:</span>
+                    <span className="font-medium text-gray-600 w-32">Nhóm máu:</span>
                     <span className="text-gray-800">{child.bloodType || "N/A"}</span>
                   </div>
                   <div className="flex items-center">
@@ -207,7 +210,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
                     <span className="text-gray-800">{child.allergiesNotes || "Không có"}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-medium text-gray-600 w-32">Tiền sử bệnh lí:</span>
+                    <span className="font-medium text-gray-600 w-32">Tiền sử bệnh lý:</span>
                     <span className="text-gray-800">{child.medicalHistory || "Không có"}</span>
                   </div>
                   <div className="flex items-center">
@@ -219,7 +222,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
             )}
             <div className="mt-4 pt-4 border-t">
               <div className="flex items-center">
-                <span className="font-medium text-gray-600 w-32">Vaccines:</span>
+                <span className="font-medium text-gray-600 w-32">Vắc xin:</span>
                 <span className="text-gray-800">{vaccineDisplay}</span>
               </div>
               <div className="flex items-center mt-2">
@@ -229,51 +232,63 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
             </div>
           </div>
 
-          <AntButton
-            type="primary"
-            icon={<CaretRightOutlined />}
-            onClick={() => setIsHistoryVisible(!isHistoryVisible)}
-            className="mb-4"
+          <Collapse
+            activeKey={isHistoryVisible ? ["1"] : []}
+            className="mb-8 bg-white rounded-xl shadow-lg"
+            expandIcon={({ isActive }) => (
+              <CaretRightOutlined rotate={isActive ? 90 : 0} className="text-blue-600 text-lg" />
+            )}
+            onChange={() => setIsHistoryVisible(!isHistoryVisible)}
           >
-            {isHistoryVisible ? "Ẩn" : "Lịch sử tiêm chủng"}
-          </AntButton>
-
-          <Collapse activeKey={isHistoryVisible ? ["1"] : []} className="mb-8">
-            <Collapse.Panel header="" key="1">
-              <h3 className="text-lg font-semibold text-blue-700 mb-4 border-b pb-2">
-                Vaccination History
-              </h3>
+            <Collapse.Panel
+              header={
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-blue-700 mb-0">
+                    Lịch sử tiêm chủng
+                  </h3>
+                 
+                </div>
+              }
+              key="1"
+              className="p-6"
+            >
               {loadingProfiles ? (
-                <div className="text-gray-600 text-center py-4">Loading...</div>
+                <div className="flex flex-col items-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-blue-500"></div>
+                  <span className="mt-2 text-gray-600">Đang tải lịch sử tiêm chủng...</span>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                    <div className="bg-blue-500 h-2 rounded-full animate-pulse" style={{ width: '50%' }}></div>
+                  </div>
+                </div>
               ) : errorProfiles ? (
-                <div className="text-red-600 text-center py-4">{errorProfiles}</div>
+                <div className="bg-red-100 text-red-700 p-4 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M12 17h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"></path>
+                  </svg>
+                  {errorProfiles}
+                </div>
               ) : vaccineProfiles.length === 0 ? (
-                <div className="text-gray-600 text-center py-4">
-                  No vaccination history available.
+                <div className="bg-gray-50 text-gray-600 p-4 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"></path>
+                  </svg>
+                  Không có lịch sử tiêm chủng.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full table-auto border border-gray-200 text-sm">
-                    <thead className="bg-blue-50 text-blue-800">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-semibold">Bệnh</th>
-                        <th className="px-4 py-3 text-left font-semibold">Vaccine</th>
-                        <th className="px-4 py-3 text-left font-semibold">Liều</th>
-                        <th className="px-4 py-3 text-left font-semibold">Ngày tiêm</th>
-                        <th className="px-4 py-3 text-left font-semibold">Ghi chú</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {vaccineProfiles.map((vp) => (
-                        <VaccineProfileRow
-                          key={vp.vaccineProfileId}
-                          vp={vp}
-                          getVaccineName={getVaccineName}
-                          getDiseaseName={getDiseaseName}
-                        />
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-4">
+                  <div className="bg-blue-50 rounded-lg p-4 flex items-center justify-between">
+                    <span className="text-blue-700 font-semibold">Tổng cộng: {totalDoses} liều</span>
+                    <span className="text-sm text-gray-500">Cập nhật đến {new Date().toLocaleDateString("vi-VN")}</span>
+                  </div>
+                  {vaccineProfiles.map((vp, index) => (
+                    <VaccineProfileCard
+                      key={vp.vaccineProfileId}
+                      vp={vp}
+                      getVaccineName={getVaccineName}
+                      getDiseaseName={getDiseaseName}
+                      index={index}
+                    />
+                  ))}
                 </div>
               )}
             </Collapse.Panel>
@@ -311,13 +326,14 @@ const AppointmentDetail: React.FC<{ appointment: Appointment; onClose?: () => vo
   );
 };
 
-interface VaccineProfileRowProps {
+interface VaccineProfileCardProps {
   vp: VaccineProfile;
   getVaccineName: (id: number) => Promise<string>;
   getDiseaseName: (id: number) => Promise<string>;
+  index: number;
 }
 
-const VaccineProfileRow: React.FC<VaccineProfileRowProps> = ({ vp, getVaccineName, getDiseaseName }) => {
+const VaccineProfileCard: React.FC<VaccineProfileCardProps> = ({ vp, getVaccineName, getDiseaseName, index }) => {
   const [vaccineName, setVaccineName] = useState<string>(`ID: ${vp.vaccineId}`);
   const [diseaseName, setDiseaseName] = useState<string>(`Bệnh ID: ${vp.diseaseId}`);
   const [numberOfDose, setNumberOfDose] = useState<number | null>(null);
@@ -344,16 +360,52 @@ const VaccineProfileRow: React.FC<VaccineProfileRowProps> = ({ vp, getVaccineNam
   }, [vp.vaccineId, vp.diseaseId, getVaccineName, getDiseaseName]);
 
   return (
-    <tr className="border-t hover:bg-gray-50">
-      <td className="px-4 py-3">{diseaseName}</td>
-      <td className="px-4 py-3">{vaccineName}</td>
-      <td className="px-4 py-3">
-        {vp.doseNum}
-        {numberOfDose !== null ? `/${numberOfDose}` : ""}
-      </td>
-      <td className="px-4 py-3">{vp.actualDate?.slice(0, 10) || "-"}</td>
-      <td className="px-4 py-3">{vp.note || "Không"}</td>
-    </tr>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 3.996a11.955 11.955 0 01-8.618 3.986A12.02 12.02 0 003 12c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+            <span className="font-medium text-gray-600">Bệnh:</span>
+            <span className="ml-2 text-gray-800">{diseaseName}</span>
+          </div>
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+            </svg>
+            <span className="font-medium text-gray-600">Vắc xin:</span>
+            <span className="ml-2 text-gray-800 font-semibold">{vaccineName}</span>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <span className="font-medium text-gray-600">Liều:</span>
+            <span className="ml-2 text-gray-800">
+              {vp.doseNum}
+              {numberOfDose !== null ? `/${numberOfDose}` : ""}
+            </span>
+          </div>
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <span className="font-medium text-gray-600">Ngày tiêm:</span>
+            <span className="ml-2 text-gray-800">{vp.actualDate?.slice(0, 10) || "-"}</span>
+          </div>
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            <span className="font-medium text-gray-600">Ghi chú:</span>
+            <span className="ml-2 text-gray-800">{vp.note || "Không"}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

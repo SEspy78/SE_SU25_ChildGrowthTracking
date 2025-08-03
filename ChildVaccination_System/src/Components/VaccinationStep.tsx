@@ -9,7 +9,6 @@ const steps = [
   "Pre-vaccination health survey",
   "Payment",
   "Vaccination",
-  "Finish",
 ]
 
 interface VaccinationStepsProps {
@@ -67,10 +66,10 @@ export default function VaccinationSteps({ currentStep: propCurrentStep }: Vacci
         return stepIndex < 0 // No steps completed
       case "Approval":
         return stepIndex <= 1 // Confirm Schedule, Pre-vaccination health survey completed
-      case "Payed":
+      case "Paid":
         return stepIndex <= 2 // Confirm Schedule, Pre-vaccination health survey, Payment completed
       case "Completed":
-        return stepIndex <= 4 // All steps (Confirm Schedule, Pre-vaccination health survey, Payment, Vaccination, Finish) completed
+        return stepIndex <= 3 // All steps (Confirm Schedule, Pre-vaccination health survey, Payment, Vaccination, Finish) completed
       default:
         return false
     }

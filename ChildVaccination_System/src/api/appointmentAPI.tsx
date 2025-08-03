@@ -142,7 +142,17 @@ export type Order = {
   createdAt: string;
   updatedAt: string;
   member: Member;
-  orderDetails: any[];
+  orderDetails: OrderDetail[];
+};
+
+export type OrderDetail = {
+  orderDetailId: number;
+  orderId: number;
+  facilityVaccineId: number;
+  diseaseId: number;
+  price: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Member = {
@@ -188,7 +198,7 @@ export type Vaccine = {
   status: string;
   createdAt: string;
   updatedAt: string;
-  diseases: any[]; // Adjust based on actual diseases structure if needed
+  diseases: any[];
 };
 
 export type updateStatusPayload = {

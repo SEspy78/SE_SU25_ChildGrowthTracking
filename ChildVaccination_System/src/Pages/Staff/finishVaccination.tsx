@@ -1,131 +1,177 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import VaccinationSteps from "@/Components/VaccinationStep";
-import { Button } from "@/Components/ui/button";
-import { appointmentApi, type Appointment } from "@/api/appointmentAPI";
+import { useEffect, useState } from "react"
+import { useParams, useNavigate } from "react-router-dom"
+import { appointmentApi, type Appointment } from "@/api/appointmentAPI"
+import { facilityVaccineApi, type FacilityVaccine } from "@/api/vaccineApi"
+import { message, Button as AntButton } from 'antd'
+import VaccinationSteps from "@/Components/VaccinationStep"
+import { CheckCircleIcon } from "@heroicons/react/24/solid"
+import { getUserInfo } from "@/lib/storage"
 
-export default function FinishVaccination() {
-  const { id } = useParams<{ id?: string }>();
-  const [appointment, setAppointment] = useState<Appointment | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+interface CompletedVaccinationInfoProps {
+  appointmentId?: number // Optional prop if not using useParams
+}
+
+export default function CompletedVaccinationInfo({ appointmentId }: CompletedVaccinationInfoProps) {
+  const { id } = useParams<{ id?: string }>()
+  const navigate = useNavigate()
+  const [appointment, setAppointment] = useState<Appointment | null>(null)
+  const [vaccineNames, setVaccineNames] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const user = getUserInfo()
 
   useEffect(() => {
     const fetchAppointment = async () => {
       try {
-        setLoading(true);
-        if (!id) {
-          setError("No appointment ID provided in the URL.");
-          setAppointment(null);
-          return;
+        setLoading(true)
+        const effectiveId = appointmentId || Number(id)
+        if (!effectiveId) {
+          setError("Không có ID lịch hẹn.")
+          setAppointment(null)
+          return
         }
-        const appointmentRes = await appointmentApi.getAppointmentById(Number(id));
-        const appointmentData = (appointmentRes as any).data || appointmentRes;
-        setAppointment(appointmentData);
-      } catch (error) {
-        setError("Không thể tải thông tin lịch hẹn.");
+        const appointmentRes = await appointmentApi.getAppointmentById(effectiveId)
+        console.log("Appointment Response:", appointmentRes)
+        const appointmentData: Appointment = appointmentRes.appointments?.[0] || appointmentRes
+        console.log("Appointment Data:", appointmentData)
+        setAppointment(appointmentData)
+
+        // Extract facilityVaccineIds from orderDetails or facilityVaccines
+        let facilityVaccineIds: number[] = []
+        if (appointmentData.order && Array.isArray(appointmentData.order.orderDetails) && appointmentData.order.orderDetails.length > 0) {
+          console.log("Order Details:", appointmentData.order.orderDetails)
+          facilityVaccineIds = appointmentData.order.orderDetails
+            .filter(detail => detail && typeof detail.facilityVaccineId === 'number' && detail.facilityVaccineId > 0)
+            .map(detail => detail.facilityVaccineId)
+          console.log("Facility Vaccine IDs from Order Details:", facilityVaccineIds)
+        } else if (Array.isArray(appointmentData.facilityVaccines) && appointmentData.facilityVaccines.length > 0) {
+          console.log("Facility Vaccines:", appointmentData.facilityVaccines)
+          facilityVaccineIds = appointmentData.facilityVaccines
+            .filter(fv => fv && typeof fv.facilityVaccineId === 'number' && fv.facilityVaccineId > 0)
+            .map(fv => fv.facilityVaccineId)
+          console.log("Facility Vaccine IDs from Facility Vaccines:", facilityVaccineIds)
+        }
+
+        // Fetch vaccine names
+        if (facilityVaccineIds.length > 0) {
+          const vaccinePromises = facilityVaccineIds.map(async (id) => {
+            try {
+              const response = await facilityVaccineApi.getById(id)
+              console.log(`Raw response for facilityVaccineId ${id}:`, response)
+              return response
+            } catch (err) {
+              console.error(`Error fetching facilityVaccineId ${id}:`, err)
+              return null
+            }
+          })
+          const vaccineResults = await Promise.allSettled(vaccinePromises)
+          const names: string[] = []
+          vaccineResults.forEach((result, index) => {
+            if (result.status === "fulfilled" && result.value && result.value?.vaccine) {
+              names.push(result.value.vaccine.name || `ID: ${facilityVaccineIds[index]}`)
+            } else {
+              console.warn(`Invalid FacilityVaccine data for ID ${facilityVaccineIds[index]}:`, result.status === "fulfilled" ? result.value : result.reason)
+            }
+          })
+          console.log("Fetched Vaccine Names:", names)
+          setVaccineNames(names)
+        } else {
+          setVaccineNames([])
+          setError("Không có vắc xin nào được liên kết với lịch hẹn.")
+        }
+      } catch (err) {
+        console.error("Error fetching appointment:", err)
+        setError("Không thể tải thông tin lịch hẹn.")
+        setAppointment(null)
+        message.error("Không thể tải thông tin lịch hẹn.")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-    fetchAppointment();
-  }, [id]);
+    }
+    fetchAppointment()
+  }, [id, appointmentId])
 
-  if (loading) return <div className="p-8 text-gray-600 text-center">Đang tải thông tin...</div>;
-  if (error) return <div className="p-8 text-red-500 text-center">{error}</div>;
-  if (!appointment) return <div className="p-8 text-gray-600 text-center">Không có dữ liệu lịch hẹn.</div>;
+  const handleBack = () => {
+    if (user?.position === "Doctor") {
+      navigate("/doctor/appointments")
+    } else {
+      navigate("/staff/appointments")
+    }
+  }
 
-  const childName = appointment.child.fullName;
-  const vaccineNames = Array.isArray(appointment.facilityVaccines) && appointment.facilityVaccines.length > 0
-    ? appointment.facilityVaccines.map(fv => fv.vaccine.name).join(", ")
-    : "Unknown vaccine";
-  const vaccinationDate = appointment.appointmentDate
-    ? new Date(appointment.appointmentDate).toLocaleDateString("vi-VN")
-    : "Unknown date";
-  const isCompleted = appointment.status === "Completed";
+  if (loading) return (
+    <div className="mt-8 p-6 bg-white shadow rounded-xl max-w-4xl mx-auto">
+      <div className="text-gray-600 text-center">Đang tải...</div>
+    </div>
+  )
+  if (error || !appointment) return (
+    <div className="mt-8 p-6 bg-white shadow rounded-xl max-w-4xl mx-auto">
+      <div className="text-red-500 text-center">{error || "Không có dữ liệu lịch hẹn."}</div>
+    </div>
+  )
+  if (appointment.status !== "Completed") return (
+    <div className="mt-8 p-6 bg-white shadow rounded-xl max-w-4xl mx-auto">
+      <div className="text-gray-600 text-center">Lịch hẹn chưa hoàn tất.</div>
+    </div>
+  )
+
+  const child = appointment.child
 
   return (
-    <div className="mt-8 p-6 bg-white shadow rounded-xl min-h-screen flex items-center justify-center">
-      <div className="max-w-4xl mx-auto w-full">
-        <h2 className="text-xl font-semibold mb-4">Vaccination Process</h2>
-        <div className="mb-8">
-          <VaccinationSteps currentStep={4} />
-        </div>
-
-        {/* Centered Notification based on status */}
-        <div className="flex flex-col items-center text-center">
-          <div className="text-6xl mb-4">{isCompleted ? "✅" : "⚠️"}</div>
-          <div
-            className={`rounded-lg p-6 shadow-md ${
-              isCompleted ? "bg-green-100 border-2 border-green-200" : "bg-yellow-100 border-2 border-yellow-200"
-            }`}
-          >
-            <h1 className="text-2xl font-bold mb-2">
-              {isCompleted ? "🎉 Hoàn tất tiêm chủng" : "⚠️ Quá trình tiêm chưa hoàn tất"}
-            </h1>
-            {isCompleted ? (
-              <p className="text-lg text-gray-700">
-                Đã hoàn tất tiêm vaccine {vaccineNames} cho trẻ {childName} vào ngày{" "}
-                {vaccinationDate} lúc 07:55 AM +07, Thứ Bảy, ngày 26/07/2025.
-              </p>
-            ) : (
-              <p className="text-lg text-gray-700">
-                Quá trình tiêm chủng chưa hoàn tất. Vui lòng thực hiện các bước
-                trước đó.
-              </p>
-            )}
+    <div className="mt-8 p-6 bg-white shadow-lg rounded-xl max-w-4xl mx-auto">
+      <h2 className="text-2xl font-bold text-gray-800 mb-6 bg-gradient-to-r from-blue-500 to-green-500 text-white p-4 rounded-t-lg">
+        Thông tin lịch hẹn
+      </h2>
+      <div className="mb-8">
+        <VaccinationSteps currentStep={5} />
+      </div>
+      <div className="bg-white rounded-xl shadow p-6 mb-8">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Chi tiết lịch hẹn</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <span className="font-medium text-gray-700 w-32">Bệnh nhân:</span>
+              <span className="text-gray-800">{child?.fullName || '-'}</span>
+            </div>
+            <div className="flex items-center">
+              <span className="font-medium text-gray-700 w-32">Phụ huynh:</span>
+              <span className="text-gray-800">{appointment.memberName || '-'}</span>
+            </div>
+            <div className="flex items-center">
+              <span className="font-medium text-gray-700 w-32">Liên hệ:</span>
+              <span className="text-gray-800">{appointment.memberPhone || '-'}</span>
+            </div>
           </div>
-        </div>
-
-        <div className="mt-8">
-          <p className="mb-6 text-gray-700">
-            {isCompleted
-              ? "Quá trình tiêm đã hoàn tất. Thông tin ghi nhận phản ứng sau tiêm như sau:"
-              : ""}
-          </p>
-
-          {isCompleted && (
-            <div>
-              <div className="grid grid-cols-2 gap-6 mb-6">
-                <div>
-                  <p>
-                    <strong>Vaccine :</strong>{appointment.facilityVaccines.map(fv => fv.vaccine.name).join(", ") } {appointment.order?.packageId ? `(${appointment.order.packageId})` : ""}
-                  </p>
-                  <p>
-                    <strong>Vaccination Date:</strong> {vaccinationDate}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <h3 className="font-medium mb-2">📋 Phản ứng sau tiêm:</h3>
-                <p className="bg-gray-100 border border-gray-300 rounded-md p-4 text-gray-800 whitespace-pre-wrap">
-                  {appointment.note ||
-                    "Quá trình tiêm chủng diễn ra bình thường, không có phản ứng bất thường nào được ghi nhận."}
-                </p>
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <span className="font-medium text-gray-700 w-32">Ngày tiêm:</span>
+              <span className="text-gray-800">
+                {appointment.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString('vi-VN') : '-'}
+              </span>
+            </div>
+            <div className="flex items-center">
+              <span className="font-medium text-gray-700 w-32">Vắc xin:</span>
+              <span className="text-gray-800">{vaccineNames.length > 0 ? vaccineNames.join(", ") : "Không có"}</span>
+            </div>
+            <div className="flex items-center">
+              <span className="font-medium text-gray-700 w-32">Trạng thái:</span>
+              <div className="flex items-center space-x-1">
+                <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                <span className="text-green-600 font-medium">Hoàn tất</span>
               </div>
             </div>
-          )}
-
-          <div className="flex justify-end space-x-4">
-            <Button
-              className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-full"
-              variant="outline"
-              onClick={() => window.history.back()}
-            >
-              🔙 Quay lại
-            </Button>
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full"
-              variant="default"
-              onClick={() => (window.location.href = "/staff/dashboard")}
-              disabled={!isCompleted}
-            >
-              Finish
-            </Button>
           </div>
         </div>
       </div>
+      <div className="flex justify-end">
+        <AntButton
+          type="default"
+          onClick={handleBack}
+          className="bg-gray-300 hover:bg-blue-400 text-black px-6 py-2 rounded-full transition-colors"
+        >
+          Quay lại
+        </AntButton>
+      </div>
     </div>
-  );
+  )
 }

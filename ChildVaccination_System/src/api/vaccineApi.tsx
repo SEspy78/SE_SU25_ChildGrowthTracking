@@ -45,10 +45,11 @@ export const vaccineApi = {
   },
 };
 
-export interface FacilityVaccineResponse {
+export interface FacilityVaccineResponse1 {
   totalCount: number;
   data: FacilityVaccine[];
 }
+
 
 export interface CreateFacilityVaccineRequest {
   facilityId: number;
@@ -64,12 +65,12 @@ export interface CreateFacilityVaccineRequest {
 
 
 export const facilityVaccineApi = {
-      getAll: async (id: number) => {
-   const res :FacilityVaccineResponse = await axiosClient.get(`api/FacilityVaccines?facilityId=${id}`);
+      getAll: async (facilityId: number) => {
+   const res :FacilityVaccineResponse1 = await axiosClient.get(`api/FacilityVaccines?facilityId=${facilityId}`);
   return res;
   },
-getById: async (id: number) => {
-   const res :FacilityVaccineResponse = await axiosClient.get(`api/FacilityVaccines?facilityId=${id}`);
+getById: async (facilityVaccineid: number) => {
+   const res :FacilityVaccine = await axiosClient.get(`api/FacilityVaccines/${facilityVaccineid}`);
   return res;
   },
  create: async (payload: CreateFacilityVaccineRequest): Promise<FacilityVaccine> => {

@@ -9,7 +9,6 @@ import VaccinationDetailPage from "@/Pages/Staff/vaccinationDetail";
 import HealthSurvey from "@/Pages/Staff/healthSurvey";
 import Payment from "@/Pages/Staff/payment";
 import ConfirmVaccination from "@/Pages/Staff/confirmVaccination";
-import FinishVaccination from "@/Pages/Staff/finishVaccination";
 import DoctorLayout from "@/Layouts/doctorLayout";
 import ProtectedRoute from "./ProtectedRoute";
 import AdminLayout from "@/Layouts/adminLayout";
@@ -23,6 +22,7 @@ import MemberManagement from "@/Pages/Admin/memberManagement";
 import ScheduleSlotPage from "@/Pages/Manager/scheduleSlot";
 import SurveyManagement from "@/Pages/Manager/surveyManagement";
 import DoctorConfirmVaccination from "@/Pages/Doctor/doctorVaccination";
+import CompletedVaccinationInfo from "@/Pages/Staff/finishVaccination";
 const App: React.FC = () => {
   return (
     <Router>
@@ -45,7 +45,6 @@ const App: React.FC = () => {
       <Route path="appointments/:id/step-2" element={<HealthSurvey />} />
       <Route path="appointments/:id/step-3" element={<Payment />} />
       <Route path="appointments/:id/step-4" element={<ConfirmVaccination />} />
-      <Route path="appointments/:id/step-5" element={<FinishVaccination />} />
     </Route>
 
     {/* Doctor */}
@@ -62,7 +61,7 @@ const App: React.FC = () => {
       <Route path="appointments/:id/step-2" element={<HealthSurvey />} />
       <Route path="appointments/:id/step-3" element={<Payment />} />
       <Route path="appointments/:id/step-4" element={<DoctorConfirmVaccination />} />
-      <Route path="appointments/:id/step-5" element={<FinishVaccination />} />
+       <Route path="appointments/:id/finish" element={<CompletedVaccinationInfo />} />
     </Route>
     {/* Doctor */}
 

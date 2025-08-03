@@ -11,7 +11,6 @@ const FacilityVaccinePage: React.FC = () => {
   const [detailError, setDetailError] = useState<string | null>(null);
 
   const handleRowClick = async (vaccineId: number) => {
-    // Nếu đang mở dropdown cho vaccine này thì đóng lại
     if (selectedVaccine && selectedVaccine.vaccineId === vaccineId) {
       setSelectedVaccine(null);
       setDetailError(null);
@@ -106,7 +105,7 @@ const FacilityVaccinePage: React.FC = () => {
       await facilityVaccineApi.create({
         ...form,
         facilityId: user.facilityId,
-        status: form.status || "true",
+        status: form.status || "active",
         price: form.price || 0,
         availableQuantity: form.availableQuantity || 0,
         batchNumber: generateRandomBatchNumber(),
@@ -114,7 +113,7 @@ const FacilityVaccinePage: React.FC = () => {
         importDate: form.importDate!,
       } as any);
       setShowForm(false);
-      setForm({ vaccineId: undefined, price: 0, availableQuantity: 0, expiryDate: "", importDate: "", status: "true" });
+      setForm({ vaccineId: undefined, price: 0, availableQuantity: 0, expiryDate: "", importDate: "", status: "active" });
       // reload list
       const res = await facilityVaccineApi.getAll(user.facilityId);
       setVaccines(res.data);
@@ -291,7 +290,6 @@ const FacilityVaccinePage: React.FC = () => {
                               <div><span className="font-medium">Khoảng cách tối thiểu giữa các mũi:</span> {selectedVaccine.minIntervalBetweenDoses}</div>
                               <div><span className="font-medium">Tác dụng phụ:</span> {selectedVaccine.sideEffects}</div>
                               <div><span className="font-medium">Chống chỉ định:</span> {selectedVaccine.contraindications}</div>
-                              <div><span className="font-medium">Giá:</span> {selectedVaccine.price?.toLocaleString()} VNĐ</div>
                               <div><span className="font-medium">Trạng thái:</span> {selectedVaccine.status === "Approved" ? "Approved" : "UnApproved"}</div>
                               <div><span className="font-medium">Ngày tạo:</span> {new Date(selectedVaccine.createdAt).toLocaleDateString()}</div>
                               <div><span className="font-medium">Ngày cập nhật:</span> {new Date(selectedVaccine.updatedAt).toLocaleDateString()}</div>
