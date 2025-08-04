@@ -26,7 +26,7 @@ export default function AdminLayout() {
   const handleLogout = () => {
     removeItem("accessToken");
     removeItem("userInfo");
-    navigate("/login");
+    navigate("/");
   };
 
   return (
@@ -76,9 +76,7 @@ export default function AdminLayout() {
   </nav>
 </aside>
 
-      {/* Main Content */}
       <main className="flex-1 p-6 overflow-y-auto">
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
           </div>
@@ -93,7 +91,6 @@ export default function AdminLayout() {
           </div>
         </div>
 
-        {/* Render nội dung page */}
         <Outlet />
       </main>
     </div>
