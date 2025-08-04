@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import VaccinationSteps from "@/Components/VaccinationStep"
-import { Button as AntButton, message, DatePicker, Select } from 'antd'
+import { Button as AntButton, message, Select } from 'antd'
 import { appointmentApi, type Appointment, type finishVaccinationPayload } from "@/api/appointmentAPI"
 import { vaccinePackageApi, type VaccinePackage } from "@/api/vaccinePackageApi"
 import { getUserInfo } from "@/lib/storage"
@@ -9,7 +9,6 @@ import { Button } from "@/Components/ui/button"
 import { CheckCircleIcon } from "@heroicons/react/24/solid"
 import dayjs from 'dayjs'
 
-const { Option } = Select
 
 export default function ConfirmVaccination() {
   const { id } = useParams<{ id?: string }>()
@@ -104,14 +103,6 @@ export default function ConfirmVaccination() {
     }
   }
 
-  const handleDoseNumChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    if (value === '' || Number(value) < 1) {
-      setDoseNum(1)
-    } else {
-      setDoseNum(Number(value))
-    }
-  }
 
   const handleConfirmVaccination = async () => {
     if (!id || !appointment || !facilityVaccineId || !expectedDateForNextDose || doseNum < 1) {
@@ -295,81 +286,7 @@ export default function ConfirmVaccination() {
           </div>
         </div>
 
-        {/* Vaccination Details Card */}
-        {/* {!isCompletedStatus && isPayedStatus && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Chi tiết tiêm chủng</h3>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-gray-600 mb-2">Vắc xin:</label>
-                <Select
-                  className="w-full"
-                  value={facilityVaccineId}
-                  onChange={(value) => setFacilityVaccineId(value)}
-                  disabled={submitting}
-                  placeholder="Chọn vắc xin"
-                >
-                  {Array.isArray(appointment.facilityVaccines) && appointment.facilityVaccines.length > 0
-                    ? appointment.facilityVaccines.map(fv => (
-                        <Option key={fv.facilityVaccineId} value={fv.facilityVaccineId}>
-                          {fv.vaccine.name} (ID: {fv.facilityVaccineId})
-                        </Option>
-                      ))
-                    : <Option value="" disabled>Không có vắc xin nào khả dụng</Option>}
-                </Select>
-              </div>
-              <div>
-                <label className="block text-gray-600 mb-2">Số liều:</label>
-                <input
-                  type="number"
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  value={doseNum}
-                  onChange={handleDoseNumChange}
-                  min="1"
-                  disabled={submitting}
-                />
-              </div>
-              <div>
-                <label className="block text-gray-600 mb-2">Ngày dự kiến liều tiếp theo:</label>
-                <DatePicker
-                  className="w-full"
-                  value={expectedDateForNextDose ? dayjs(expectedDateForNextDose) : null}
-                  onChange={(date) => setExpectedDateForNextDose(date ? date.format('YYYY-MM-DD') : '')}
-                  format="DD/MM/YYYY"
-                  disabled={submitting}
-                />
-              </div>
-              <div>
-                <label className="block text-gray-600 mb-2">Ghi chú sau tiêm:</label>
-                <textarea
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  value={postVaccinationNotes}
-                  onChange={(e) => setPostVaccinationNotes(e.target.value)}
-                  rows={4}
-                  placeholder="Nhập ghi chú về phản ứng sau tiêm..."
-                  disabled={submitting}
-                />
-              </div>
-            </div>
-          </div>
-        )} */}
-
-        {/* Status Message */}
-        {/* {!isCompletedStatus && isPayedStatus && !submitting && (
-          <div className="my-8 text-center">
-            <p className="text-lg font-medium text-gray-700 mb-4">⏳ Đang chờ bác sĩ thực hiện tiêm chủng...</p>
-            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500 mx-auto" />
-          </div>
-        )}
-        {isApprovalOrPending && (
-          <div className="my-8 text-center">
-            <p className="text-2xl font-medium text-gray-700 mb-4">
-              Vui lòng hoàn thành check-in và thanh toán để tiếp tục
-            </p>
-          </div>
-        )} */}
-
-        {/* Action Buttons */}
+       
         <div className="flex justify-end space-x-4 mt-8 items-center">
           <AntButton
             type="default"

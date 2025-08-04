@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { appointmentApi, type Appointment } from "@/api/appointmentAPI"
-import { facilityVaccineApi, type FacilityVaccine } from "@/api/vaccineApi"
+import { facilityVaccineApi } from "@/api/vaccineApi"
 import { message, Button as AntButton } from 'antd'
 import VaccinationSteps from "@/Components/VaccinationStep"
 import { CheckCircleIcon } from "@heroicons/react/24/solid"

@@ -1,13 +1,8 @@
 import Header from "@/Components/Header"
-import { useState } from "react"
 import { FaUser, FaPhone, FaEnvelope, FaMapMarkerAlt, FaBuilding, FaCity, FaLock } from "react-icons/fa"
 
 export default function RegisterClinicPage() {
  
-  const [error, setError] = useState("")
-
- 
-
 
 
   const InputGroup = ({ label, name, type = "text", icon, required = true }: any) => (
@@ -29,7 +24,6 @@ export default function RegisterClinicPage() {
         <div className="bg-white p-10 rounded-3xl shadow-xl w-full max-w-2xl space-y-6">
           <h2 className="text-3xl font-bold text-center text-blue-700">Đăng ký hệ thống KID TRACK</h2>
 
-          {error && <p className="text-red-600 text-sm text-center">{error}</p>}
 
           <form  className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <InputGroup label="Tên cơ sở" name="clinicName" icon={<FaBuilding />} />

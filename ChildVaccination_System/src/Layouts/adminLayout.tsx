@@ -13,7 +13,6 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [userInfo, setUserInfo] = useState<{ accountName: string } | null>(null);
-  const [facilityMenuOpen, setFacilityMenuOpen] = useState(false);
 
   useEffect(() => {
     const stored = getItemWithExpiry("userInfo");

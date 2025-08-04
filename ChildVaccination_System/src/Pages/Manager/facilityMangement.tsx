@@ -29,17 +29,8 @@ const FacilityDetail: React.FC = () => {
 }, [user?.facilityId]);
 
 
-  const handleUpdate = () => {
-    alert("Chuyển sang trang cập nhật cơ sở!");
-    // TODO: Redirect đến form cập nhật
-  };
-
-  const handleDelete = () => {
-    if (confirm("Bạn có chắc chắn muốn xoá cơ sở này?")) {
-      alert("Đã xoá (mô phỏng)");
-      // TODO: Gọi API xoá ở đây nếu có
-    }
-  };
+ 
+ 
 
   if (loading) return <p className="p-4">Đang tải dữ liệu...</p>;
   if (error) return <p className="p-4 text-red-600">{error}</p>;
