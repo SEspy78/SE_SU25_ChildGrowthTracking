@@ -1,10 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { appointmentApi, type Appointment } from "@/api/appointmentAPI";
-import {
-  vaccinePackageApi,
-  type VaccinePackage,
-} from "@/api/vaccinePackageApi";
+import { vaccinePackageApi, type VaccinePackage } from "@/api/vaccinePackageApi";
 import { getUserInfo } from "@/lib/storage";
 import { Button as AntButton, message } from "antd";
 import VaccinationSteps from "@/Components/VaccinationStep";
@@ -14,11 +11,11 @@ export default function Payment() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [appointment, setAppointment] = useState<Appointment | null>(null);
-  const [vaccinePackages, setVaccinePackages] = useState<VaccinePackage[]>([]);
+  const [vaccinePackage, setVaccinePackage] = useState<VaccinePackage | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingPackages, setLoadingPackages] = useState(true);
+  const [loadingPackage, setLoadingPackage] = useState(true);
   const [error, setError] = useState("");
-  const [errorPackages, setErrorPackages] = useState("");
+  const [errorPackage, setErrorPackage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
   const user = getUserInfo();
@@ -47,29 +44,27 @@ export default function Payment() {
     fetchAppointment();
   }, [id]);
 
-  // Derive facilityId from appointment or fallback to 5
-  const facilityId = useMemo(() => {
-    return appointment?.facilityVaccines[0]?.facilityId || 5;
-  }, [appointment]);
-
-  // Fetch vaccine packages when facilityId changes
+  // Fetch vaccine package if order exists
   useEffect(() => {
-    const fetchVaccinePackages = async () => {
-      try {
-        setLoadingPackages(true);
-        const packageRes = await vaccinePackageApi.getAll(facilityId);
-        setVaccinePackages(packageRes.data || []);
-      } catch {
-        setErrorPackages("Không thể tải danh sách gói vắc xin.");
-        setVaccinePackages([]);
-      } finally {
-        setLoadingPackages(false);
-      }
-    };
-    if (facilityId) {
-      fetchVaccinePackages();
+    if (appointment?.order?.packageId) {
+      const fetchVaccinePackage = async () => {
+        setLoadingPackage(true);
+        setErrorPackage("");
+        try {
+          const response = await vaccinePackageApi.getById(appointment.order!.packageId);
+          setVaccinePackage(response);
+        } catch {
+          setErrorPackage("Không thể tải thông tin gói vắc xin.");
+        } finally {
+          setLoadingPackage(false);
+        }
+      };
+      fetchVaccinePackage();
+    } else {
+      setLoadingPackage(false);
+      setVaccinePackage(null);
     }
-  }, [facilityId]);
+  }, [appointment]);
 
   // Function to calculate age
   const calculateAge = (birthDate: string): string => {
@@ -137,15 +132,15 @@ export default function Payment() {
     }
   };
 
-  if (loading || loadingPackages) return (
+  if (loading || loadingPackage) return (
     <div className="p-8 text-gray-700 text-center flex justify-center items-center bg-gray-50 rounded-lg">
       <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-indigo-600 mr-2"></div>
       Đang tải thông tin...
     </div>
   );
-  if (error || errorPackages) return (
+  if (error || errorPackage) return (
     <div className="p-8 text-rose-600 text-center bg-rose-50 rounded-lg">
-      {error || errorPackages}
+      {error || errorPackage}
     </div>
   );
   if (!appointment) return (
@@ -159,38 +154,31 @@ export default function Payment() {
   const isPendingStatus = appointment.status === "Pending";
   const isPaidOrCompletedStatus = appointment.status === "Paid" || appointment.status === "Completed";
 
-  // Extract vaccine names from facilityVaccines
+  // Vaccine display logic
   const vaccineNames = Array.isArray(appointment.facilityVaccines)
     ? appointment.facilityVaccines.map((fv) => fv.vaccine.name)
     : [];
-
-  // Find package data based on order.packageId
-  const packageData = vaccinePackages.find(
-    (pkg) => pkg.packageId === appointment.order?.packageId
-  );
-  const packageName = packageData?.name;
-  const packageVaccineNames = packageData?.packageVaccines
-    ? packageData.packageVaccines.map((pv) => pv.facilityVaccine.vaccine.name)
+  const packageName = vaccinePackage?.name;
+  const packageVaccineNames = vaccinePackage?.packageVaccines
+    ? vaccinePackage.packageVaccines.map((pv) => pv.facilityVaccine.vaccine.name)
     : [];
 
-  // Combine individual vaccines and package details
   const vaccineDisplayParts: string[] = [];
-  if (vaccineNames.length > 0) {
+  if (appointment.order && packageName) {
+    const packageDisplay = packageVaccineNames.length > 0
+      ? `${packageName} (${packageVaccineNames.join(", ")})`
+      : packageName;
+    vaccineDisplayParts.push(packageDisplay);
+  } else if (vaccineNames.length > 0) {
     vaccineDisplayParts.push(vaccineNames.join(", "));
   }
-  if (packageName) {
-    const packageDisplay =
-      packageVaccineNames.length > 0
-        ? `${packageName} (${packageVaccineNames.join(", ")})`
-        : packageName;
-    vaccineDisplayParts.push(packageDisplay);
-  }
-  const vaccineDisplay =
-    vaccineDisplayParts.length > 0 ? vaccineDisplayParts.join(", ") : "-";
+  const vaccineDisplay = vaccineDisplayParts.length > 0
+    ? vaccineDisplayParts.join(", ")
+    : "Không có vắc xin";
 
   return (
-   <div>
-      <div className="mt-8 p-6 bg-white shadow rounded-xl">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
+      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-6">
         <Button
           type="button"
           className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors mb-6"
@@ -198,9 +186,7 @@ export default function Payment() {
         >
           Quay lại
         </Button>
-        <div className="max-w-4xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-800 mb-6 bg-gradient-to-r from-blue-500 to-green-500 text-white p-4 rounded-t-lg">
-          Quy trình tiêm chủng</h2>
+        <h2 className="text-3xl font-bold text-indigo-900 mb-6">Quy trình tiêm chủng</h2>
         <div className="mb-8">
           <VaccinationSteps currentStep={2} />
         </div>
@@ -311,7 +297,7 @@ export default function Payment() {
               {submitting ? "Đang xử lý..." : "Xác nhận thanh toán"}
             </AntButton>
           )}
-          {(isPaidOrCompletedStatus || !isPendingStatus && !isApprovalStatus) && (
+          {(isPaidOrCompletedStatus || (!isPendingStatus && !isApprovalStatus)) && (
             <AntButton
               type="primary"
               onClick={handleContinue}
@@ -332,7 +318,6 @@ export default function Payment() {
               {submitMessage}
             </span>
           )}
-        </div>
         </div>
       </div>
     </div>

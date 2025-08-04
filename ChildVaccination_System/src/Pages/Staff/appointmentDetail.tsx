@@ -16,9 +16,9 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
   const navigate = useNavigate();
   const child = appointment.child;
   const [isHistoryVisible, setIsHistoryVisible] = useState(false);
-  const [vaccinePackages, setVaccinePackages] = useState<VaccinePackage[]>([]);
-  const [loadingPackages, setLoadingPackages] = useState<boolean>(false);
-  const [errorPackages, setErrorPackages] = useState<string>("");
+  const [vaccinePackage, setVaccinePackage] = useState<VaccinePackage | null>(null);
+  const [loadingPackage, setLoadingPackage] = useState<boolean>(false);
+  const [errorPackage, setErrorPackage] = useState<string>("");
   const [vaccineProfiles, setVaccineProfiles] = useState<VaccineProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(false);
   const [errorProfiles, setErrorProfiles] = useState<string>("");
@@ -65,6 +65,26 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
     }
   }, [diseaseMap]);
 
+  // Fetch vaccine package if order exists
+  useEffect(() => {
+    if (appointment.order?.packageId) {
+      const fetchVaccinePackage = async () => {
+        setLoadingPackage(true);
+        setErrorPackage("");
+        try {
+          const response = await vaccinePackageApi.getById(appointment.order!.packageId);
+          setVaccinePackage(response);
+        } catch {
+          setErrorPackage("Không thể tải thông tin gói vắc xin.");
+        } finally {
+          setLoadingPackage(false);
+        }
+      };
+      fetchVaccinePackage();
+    }
+  }, [appointment.order]);
+
+  // Fetch vaccine profiles
   useEffect(() => {
     if (!child?.childId) return;
     setLoadingProfiles(true);
@@ -75,24 +95,6 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
       .catch(() => setErrorProfiles("Không thể tải lịch sử tiêm chủng."))
       .finally(() => setLoadingProfiles(false));
   }, [child?.childId]);
-
-  // Fetch vaccine packages
-  useEffect(() => {
-    const fetchVaccinePackages = async () => {
-      const facilityId = appointment.facilityVaccines[0]?.facilityId || 5;
-      setLoadingPackages(true);
-      setErrorPackages("");
-      try {
-        const response = await vaccinePackageApi.getAll(facilityId);
-        setVaccinePackages(response.data || []);
-      } catch {
-        setErrorPackages("Không thể tải danh sách gói vắc xin.");
-      } finally {
-        setLoadingPackages(false);
-      }
-    };
-    fetchVaccinePackages();
-  }, [appointment.facilityVaccines]);
 
   // Function to calculate age
   const calculateAge = (birthDate: string) => {
@@ -114,26 +116,23 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
     }
   };
 
+  // Vaccine display logic
   const vaccineNames = Array.isArray(appointment.facilityVaccines)
     ? appointment.facilityVaccines.map((fv: FacilityVaccine) => fv.vaccine.name)
     : [];
-
-  // Find package data based on order.packageId
-  const packageData = vaccinePackages.find(pkg => pkg.packageId === appointment.order?.packageId);
-  const packageName = packageData?.name;
-  const packageVaccineNames = packageData?.packageVaccines
-    ? packageData.packageVaccines.map(pv => pv.facilityVaccine.vaccine.name)
+  const packageName = vaccinePackage?.name;
+  const packageVaccineNames = vaccinePackage?.packageVaccines
+    ? vaccinePackage.packageVaccines.map(pv => pv.facilityVaccine.vaccine.name)
     : [];
 
   const vaccineDisplayParts: string[] = [];
-  if (vaccineNames.length > 0) {
-    vaccineDisplayParts.push(vaccineNames.join(", "));
-  }
-  if (packageName) {
+  if (appointment.order && packageName) {
     const packageDisplay = packageVaccineNames.length > 0
       ? `${packageName} (${packageVaccineNames.join(", ")})`
       : packageName;
     vaccineDisplayParts.push(packageDisplay);
+  } else if (vaccineNames.length > 0) {
+    vaccineDisplayParts.push(vaccineNames.join(", "));
   }
   const vaccineDisplay = vaccineDisplayParts.length > 0
     ? vaccineDisplayParts.join(", ")
@@ -161,13 +160,13 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
           <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
             Thông tin cuộc hẹn
           </h3>
-          {loadingPackages ? (
+          {loadingPackage ? (
             <div className="flex justify-center items-center py-4 bg-gray-50 rounded-lg">
               <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-indigo-600 mr-2"></div>
-              <span className="text-gray-600">Đang tải gói vắc xin...</span>
+              <span className="text-gray-600">Đang tải thông tin gói vắc xin...</span>
             </div>
-          ) : errorPackages ? (
-            <div className="bg-rose-50 text-rose-600 p-4 rounded-lg text-center">{errorPackages}</div>
+          ) : errorPackage ? (
+            <div className="bg-rose-50 text-rose-600 p-4 rounded-lg text-center">{errorPackage}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">

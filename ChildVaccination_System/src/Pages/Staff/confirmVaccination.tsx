@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import VaccinationSteps from "@/Components/VaccinationStep";
 import { Button as AntButton, message } from "antd";
@@ -12,14 +12,13 @@ export default function ConfirmVaccination() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [appointment, setAppointment] = useState<Appointment | null>(null);
-  const [vaccinePackages, setVaccinePackages] = useState<VaccinePackage[]>([]);
+  const [vaccinePackage, setVaccinePackage] = useState<VaccinePackage | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingPackages, setLoadingPackages] = useState(true);
+  const [loadingPackage, setLoadingPackage] = useState(true);
   const [error, setError] = useState("");
-  const [errorPackages, setErrorPackages] = useState("");
+  const [errorPackage, setErrorPackage] = useState("");
   const user = getUserInfo();
 
-  // Fetch appointment data
   useEffect(() => {
     const fetchAppointment = async () => {
       try {
@@ -43,29 +42,27 @@ export default function ConfirmVaccination() {
     fetchAppointment();
   }, [id]);
 
-  // Derive facilityId from appointment or fallback to 5
-  const facilityId = useMemo(() => {
-    return appointment?.facilityVaccines[0]?.facilityId || appointment?.order?.orderDetails[0]?.facilityVaccineId || 5;
-  }, [appointment]);
-
-  // Fetch vaccine packages when facilityId changes
+  // Fetch vaccine package if order exists
   useEffect(() => {
-    const fetchVaccinePackages = async () => {
-      try {
-        setLoadingPackages(true);
-        const packageRes = await vaccinePackageApi.getAll(facilityId);
-        setVaccinePackages(packageRes.data || []);
-      } catch {
-        setErrorPackages("Không thể tải danh sách gói vắc xin.");
-        setVaccinePackages([]);
-      } finally {
-        setLoadingPackages(false);
-      }
-    };
-    if (facilityId) {
-      fetchVaccinePackages();
+    if (appointment?.order?.packageId) {
+      const fetchVaccinePackage = async () => {
+        setLoadingPackage(true);
+        setErrorPackage("");
+        try {
+          const response = await vaccinePackageApi.getById(appointment.order!.packageId);
+          setVaccinePackage(response);
+        } catch {
+          setErrorPackage("Không thể tải thông tin gói vắc xin.");
+        } finally {
+          setLoadingPackage(false);
+        }
+      };
+      fetchVaccinePackage();
+    } else {
+      setLoadingPackage(false);
+      setVaccinePackage(null);
     }
-  }, [facilityId]);
+  }, [appointment]);
 
   // Function to calculate age
   const calculateAge = (birthDate: string): string => {
@@ -100,15 +97,15 @@ export default function ConfirmVaccination() {
     navigate(`${basePath}/appointments/${id}/step-3`);
   };
 
-  if (loading || loadingPackages) return (
+  if (loading || loadingPackage) return (
     <div className="p-6 bg-gray-50 rounded-lg max-w-4xl mx-auto flex justify-center items-center">
       <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-indigo-600 mr-2"></div>
       <span className="text-gray-600">Đang tải thông tin...</span>
     </div>
   );
-  if (error || errorPackages) return (
+  if (error || errorPackage) return (
     <div className="p-6 bg-rose-50 text-rose-600 rounded-lg max-w-4xl mx-auto text-center">
-      {error || errorPackages}
+      {error || errorPackage}
     </div>
   );
   if (!appointment) return (
@@ -122,32 +119,27 @@ export default function ConfirmVaccination() {
   const isPaidStatus = appointment.status === "Paid";
   const isApprovalOrPending = appointment.status === "Approval" || appointment.status === "Pending";
 
-  // Extract vaccine names from facilityVaccines
+  // Vaccine display logic
   const vaccineNames = Array.isArray(appointment.facilityVaccines)
     ? appointment.facilityVaccines.map(fv => fv.vaccine.name)
     : [];
-
-  // Find package data based on order.packageId
-  const packageData = vaccinePackages.find(pkg => pkg.packageId === appointment.order?.packageId);
-  const packageName = packageData?.name;
-  const packageVaccineNames = packageData?.packageVaccines
-    ? packageData.packageVaccines.map(pv => pv.facilityVaccine.vaccine.name)
+  const packageName = vaccinePackage?.name;
+  const packageVaccineNames = vaccinePackage?.packageVaccines
+    ? vaccinePackage.packageVaccines.map(pv => pv.facilityVaccine.vaccine.name)
     : [];
 
-  // Combine individual vaccines and package details
   const vaccineDisplayParts: string[] = [];
-  if (vaccineNames.length > 0) {
-    vaccineDisplayParts.push(vaccineNames.join(", "));
-  }
-  if (packageName) {
+  if (appointment.order && packageName) {
     const packageDisplay = packageVaccineNames.length > 0
       ? `${packageName} (${packageVaccineNames.join(", ")})`
       : packageName;
     vaccineDisplayParts.push(packageDisplay);
+  } else if (vaccineNames.length > 0) {
+    vaccineDisplayParts.push(vaccineNames.join(", "));
   }
   const vaccineDisplay = vaccineDisplayParts.length > 0
     ? vaccineDisplayParts.join(", ")
-    : "-";
+    : "Không có vắc xin";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
