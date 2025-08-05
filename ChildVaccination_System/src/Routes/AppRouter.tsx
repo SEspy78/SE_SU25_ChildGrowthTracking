@@ -134,6 +134,7 @@ import ScheduleSlotPage from "@/Pages/Manager/scheduleSlot";
 import SurveyManagement from "@/Pages/Manager/surveyManagement";
 import DoctorConfirmVaccination from "@/Pages/Doctor/doctorVaccination";
 import CompletedVaccinationInfo from "@/Pages/Staff/finishVaccination";
+import PaymentAccountManagement from "@/Pages/Manager/paymentAccount";
 const App: React.FC = () => {
   return (
     <Router>
@@ -204,7 +205,7 @@ const App: React.FC = () => {
     <Route path="facility-management" element={<FacilityDetail />} />
     <Route path="vaccine-packages" element={<VaccinePackageManagement />} />
     <Route path="schedule-slots" element={<ScheduleSlotPage />} />
-
+    <Route path="payment-accounts" element={<PaymentAccountManagement/>} />
     </Route>
     {/* Manager */}
 
