@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { appointmentApi, type Appointment } from "@/api/appointmentAPI";
 import { vaccinePackageApi, type VaccinePackage } from "@/api/vaccinePackageApi";
+import { FacilityPaymentAccountApi, type AllPaymentAccountResponse, type PaymentAccount } from "@/api/facilityPaymentAPI";
 import { getUserInfo } from "@/lib/storage";
 import { Button as AntButton, message } from "antd";
 import VaccinationSteps from "@/Components/VaccinationStep";
@@ -18,9 +19,12 @@ export default function Payment() {
   const [errorPackage, setErrorPackage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
+  const [accounts, setAccounts] = useState<PaymentAccount[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [errorAccounts, setErrorAccounts] = useState("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash"); // Theo dõi phương thức thanh toán
   const user = getUserInfo();
 
-  // Fetch appointment data
   useEffect(() => {
     const fetchAppointment = async () => {
       try {
@@ -66,7 +70,24 @@ export default function Payment() {
     }
   }, [appointment]);
 
-  // Function to calculate age
+  useEffect(() => {
+    if (user?.facilityId) {
+      const fetchAccounts = async () => {
+        setLoadingAccounts(true);
+        setErrorAccounts("");
+        try {
+          const response: AllPaymentAccountResponse = await FacilityPaymentAccountApi.getTrueAccount(user.facilityId);
+          setAccounts(response.data);
+        } catch {
+          setErrorAccounts("Không thể tải thông tin tài khoản thanh toán.");
+        } finally {
+          setLoadingAccounts(false);
+        }
+      };
+      fetchAccounts();
+    }
+  }, [user?.facilityId]);
+
   const calculateAge = (birthDate: string): string => {
     if (!birthDate) return "Không có";
     const birth = new Date(birthDate);
@@ -123,6 +144,33 @@ export default function Payment() {
     }
   };
 
+  const handleContinueWithPayment = async () => {
+    if (!id || !appointment) return;
+    setSubmitting(true);
+    setSubmitMessage("");
+    try {
+      await appointmentApi.updateAppointmentStatus(Number(id), {
+        status: "Paid",
+        note: "Xác nhận thanh toán từ order",
+      });
+      setSubmitMessage("Xác nhận thanh toán thành công!");
+      setAppointment({ ...appointment, status: "Paid" });
+      message.success("Xác nhận thanh toán thành công!");
+      setTimeout(() => {
+        if (user?.position === "Doctor") {
+          navigate(`/doctor/appointments/${id}/step-4`);
+        } else {
+          navigate(`/staff/appointments/${id}/step-4`);
+        }
+      }, 1200);
+    } catch {
+      setSubmitMessage("Có lỗi khi xác nhận thanh toán.");
+      message.error("Có lỗi khi xác nhận thanh toán.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleContinue = () => {
     if (!id) return;
     if (user?.position === "Doctor") {
@@ -132,15 +180,15 @@ export default function Payment() {
     }
   };
 
-  if (loading || loadingPackage) return (
+  if (loading || loadingPackage || loadingAccounts) return (
     <div className="p-8 text-gray-700 text-center flex justify-center items-center bg-gray-50 rounded-lg">
       <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-indigo-600 mr-2"></div>
       Đang tải thông tin...
     </div>
   );
-  if (error || errorPackage) return (
+  if (error || errorPackage || errorAccounts) return (
     <div className="p-8 text-rose-600 text-center bg-rose-50 rounded-lg">
-      {error || errorPackage}
+      {error || errorPackage || errorAccounts}
     </div>
   );
   if (!appointment) return (
@@ -176,6 +224,18 @@ export default function Payment() {
     ? vaccineDisplayParts.join(", ")
     : "Không có vắc xin";
 
+  // Handle payment method change
+  const handlePaymentMethodChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSelectedPaymentMethod(value);
+    // Remove message.warning, handle notification inline
+  };
+
+  // Determine payment section visibility based on order and status
+  const showPaymentMethod = isApprovalStatus && (!appointment.order || (appointment.order && appointment.order.status === "Pending"));
+  const showPaidNotification = appointment.order && appointment.order.status === "Paid";
+  const showContinueWithPayment = appointment.order && appointment.order.status === "Paid" && appointment.status !== "Paid";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
       <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-6">
@@ -206,6 +266,14 @@ export default function Payment() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
             <span className="font-semibold">Vui lòng hoàn thiện khảo sát trước khi tiêm để thanh toán.</span>
+          </div>
+        )}
+        {showPaidNotification && (
+          <div className="mb-8 p-4 bg-emerald-100 text-emerald-800 rounded-lg flex items-center">
+            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span className="font-semibold">Đã thanh toán. Vui lòng tiếp tục quy trình.</span>
           </div>
         )}
 
@@ -249,7 +317,7 @@ export default function Payment() {
         </div>
 
         {/* Payment Method Selection */}
-        {!isPaidOrCompletedStatus && isApprovalStatus && (
+        {showPaymentMethod && (
           <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-teal-500">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Phương thức thanh toán</h3>
             <div className="flex flex-col gap-3">
@@ -258,7 +326,8 @@ export default function Payment() {
                   type="radio"
                   name="paymentMethod"
                   value="cash"
-                  defaultChecked
+                  checked={selectedPaymentMethod === "cash"}
+                  onChange={handlePaymentMethodChange}
                   className="h-4 w-4 text-teal-600 focus:ring-teal-500"
                 />
                 <span className="text-gray-700">Tiền mặt</span>
@@ -268,10 +337,39 @@ export default function Payment() {
                   type="radio"
                   name="paymentMethod"
                   value="bank"
+                  checked={selectedPaymentMethod === "bank"}
+                  onChange={handlePaymentMethodChange}
                   className="h-4 w-4 text-teal-600 focus:ring-teal-500"
                 />
                 <span className="text-gray-700">Chuyển khoản qua mã QR</span>
               </label>
+              {selectedPaymentMethod === "bank" && accounts.length === 0 && (
+                <div className="ml-6 text-rose-600 text-sm">
+                  Chưa có thông tin tài khoản, vui lòng thêm tài khoản thanh toán.
+                </div>
+              )}
+              {selectedPaymentMethod === "bank" && accounts.length > 0 && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <h4 className="text-md font-semibold text-gray-800 mb-2">Tài khoản thanh toán:</h4>
+                  {accounts.map((account) => (
+                    <div key={account.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                      <div>
+                        <p className="text-gray-700">Ngân hàng: {account.bankName}</p>
+                        <p className="text-gray-700">Số TK: {account.accountNumber}</p>
+                        <p className="text-gray-700">Chủ TK: {account.accountHolder}</p>
+                      </div>
+                      <a
+                        href={account.qrcodeImageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-teal-600 hover:underline"
+                      >
+                        Xem QR
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -286,7 +384,7 @@ export default function Payment() {
           >
             Trở lại
           </AntButton>
-          {!isPaidOrCompletedStatus && isApprovalStatus && (
+          {showPaymentMethod && !isPaidOrCompletedStatus && isApprovalStatus && (
             <AntButton
               type="primary"
               onClick={handleConfirmPayment}
@@ -295,6 +393,17 @@ export default function Payment() {
               className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
             >
               {submitting ? "Đang xử lý..." : "Xác nhận thanh toán"}
+            </AntButton>
+          )}
+          {showContinueWithPayment && (
+            <AntButton
+              type="primary"
+              onClick={handleContinueWithPayment}
+              loading={submitting}
+              disabled={submitting}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+            >
+              {submitting ? "Đang xử lý..." : "Tiếp tục"}
             </AntButton>
           )}
           {(isPaidOrCompletedStatus || (!isPendingStatus && !isApprovalStatus)) && (

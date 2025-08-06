@@ -288,7 +288,6 @@ export default function DoctorConfirmVaccination() {
   const vaccineDisplay =
     vaccineDisplayParts.length > 0 ? vaccineDisplayParts.join(", ") : "-"
 
-  // Get selected facility vaccine details
   const selectedFacilityVaccine = facilityVaccines.find(fv => fv.facilityVaccineId === facilityVaccineId)
 
   return (

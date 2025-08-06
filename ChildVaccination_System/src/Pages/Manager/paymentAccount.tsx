@@ -44,8 +44,11 @@ const PaymentAccountManagement: React.FC = () => {
     const fetchAccounts = async () => {
       setLoading(true);
       try {
-        const response: AllPaymentAccountResponse =
-          await FacilityPaymentAccountApi.getAllAccount(pageIndex, pageSize);
+        if (!user?.facilityId) {
+          setError("Không tìm thấy ID cơ sở.");
+          return;
+        }
+        const response: AllPaymentAccountResponse = await FacilityPaymentAccountApi.getTrueAccount(user.facilityId);
         setAccounts(response.data);
         setTotalCount(response.totalCount);
       } catch (err) {
@@ -55,7 +58,7 @@ const PaymentAccountManagement: React.FC = () => {
       }
     };
     fetchAccounts();
-  }, [pageIndex, pageSize]);
+  }, [user?.facilityId]);
 
   // Handle file input change
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,8 +129,7 @@ const PaymentAccountManagement: React.FC = () => {
         isActive: true,
       });
       setIsModalOpen(false); // Đóng modal khi thành công
-      const response: AllPaymentAccountResponse =
-        await FacilityPaymentAccountApi.getAllAccount(pageIndex, pageSize);
+      const response: AllPaymentAccountResponse = await FacilityPaymentAccountApi.getTrueAccount(user?.facilityId || 0);
       setAccounts(response.data);
       setTotalCount(response.totalCount);
     } catch (err) {
@@ -144,8 +146,7 @@ const PaymentAccountManagement: React.FC = () => {
       setMessage("Xóa tài khoản thành công!");
       setIsDeleteConfirmOpen(false);
       setAccountToDelete(null);
-      const response: AllPaymentAccountResponse =
-        await FacilityPaymentAccountApi.getAllAccount(pageIndex, pageSize);
+      const response: AllPaymentAccountResponse = await FacilityPaymentAccountApi.getTrueAccount(user?.facilityId || 0);
       setAccounts(response.data);
       setTotalCount(response.totalCount);
     } catch (err) {

@@ -38,6 +38,10 @@ export const FacilityPaymentAccountApi = {
     });
   },
 
+  getTrueAccount : async (facilityId: number): Promise<AllPaymentAccountResponse> => {
+      return await axiosClient.get(`api/VaccinationFacilityPaymentAccount/byFacility/${facilityId}?isActive=true&pageIndex=1&pageSize=10`)
+  },
+
   createAccount: async (data: FormData): Promise<any> => {
     return await axiosClient.post(`api/VaccinationFacilityPaymentAccount`, data, {
       headers: {
