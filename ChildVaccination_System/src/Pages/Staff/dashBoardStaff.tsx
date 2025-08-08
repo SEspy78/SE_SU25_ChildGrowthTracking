@@ -59,9 +59,9 @@ export default function DashboardStaff() {
     fetchData()
   }, [])
 
-  const filteredAppointments = appointments.filter(item =>
-    item.child.fullName.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredAppointments = appointments
+    .filter(item => item.child.fullName.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => b.appointmentId - a.appointmentId) // Sort by appointmentId in descending order
 
   const handleNavigateByRoleAndStatus = (appointmentId: number, status: string) => {
     const user = getUserInfo()
@@ -88,44 +88,44 @@ export default function DashboardStaff() {
 
   // Function to calculate age
   const calculateAge = (birthDate: string): string => {
-    if (!birthDate) return "Không có";
+    if (!birthDate) return "Không có"
 
-    const birth = new Date(birthDate);
-    const today = new Date();
+    const birth = new Date(birthDate)
+    const today = new Date()
 
-    if (isNaN(birth.getTime())) return "Không có";
+    if (isNaN(birth.getTime())) return "Không có"
 
     // Calculate the difference in milliseconds
-    const diffTime = today.getTime() - birth.getTime();
+    const diffTime = today.getTime() - birth.getTime()
     
     // Convert to days
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
 
     // Calculate weeks, months, and years
-    const weeks = Math.floor(diffDays / 7);
-    const months = Math.floor(diffDays / 30.42); // Average days in a month
-    const years = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    const dayDiff = today.getDate() - birth.getDate();
+    const weeks = Math.floor(diffDays / 7)
+    const months = Math.floor(diffDays / 30.42) // Average days in a month
+    const years = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
+    const dayDiff = today.getDate() - birth.getDate()
 
     // Adjust years if the birthday hasn't occurred this year
-    let adjustedYears = years;
+    let adjustedYears = years
     if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-      adjustedYears--;
+      adjustedYears--
     }
 
     // Determine the appropriate unit
     if (diffDays <= 90) {
       // Less than or equal to 3 months, show in weeks
-      return `${weeks} tuần`;
+      return `${weeks} tuần`
     } else if (months < 24) {
       // Less than 2 years, show in months
-      return `${months} tháng`;
+      return `${months} tháng`
     } else {
       // 2 years or older, show in years
-      return `${adjustedYears} tuổi`;
+      return `${adjustedYears} tuổi`
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">

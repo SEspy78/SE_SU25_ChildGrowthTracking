@@ -80,7 +80,7 @@ export const vaccinePackageApi = {
   getAll: async (facilityId: number): Promise<VaccinePackageResponse> => {
     return await axiosClient.get(`api/VaccinePackages?facilityId=${facilityId}`);
   },
-  getById: async (packageId: number): Promise<VaccinePackage> => {
+  getById: async (packageId: number | null): Promise<VaccinePackage> => {
     return await axiosClient.get(`api/VaccinePackages/${packageId}`);
   },
    deleteVaccinePackage: async (packageId: number): Promise<VaccinePackage> => {

@@ -66,12 +66,12 @@ export default function AdminLayout() {
     </Link>
 
     <Link
-      to="/admin/statistics"
+      to="/admin/order"
       className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
-        ${location.pathname.startsWith('/admin/statistics') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-blue-100 hover:text-blue-700'}`}
+        ${location.pathname.startsWith('/admin/order') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-blue-100 hover:text-blue-700'}`}
     >
       <BarChart2 className="w-5 h-5" />
-      Thống kê
+      Order
     </Link>
   </nav>
 </aside>

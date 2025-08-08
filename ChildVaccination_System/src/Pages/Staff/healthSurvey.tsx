@@ -228,8 +228,10 @@ export default function HealthSurvey() {
   const child = appointment.child;
 
   return (
-    <div className="mt-8 p-6 bg-white shadow rounded-xl">
-      <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
+      
+      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-6">
+        <div className="flex justify-between items-center mb-6">
         <Button
           type="button"
           className="bg-gray-300 hover:bg-blue-400 text-black px-6 py-2 rounded-full transition-colors"
@@ -250,8 +252,7 @@ export default function HealthSurvey() {
           </Button>
         )}
       </div>
-      <div className="max-w-4xl mx-auto">
-              <h2 className="text-3xl font-bold text-gray-800 mb-6 bg-gradient-to-r from-blue-500 to-green-500 text-white p-4 rounded-t-lg">
+              <h2 className="text-3xl font-bold text-indigo-900 mb-6">
                 Quy trình tiêm chủng
               </h2>
 

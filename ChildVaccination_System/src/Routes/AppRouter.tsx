@@ -135,6 +135,8 @@ import SurveyManagement from "@/Pages/Manager/surveyManagement";
 import DoctorConfirmVaccination from "@/Pages/Doctor/doctorVaccination";
 import CompletedVaccinationInfo from "@/Pages/Staff/finishVaccination";
 import PaymentAccountManagement from "@/Pages/Manager/paymentAccount";
+import OrderManagement from "@/Pages/Manager/orderManagement";
+import OrderManagementStyled from "@/Pages/Admin/order";
 const App: React.FC = () => {
   return (
     <Router>
@@ -185,10 +187,11 @@ const App: React.FC = () => {
       <AdminLayout />
     </ProtectedRoute>
   }>
-    <Route path="dashboard" element={<TodaySchedule />} />
     <Route path="members" element={<MemberManagement />} />
     <Route path="vaccines" element={<VaccineManagement />} />
     <Route path="facilities" element={<FacilityManagement />} />
+    <Route path="order" element={<OrderManagementStyled />} />
+
     </Route>
     {/* Admin */}
 
@@ -206,6 +209,7 @@ const App: React.FC = () => {
     <Route path="vaccine-packages" element={<VaccinePackageManagement />} />
     <Route path="schedule-slots" element={<ScheduleSlotPage />} />
     <Route path="payment-accounts" element={<PaymentAccountManagement/>} />
+    <Route path="order" element={<OrderManagement/>} />
     </Route>
     {/* Manager */}
 

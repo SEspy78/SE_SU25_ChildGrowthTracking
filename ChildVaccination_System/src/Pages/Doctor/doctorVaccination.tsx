@@ -1,8 +1,8 @@
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import VaccinationSteps from "@/Components/VaccinationStep"
-import { Button as AntButton, message, DatePicker, Modal } from 'antd'
-import { appointmentApi, type Appointment, type finishVaccinationPayload } from "@/api/appointmentAPI"
+import { Button as AntButton, message, DatePicker, Modal, Tooltip } from 'antd'
+import { appointmentApi, type Appointment, type finishVaccinationPayload, orderApi } from "@/api/appointmentAPI"
 import { vaccinePackageApi, type VaccinePackage } from "@/api/vaccinePackageApi"
 import { facilityVaccineApi, type FacilityVaccine } from "@/api/vaccineApi"
 import { getUserInfo } from "@/lib/storage"
@@ -13,14 +13,16 @@ export default function DoctorConfirmVaccination() {
   const { id } = useParams<{ id?: string }>()
   const navigate = useNavigate()
   const [appointment, setAppointment] = useState<Appointment | null>(null)
-  const [vaccinePackages, setVaccinePackages] = useState<VaccinePackage[]>([])
+  const [vaccinePackage, setVaccinePackage] = useState<VaccinePackage | null>(null)
   const [facilityVaccines, setFacilityVaccines] = useState<FacilityVaccine[]>([])
+  const [vaccineQuantities, setVaccineQuantities] = useState<Map<number, number>>(new Map())
   const [loading, setLoading] = useState(true)
-  const [loadingPackages, setLoadingPackages] = useState(true)
+  const [loadingPackage, setLoadingPackage] = useState(true)
   const [loadingFacilityVaccines, setLoadingFacilityVaccines] = useState(true)
   const [error, setError] = useState("")
-  const [errorPackages, setErrorPackages] = useState("")
+  const [errorPackage, setErrorPackage] = useState("")
   const [errorFacilityVaccines, setErrorFacilityVaccines] = useState("")
+  const [vaccineStatusMessage, setVaccineStatusMessage] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [submitMessage, setSubmitMessage] = useState("")
   const [postVaccinationNotes, setPostVaccinationNotes] = useState("")
@@ -32,7 +34,6 @@ export default function DoctorConfirmVaccination() {
   const [vaccinationConfirmed, setVaccinationConfirmed] = useState(false)
   const user = getUserInfo()
 
-  // Fetch appointment data and facility vaccine details
   useEffect(() => {
     const fetchAppointment = async () => {
       try {
@@ -47,9 +48,10 @@ export default function DoctorConfirmVaccination() {
         console.log("Appointment Response:", appointmentRes)
         const appointmentData: Appointment = appointmentRes.appointments?.[0] || appointmentRes
         console.log("Appointment Data:", appointmentData)
+        console.log("Order:", appointmentData.order)
+        console.log("Facility Vaccines:", appointmentData.facilityVaccines)
         setAppointment(appointmentData)
 
-        // Extract facilityVaccineIds from orderDetails or facilityVaccines
         let facilityVaccineIds: number[] = []
         if (appointmentData.order && Array.isArray(appointmentData.order.orderDetails) && appointmentData.order.orderDetails.length > 0) {
           console.log("Order Details:", appointmentData.order.orderDetails)
@@ -64,12 +66,12 @@ export default function DoctorConfirmVaccination() {
             .map(fv => fv.facilityVaccineId)
           console.log("Facility Vaccine IDs from Facility Vaccines:", facilityVaccineIds)
         }
+        console.log("Final Facility Vaccine IDs:", facilityVaccineIds)
 
-        // Fetch FacilityVaccine details
         if (facilityVaccineIds.length > 0) {
           const vaccinePromises = facilityVaccineIds.map(id => facilityVaccineApi.getById(id))
           const vaccineResults = await Promise.allSettled(vaccinePromises)
-          const vaccines: FacilityVaccine[] = []
+          let vaccines: FacilityVaccine[] = []
           vaccineResults.forEach((result, index) => {
             if (result.status === "fulfilled") {
               const vaccine = result.value
@@ -82,12 +84,40 @@ export default function DoctorConfirmVaccination() {
               console.error(`Failed to fetch facility vaccine ${facilityVaccineIds[index]}:`, result.reason)
             }
           })
-          console.log("Fetched Facility Vaccines:", vaccines)
-          setFacilityVaccines(vaccines)
-          if (vaccines.length > 0) {
-            setFacilityVaccineId(vaccines[0].facilityVaccineId)
+          console.log("Fetched Vaccines:", vaccines)
+
+          // Fetch order to check remainingQuantity
+          const quantities = new Map<number, number>()
+          if (appointmentData.order?.orderId) {
+            try {
+              const order = await orderApi.getOrderById(appointmentData.order.orderId)
+              console.log("Fetched Order:", order)
+              console.log("Order Details:", order.orderDetails)
+              vaccines.forEach(vaccine => {
+                const orderDetail = order.orderDetails.find(detail => detail.facilityVaccineId === vaccine.facilityVaccineId)
+                const remainingQuantity = orderDetail?.remainingQuantity ?? 1
+                console.log(`Vaccine ID ${vaccine.facilityVaccineId} Remaining Quantity:`, remainingQuantity)
+                quantities.set(vaccine.facilityVaccineId, remainingQuantity)
+              })
+            } catch (err) {
+              console.error("Error fetching order for remaining quantity:", err)
+              vaccines.forEach(vaccine => quantities.set(vaccine.facilityVaccineId, 1)) // Default to 1 if order fetch fails
+            }
           } else {
-            setErrorFacilityVaccines("Không thể tải thông tin chi tiết vắc xin.")
+            vaccines.forEach(vaccine => quantities.set(vaccine.facilityVaccineId, 1)) // Default to 1 if no order
+          }
+
+          console.log("Vaccine Quantities:", quantities)
+          setFacilityVaccines(vaccines)
+          setVaccineQuantities(quantities)
+
+          // Select the first vaccine with remainingQuantity > 0
+          const firstAvailableVaccine = vaccines.find(vaccine => (quantities.get(vaccine.facilityVaccineId) ?? 1) > 0)
+          if (firstAvailableVaccine) {
+            setFacilityVaccineId(firstAvailableVaccine.facilityVaccineId)
+            await handleVaccineSelect(firstAvailableVaccine.facilityVaccineId)
+          } else {
+            setVaccineStatusMessage("Tất cả vắc xin đã được tiêm hết.")
           }
         } else {
           setFacilityVaccines([])
@@ -106,31 +136,27 @@ export default function DoctorConfirmVaccination() {
     fetchAppointment()
   }, [id])
 
-  // Derive facilityId from appointment or fallback to 5
-  const facilityId = useMemo(() => {
-    return appointment?.facilityVaccines[0]?.facilityId || appointment?.order?.orderDetails[0]?.facilityVaccineId || 5
+  useEffect(() => {
+    if (appointment?.order?.packageId) {
+      const fetchVaccinePackage = async () => {
+        setLoadingPackage(true)
+        setErrorPackage("")
+        try {
+          const response = await vaccinePackageApi.getById(appointment.order!.packageId)
+          setVaccinePackage(response)
+        } catch {
+          setErrorPackage("Không thể tải thông tin gói vắc xin.")
+        } finally {
+          setLoadingPackage(false)
+        }
+      }
+      fetchVaccinePackage()
+    } else {
+      setLoadingPackage(false)
+      setVaccinePackage(null)
+    }
   }, [appointment])
 
-  // Fetch vaccine packages when facilityId changes
-  useEffect(() => {
-    const fetchVaccinePackages = async () => {
-      try {
-        setLoadingPackages(true)
-        const packageRes = await vaccinePackageApi.getAll(facilityId)
-        setVaccinePackages(packageRes.data || [])
-      } catch {
-        setErrorPackages("Không thể tải danh sách gói vắc xin.")
-        setVaccinePackages([])
-      } finally {
-        setLoadingPackages(false)
-      }
-    }
-    if (facilityId) {
-      fetchVaccinePackages()
-    }
-  }, [facilityId])
-
-  // Function to calculate age
   const calculateAge = (birthDate: string): string => {
     if (!birthDate) return "Không có"
     const birth = new Date(birthDate)
@@ -139,7 +165,7 @@ export default function DoctorConfirmVaccination() {
 
     const diffMs = today.getTime() - birth.getTime()
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-    const diffMonths = Math.floor(diffDays / 30.436875) // Average month length
+    const diffMonths = Math.floor(diffDays / 30.436875)
     const diffWeeks = Math.floor(diffDays / 7)
 
     if (diffMonths >= 12) {
@@ -167,15 +193,50 @@ export default function DoctorConfirmVaccination() {
     }
   }
 
-  const handleVaccineSelect = (facilityVaccineId: number) => {
+  const handleVaccineSelect = async (facilityVaccineId: number) => {
+    const remainingQuantity = vaccineQuantities.get(facilityVaccineId) ?? 1
+    if (remainingQuantity === 0) {
+      message.error("Vắc xin này đã được tiêm hết, vui lòng chọn vắc xin khác.")
+      return
+    }
+
     setFacilityVaccineId(facilityVaccineId)
     console.log("Selected Facility Vaccine ID:", facilityVaccineId)
+
+    try {
+      const facilityVaccine = await facilityVaccineApi.getById(facilityVaccineId)
+      const numberOfDoses = facilityVaccine.vaccine?.numberOfDoses || 1
+
+      if (appointment?.order?.orderId) {
+        const order = await orderApi.getOrderById(appointment.order.orderId)
+        console.log("Fetched Order:", order)
+        const orderDetail = order.orderDetails.find(detail => detail.facilityVaccineId === facilityVaccineId)
+        const remainingQuantity = orderDetail?.remainingQuantity ?? 1
+        console.log("Remaining Quantity:", remainingQuantity)
+
+        const calculatedDoseNum = Math.max(1, numberOfDoses - remainingQuantity + 1)
+        console.log("Calculated Dose Number:", calculatedDoseNum)
+        setDoseNum(calculatedDoseNum)
+      } else {
+        setDoseNum(1)
+        console.warn("No order found for appointment, defaulting doseNum to 1")
+      }
+    } catch (err) {
+      console.error("Error calculating dose number:", err)
+      setDoseNum(1)
+      message.error("Không thể tính toán số liều mặc định.")
+    }
   }
 
   const handleConfirmVaccination = async () => {
     if (!id || !appointment || !facilityVaccineId || !expectedDateForNextDose || doseNum < 1) {
       setSubmitMessage("Vui lòng nhập đầy đủ thông tin hợp lệ.")
       message.error("Vui lòng nhập đầy đủ thông tin hợp lệ.")
+      return
+    }
+    if ((vaccineQuantities.get(facilityVaccineId) ?? 1) === 0) {
+      setSubmitMessage("Vắc xin đã chọn đã được tiêm hết.")
+      message.error("Vắc xin đã chọn đã được tiêm hết.")
       return
     }
     setSubmitting(true)
@@ -237,15 +298,15 @@ export default function DoctorConfirmVaccination() {
     navigate(`${basePath}/appointments`)
   }
 
-  if (loading || loadingPackages || loadingFacilityVaccines) return (
+  if (loading || loadingPackage || loadingFacilityVaccines) return (
     <div className="p-8 text-gray-700 text-center flex justify-center items-center bg-gray-50 rounded-lg">
       <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-indigo-600 mr-2"></div>
       Đang tải thông tin...
     </div>
   )
-  if (error || errorPackages || errorFacilityVaccines) return (
+  if (error || errorPackage || errorFacilityVaccines) return (
     <div className="p-8 text-rose-600 text-center bg-rose-50 rounded-lg">
-      {error || errorPackages || errorFacilityVaccines}
+      {error || errorPackage || errorFacilityVaccines}
     </div>
   )
   if (!appointment) return (
@@ -258,35 +319,28 @@ export default function DoctorConfirmVaccination() {
   const isCompletedStatus = appointment.status === "Completed"
   const isPayedStatus = appointment.status === "Paid"
   const isCancelledStatus = appointment.status === "Cancelled"
+  const hasAvailableVaccines = facilityVaccines.some(fv => (vaccineQuantities.get(fv.facilityVaccineId) ?? 1) > 0)
 
-  // Extract vaccine names from facilityVaccines
   const vaccineNames = Array.isArray(appointment.facilityVaccines)
-    ? appointment.facilityVaccines.map((fv) => fv.vaccine.name)
+    ? appointment.facilityVaccines.map(fv => fv.vaccine?.name || `ID: ${fv.facilityVaccineId}`)
+    : []
+  const packageName = vaccinePackage?.name
+  const packageVaccineNames = vaccinePackage?.packageVaccines
+    ? vaccinePackage.packageVaccines.map(pv => pv.facilityVaccine.vaccine?.name || `ID: ${pv.facilityVaccine.vaccineId}`)
     : []
 
-  // Find package data based on order.packageId
-  const packageData = vaccinePackages.find(
-    (pkg) => pkg.packageId === appointment.order?.packageId
-  )
-  const packageName = packageData?.name
-  const packageVaccineNames = packageData?.packageVaccines
-    ? packageData.packageVaccines.map((pv) => pv.facilityVaccine.vaccine.name)
-    : []
-
-  // Combine individual vaccines and package details
   const vaccineDisplayParts: string[] = []
-  if (vaccineNames.length > 0) {
+  if (appointment.order && packageName) {
+    const packageDisplay = packageVaccineNames.length > 0
+      ? `${packageName} (${packageVaccineNames.join(", ")})`
+      : packageName
+    vaccineDisplayParts.push(packageDisplay)
+  } else if (vaccineNames.length > 0) {
     vaccineDisplayParts.push(vaccineNames.join(", "))
   }
-  if (packageName) {
-    const packageDisplay =
-      packageVaccineNames.length > 0
-        ? `${packageName} (${packageVaccineNames.join(", ")})`
-        : packageName
-    vaccineDisplayParts.push(packageDisplay)
-  }
-  const vaccineDisplay =
-    vaccineDisplayParts.length > 0 ? vaccineDisplayParts.join(", ") : "-"
+  const vaccineDisplay = vaccineDisplayParts.length > 0
+    ? vaccineDisplayParts.join(", ")
+    : "Không có vắc xin"
 
   const selectedFacilityVaccine = facilityVaccines.find(fv => fv.facilityVaccineId === facilityVaccineId)
 
@@ -305,7 +359,6 @@ export default function DoctorConfirmVaccination() {
           <VaccinationSteps currentStep={3} />
         </div>
 
-        {/* Success Message */}
         {(isCompletedStatus || vaccinationConfirmed) && (
           <div className="mb-8 p-4 bg-emerald-100 text-emerald-800 rounded-lg flex items-center">
             <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -315,7 +368,6 @@ export default function DoctorConfirmVaccination() {
           </div>
         )}
 
-        {/* Patient Information Card */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-indigo-600">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Thông tin cuộc hẹn</h3>
           {isCancelledStatus && (
@@ -365,34 +417,44 @@ export default function DoctorConfirmVaccination() {
           </div>
         </div>
 
-        {/* Vaccination Details Card */}
         {!isCompletedStatus && !vaccinationConfirmed && !isCancelledStatus && isPayedStatus && (
           <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-teal-500">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Chi tiết tiêm chủng</h3>
+            {vaccineStatusMessage && (
+              <div className="mb-4 p-4 bg-yellow-100 text-yellow-700 rounded-lg">
+                {vaccineStatusMessage}
+              </div>
+            )}
             <div className="space-y-6">
               <div>
                 <label className="block text-gray-600 mb-2">Vắc xin:</label>
-                <div className="flex flex-wrap gap-4">
-                  {facilityVaccines.length > 0 ? (
-                    facilityVaccines.map(fv => (
-                      <button
+                {facilityVaccines.length > 0 ? (
+                  <div className="flex flex-wrap gap-4">
+                    {facilityVaccines.map(fv => (
+                      <Tooltip
                         key={fv.facilityVaccineId}
-                        type="button"
-                        onClick={() => handleVaccineSelect(fv.facilityVaccineId)}
-                        disabled={submitting}
-                        className={`px-4 py-2 border rounded-lg transition-colors ${
-                          facilityVaccineId === fv.facilityVaccineId
-                            ? 'bg-teal-600 text-white border-teal-600'
-                            : 'bg-white text-gray-800 border-gray-300 hover:bg-teal-100 hover:border-teal-500'
-                        }`}
+                        title={(vaccineQuantities.get(fv.facilityVaccineId) ?? 1) === 0 ? "Vắc xin này đã được tiêm hết" : ""}
                       >
-                        {fv.vaccine?.name ? `${fv.vaccine.name} ` : `ID: ${fv.facilityVaccineId}`}
-                      </button>
-                    ))
-                  ) : (
-                    <p className="text-gray-600">Không có vắc xin nào khả dụng</p>
-                  )}
-                </div>
+                        <button
+                          type="button"
+                          onClick={() => handleVaccineSelect(fv.facilityVaccineId)}
+                          disabled={submitting || (vaccineQuantities.get(fv.facilityVaccineId) ?? 1) === 0}
+                          className={`px-4 py-2 border rounded-lg transition-colors ${
+                            facilityVaccineId === fv.facilityVaccineId
+                              ? 'bg-teal-600 text-white border-teal-600'
+                              : (vaccineQuantities.get(fv.facilityVaccineId) ?? 1) === 0
+                              ? 'bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed'
+                              : 'bg-white text-gray-800 border-gray-300 hover:bg-teal-100 hover:border-teal-500'
+                          }`}
+                        >
+                          {fv.vaccine?.name ? `${fv.vaccine.name}` : `ID: ${fv.facilityVaccineId}`}
+                        </button>
+                      </Tooltip>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-600">Không có vắc xin nào được liên kết với lịch hẹn.</p>
+                )}
                 {selectedFacilityVaccine && (
                   <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                     <p><strong>Mô tả:</strong> {selectedFacilityVaccine.vaccine?.description || 'Không có'}</p>
@@ -440,7 +502,6 @@ export default function DoctorConfirmVaccination() {
           </div>
         )}
 
-        {/* Action Buttons */}
         <div className="flex justify-end space-x-4 mt-8 items-center">
           <AntButton
             type="default"
@@ -450,22 +511,12 @@ export default function DoctorConfirmVaccination() {
           >
             Trở lại
           </AntButton>
-          {!isCompletedStatus && !vaccinationConfirmed && !isCancelledStatus && (
-            <AntButton
-              type="default"
-              onClick={() => setIsCancelModalVisible(true)}
-              disabled={submitting}
-              className="bg-rose-500 hover:bg-rose-600 text-white px-6 py-2 rounded-full transition-colors"
-            >
-              Hủy lịch hẹn
-            </AntButton>
-          )}
           {!isCompletedStatus && !vaccinationConfirmed && !isCancelledStatus && isPayedStatus && (
             <AntButton
               type="primary"
               onClick={handleConfirmVaccination}
               loading={submitting}
-              disabled={submitting || !facilityVaccineId || !expectedDateForNextDose || doseNum < 1}
+              disabled={submitting || !hasAvailableVaccines || !facilityVaccineId || !expectedDateForNextDose || doseNum < 1}
               className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
             >
               {submitting ? "Đang xử lý..." : "Xác nhận tiêm chủng"}
@@ -488,7 +539,6 @@ export default function DoctorConfirmVaccination() {
           )}
         </div>
 
-        {/* Cancel Appointment Modal */}
         <Modal
           title="Hủy lịch hẹn"
           open={isCancelModalVisible}
