@@ -6,6 +6,7 @@ import {
   Building2,
   Syringe,
   BarChart2,
+  NotebookPen,
 } from "lucide-react";
 
 
@@ -72,6 +73,14 @@ export default function AdminLayout() {
     >
       <BarChart2 className="w-5 h-5" />
       Thống kê
+    </Link>
+    <Link
+      to="/admin/blogs"
+      className={`flex items-center gap-3 px-4 py-2 rounded-md transition-all duration-200
+        ${location.pathname.startsWith('/admin/blogs') ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-blue-100 hover:text-blue-700'}`}
+    >
+      <NotebookPen className="w-5 h-5" />
+      Quản lý Blog
     </Link>
   </nav>
 </aside>
