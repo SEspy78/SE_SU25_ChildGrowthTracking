@@ -19,9 +19,9 @@ export const diseaseApi = {
   getAll: async (): Promise<DiseaseResponse> => {
     return await axiosClient.get("api/Diseases");
   },
-
-  getById: async (id: number) => {
-    const response: Disease = await axiosClient.get(`api/Diseases/${id}`);
-    return response;
-  },
+  
+  getById: async (diseaseId: number): Promise<Disease> => {
+    return await axiosClient.get(`api/Diseases/${diseaseId}`);
+  },  
+ 
 };

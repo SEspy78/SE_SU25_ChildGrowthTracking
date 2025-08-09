@@ -204,6 +204,7 @@ const PaymentAccountManagement: React.FC = () => {
   }, [isModalOpen, closeModal, isDeleteConfirmOpen, closeDeleteConfirm]);
 
   return (
+    <div className="p-6 max-w-6xl mx-auto bg-white rounded-2xl shadow-lg border border-gray-100">
     <div className="p-4 sm:p-8">
       <div
         className={`transition-all duration-300 ${
@@ -541,6 +542,7 @@ const PaymentAccountManagement: React.FC = () => {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 };

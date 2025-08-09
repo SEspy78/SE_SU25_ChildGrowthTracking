@@ -164,7 +164,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!loading && user) {
       if (user.role === "Admin") {
-        navigate("/admin/dashboard", { replace: true });
+        navigate("/admin/members", { replace: true });
       } else if (user.role === "FacilityStaff") {
         if (user.position === "Doctor") {
           navigate("/doctor/appointments", { replace: true });
