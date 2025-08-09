@@ -130,6 +130,7 @@ import FacilityDetail from "@/Pages/Manager/facilityMangement";
 import FacilityVaccinePage from "@/Pages/Manager/facilityVaccinesManagement";
 import VaccinePackageManagement from "@/Pages/Manager/vaccinePackageManagement";
 import MemberManagement from "@/Pages/Admin/memberManagement";
+import BlogManagement from "@/Pages/Admin/blogManagement";
 import ScheduleSlotPage from "@/Pages/Manager/scheduleSlot";
 import SurveyManagement from "@/Pages/Manager/surveyManagement";
 import DoctorConfirmVaccination from "@/Pages/Doctor/doctorVaccination";
@@ -190,7 +191,8 @@ const App: React.FC = () => {
     <Route path="members" element={<MemberManagement />} />
     <Route path="vaccines" element={<VaccineManagement />} />
     <Route path="facilities" element={<FacilityManagement />} />
-    <Route path="order" element={<OrderManagementStyled />} />
+
+    <Route path="blogs" element={<BlogManagement />} />
 
     </Route>
     {/* Admin */}
