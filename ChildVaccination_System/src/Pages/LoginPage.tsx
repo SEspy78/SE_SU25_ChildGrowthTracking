@@ -188,7 +188,7 @@ export default function LoginPage() {
       const res = await authApi.login({ accountName, password });
       console.log("Đăng nhập thành công:", res);
       if (res.role === "Admin") {
-        navigate("/admin/dashboard");
+        navigate("/admin/members");
       } else if (res.role === "FacilityStaff") {
         if (res.position === "Doctor") {
           navigate("/doctor/appointments");

@@ -54,6 +54,7 @@ export type Order = {
   orderId: number;
   memberId: number;
   packageId: number;
+  packageName: string;
   orderDate: string;
   totalAmount: number;
   status: string;

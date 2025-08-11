@@ -191,7 +191,7 @@ const App: React.FC = () => {
     <Route path="members" element={<MemberManagement />} />
     <Route path="vaccines" element={<VaccineManagement />} />
     <Route path="facilities" element={<FacilityManagement />} />
-
+   <Route path="order" element={<OrderManagementStyled />} />
     <Route path="blogs" element={<BlogManagement />} />
 
     </Route>

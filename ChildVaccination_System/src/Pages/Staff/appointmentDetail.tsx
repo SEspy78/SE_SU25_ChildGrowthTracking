@@ -117,26 +117,14 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
   };
 
   // Vaccine display logic
-  const vaccineNames = Array.isArray(appointment.facilityVaccines)
-    ? appointment.facilityVaccines.map((fv: FacilityVaccine) => fv.vaccine.name)
-    : [];
-  const packageName = vaccinePackage?.name;
-  const packageVaccineNames = vaccinePackage?.packageVaccines
-    ? vaccinePackage.packageVaccines.map(pv => pv.facilityVaccine.vaccine.name)
-    : [];
-
-  const vaccineDisplayParts: string[] = [];
-  if (appointment.order && packageName) {
-    const packageDisplay = packageVaccineNames.length > 0
-      ? `${packageName} (${packageVaccineNames.join(", ")})`
-      : packageName;
-    vaccineDisplayParts.push(packageDisplay);
-  } else if (vaccineNames.length > 0) {
-    vaccineDisplayParts.push(vaccineNames.join(", "));
+  let vaccineDisplay = "Không có vắc xin";
+  if (appointment.order && vaccinePackage?.name) {
+    vaccineDisplay = vaccinePackage.name;
+  } else if (Array.isArray(appointment.facilityVaccines) && appointment.facilityVaccines.length > 0) {
+    vaccineDisplay = appointment.facilityVaccines
+      .map((fv: FacilityVaccine) => fv.vaccine?.name || `ID: ${fv.vaccineId}`)
+      .join(", ");
   }
-  const vaccineDisplay = vaccineDisplayParts.length > 0
-    ? vaccineDisplayParts.join(", ")
-    : "Không có vắc xin";
 
   // Calculate total doses
   const totalDoses = vaccineProfiles.length;
