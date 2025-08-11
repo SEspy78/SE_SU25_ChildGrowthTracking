@@ -21,7 +21,6 @@ const AuthRedirect: React.FC = () => {
       if (location.pathname === "/" || location.pathname === "/login") {
         hasRedirected.current = true;
         
-        // Redirect theo role và position
         if (user.role === "Admin") {
           navigate("/admin/members", { replace: true });
         } else if (user.role === "FacilityStaff") {
