@@ -141,8 +141,8 @@ export type GetOrderResponse = {
 
 
 export const appointmentApi = {
-  getAllAppointments: async (): Promise<AppointmentResponse> => {
-    return await axiosClient.get(`api/FacilityAppointment`);
+  getAllAppointments: async (pageIndex: number = 1, pageSize: number = 10): Promise<AppointmentResponse> => {
+    return await axiosClient.get(`api/FacilityAppointment?&pageIndex=${pageIndex}&pageSize=${pageSize}`);
   },
   getAppointmentById: async (facilityId: number): Promise<AppointmentResponse> => {
     return await axiosClient.get(`api/FacilityAppointment/${facilityId}`);
@@ -159,6 +159,14 @@ export const orderApi = {
   getAllOrder: async ( facilityId: number ,status: string, pageIndex: number = 1, pageSize: number = 10): Promise<GetOrderResponse> => {
     return await axiosClient.get(`api/Order?facilityId=${facilityId}&status=${status}&pageIndex=${pageIndex}&pageSize=${pageSize}`);
   },
+
+   getAllOrderPaid: async ( facilityId: number ,status: string = "Paid", pageIndex: number = 1, pageSize: number = 10): Promise<GetOrderResponse> => {
+    return await axiosClient.get(`api/Order?facilityId=${facilityId}&status=${status}&pageIndex=${pageIndex}&pageSize=${pageSize}`);
+  },
+   getAllOrderPending: async ( facilityId: number ,status: string = "Pending", pageIndex: number = 1, pageSize: number = 10): Promise<GetOrderResponse> => {
+    return await axiosClient.get(`api/Order?facilityId=${facilityId}&status=${status}&pageIndex=${pageIndex}&pageSize=${pageSize}`);
+  },
+
   getAllOrderAdmin: async ( status: string, pageIndex: number = 1, pageSize: number = 10): Promise<GetOrderResponse> => {
     return await axiosClient.get(`api/Order?status=${status}&pageIndex=${pageIndex}&pageSize=${pageSize}`);
   },
