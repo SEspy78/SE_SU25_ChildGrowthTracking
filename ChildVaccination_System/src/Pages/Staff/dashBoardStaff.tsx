@@ -185,12 +185,12 @@ export default function DashboardStaff() {
               </table>
             </div>
 
-            {/* 🆕 Pagination component */}
             <Pagination
-              pageIndex={pageIndex}
-              setPageIndex={setPageIndex}
-              hasNextPage={hasNextPage}
-            />
+  pageIndex={pageIndex}
+  pageSize={pageSize} 
+  setPageIndex={setPageIndex}
+  hasNextPage={hasNextPage}
+/>
           </>
         )}
       </div>

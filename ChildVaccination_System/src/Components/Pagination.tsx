@@ -2,11 +2,12 @@ import React from "react";
 
 type PaginationProps = {
   pageIndex: number;
+  pageSize: number;
   setPageIndex: (page: number) => void;
   hasNextPage: boolean;
 };
 
-const Pagination: React.FC<PaginationProps> = ({ pageIndex, setPageIndex, hasNextPage }) => {
+const Pagination: React.FC<PaginationProps> = ({ pageIndex, pageSize, setPageIndex, hasNextPage }) => {
   return (
     <div className="flex justify-center items-center mt-6 space-x-2">
       {/* Nút Previous */}
@@ -15,8 +16,8 @@ const Pagination: React.FC<PaginationProps> = ({ pageIndex, setPageIndex, hasNex
         disabled={pageIndex === 1}
         className={`px-3 py-1 rounded-md border text-sm font-medium transition-colors 
           ${pageIndex === 1
-            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-            : 'bg-white hover:bg-indigo-50 text-gray-700 border-gray-300 hover:border-indigo-400'}`}
+            ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+            : "bg-white hover:bg-indigo-50 text-gray-700 border-gray-300 hover:border-indigo-400"}`}
       >
         Previous
       </button>
@@ -30,13 +31,12 @@ const Pagination: React.FC<PaginationProps> = ({ pageIndex, setPageIndex, hasNex
             onClick={() => setPageIndex(page)}
             className={`px-3 py-1 rounded-md border text-sm font-medium transition-colors
               ${page === pageIndex
-                ? 'bg-indigo-600 text-white border-indigo-600'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-indigo-50 hover:border-indigo-400'}`}
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-indigo-50 hover:border-indigo-400"}`}
           >
             {page}
           </button>
-        ))
-      }
+        ))}
 
       {/* Nút Next */}
       <button
@@ -44,8 +44,8 @@ const Pagination: React.FC<PaginationProps> = ({ pageIndex, setPageIndex, hasNex
         disabled={!hasNextPage}
         className={`px-3 py-1 rounded-md border text-sm font-medium transition-colors 
           ${!hasNextPage
-            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-            : 'bg-white hover:bg-indigo-50 text-gray-700 border-gray-300 hover:border-indigo-400'}`}
+            ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+            : "bg-white hover:bg-indigo-50 text-gray-700 border-gray-300 hover:border-indigo-400"}`}
       >
         Next
       </button>

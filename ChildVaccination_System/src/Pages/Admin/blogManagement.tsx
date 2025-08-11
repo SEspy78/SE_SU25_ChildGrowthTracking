@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createBlog, getBlogList, deleteBlog, updateBlog } from '../../api/blogApi';
-// Nếu có các component Button, Input, Textarea riêng thì import đúng đường dẫn, nếu không thì dùng thẻ HTML mặc định
+import { Plus, Search, Edit, Trash2, Calendar, Tag } from 'lucide-react';
 
 interface Blog {
   id: number;
@@ -33,26 +33,26 @@ const BlogManagement: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [editCategory, setEditCategory] = useState('');
-  // Đã xoá các biến editImage, editCategory, editStatus không dùng
   const [loading, setLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [showForm, setShowForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
 
   // Load danh sách blog khi component mount
   useEffect(() => {
     const loadBlogs = async () => {
       try {
         const response = await getBlogList();
-        console.log('Blog response received:', response); // Debug log
+        console.log('Blog response received:', response);
         
-        // Truy cập data từ AxiosResponse
         const blogData = response.data || response;
-        console.log('Processed blog data:', blogData); // Debug log thêm
+        console.log('Processed blog data:', blogData);
         
-        // Kiểm tra xem dữ liệu có phải là array không
         if (Array.isArray(blogData)) {
-          // Map dữ liệu để phù hợp với interface Blog
           const mappedBlogs = blogData.map((blog: ApiBlog) => ({
             id: blog.blogId,
             title: blog.title,
@@ -63,7 +63,6 @@ const BlogManagement: React.FC = () => {
           }));
           setBlogs(mappedBlogs);
         } else if (blogData && Array.isArray(blogData.data)) {
-          // Trường hợp API trả về object có thuộc tính data chứa array
           const mappedBlogs = blogData.data.map((blog: ApiBlog) => ({
             id: blog.blogId,
             title: blog.title,
@@ -74,7 +73,6 @@ const BlogManagement: React.FC = () => {
           }));
           setBlogs(mappedBlogs);
         } else if (blogData && Array.isArray(blogData.items)) {
-          // Trường hợp API trả về object có thuộc tính items chứa array
           const mappedBlogs = blogData.items.map((blog: ApiBlog) => ({
             id: blog.blogId,
             title: blog.title,
@@ -85,78 +83,108 @@ const BlogManagement: React.FC = () => {
           }));
           setBlogs(mappedBlogs);
         } else {
-          // Nếu không có dữ liệu hợp lệ, set empty array
           console.warn('Blog data không phải là array:', blogData);
           setBlogs([]);
         }
       } catch (error) {
         console.error('Lỗi khi tải danh sách blog:', error);
-        setBlogs([]); // Đảm bảo blogs luôn là array
+        setBlogs([]);
       }
     };
     
     loadBlogs();
   }, []);
 
-  const handleAddBlog = async () => {
-    setError('');
+  const filteredBlogs = blogs.filter(blog => {
+    const matchesSearch = blog.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         blog.content?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = filterCategory === 'all' || blog.category === filterCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const categories = [...new Set(blogs.map(b => b.category).filter(Boolean))];
+  const publishedBlogs = blogs.filter(b => b.status === 'published').length;
+  const draftBlogs = blogs.filter(b => b.status === 'draft').length;
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!title.trim() || !content.trim()) {
-      setError('Vui lòng nhập tiêu đề và nội dung.');
+      setError('Vui lòng điền đầy đủ thông tin');
       return;
     }
+
     setLoading(true);
+    setError('');
+
     try {
-      const response = await createBlog({
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('content', content);
+      formData.append('category', category);
+      if (image) {
+        formData.append('image', image);
+      }
+
+      await createBlog({
         title,
         content,
         image,
         category,
-        status: 'Published', // Tự động set status là published
+        status: 'published'
       });
       
-      // Truy cập data từ AxiosResponse
-      const resData = response.data || response;
-      
-      // Thêm blog mới vào danh sách hiện tại
-      setBlogs([
-        ...blogs,
-        {
-          id: resData.id || Date.now(),
-          title,
-          content,
-          image: resData.image || '',
-          category,
-          status: 'Published', // Tự động set status là published
-        },
-      ]);
-      
+      // Reset form
       setTitle('');
       setContent('');
-      setImage(null);
       setCategory('');
+      setImage(null);
       setImagePreview(null);
-    } catch (error: unknown) {
-      console.error('Lỗi khi tạo blog:', error);
-      setError('Tạo blog thất bại!');
+      setShowForm(false);
+      
+      // Reload blogs
+      const response = await getBlogList();
+      const blogData = response.data || response;
+      if (Array.isArray(blogData)) {
+        const mappedBlogs = blogData.map((blog: ApiBlog) => ({
+          id: blog.blogId,
+          title: blog.title,
+          content: blog.content,
+          image: blog.image,
+          category: blog.category,
+          status: blog.status
+        }));
+        setBlogs(mappedBlogs);
+      }
+    } catch (error) {
+      setError('Có lỗi xảy ra khi tạo blog');
+      console.error('Error creating blog:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteBlog = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa blog này không?')) {
-      return;
-    }
-    
+    if (!confirm('Bạn có chắc muốn xóa blog này?')) return;
+
     setDeleteLoading(id);
     try {
       await deleteBlog(id);
-      // Chỉ xóa khỏi state sau khi API call thành công
-      setBlogs(blogs.filter((blog) => blog.id !== id));
-      console.log('Xóa blog thành công!');
+      setBlogs(blogs.filter(blog => blog.id !== id));
     } catch (error) {
-      console.error('Lỗi khi xóa blog:', error);
-      setError('Xóa blog thất bại!');
+      setError('Có lỗi xảy ra khi xóa blog');
+      console.error('Error deleting blog:', error);
     } finally {
       setDeleteLoading(null);
     }
@@ -167,625 +195,389 @@ const BlogManagement: React.FC = () => {
     setEditTitle(blog.title);
     setEditContent(blog.content);
     setEditCategory(blog.category || '');
+    setShowEditForm(true);
   };
 
   const handleSaveEdit = async () => {
-    if (editId === null) return;
-    
+    if (!editTitle.trim() || !editContent.trim()) {
+      setError('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+
     setEditLoading(true);
+    setError('');
+
     try {
-      await updateBlog(editId, {
+      await updateBlog(editId!, {
         title: editTitle,
         content: editContent,
         category: editCategory,
-        status: 'Published', // Luôn set là Published
+        status: 'published'
       });
-      
-      // Cập nhật state local sau khi API thành công
-      setBlogs(
-        blogs.map((blog) =>
-          blog.id === editId ? { 
-            ...blog, 
-            title: editTitle, 
-            content: editContent, 
-            category: editCategory 
-          } : blog
-        )
-      );
-      
-      // Reset edit state
+
+      setBlogs(blogs.map(blog => 
+        blog.id === editId 
+          ? { ...blog, title: editTitle, content: editContent, category: editCategory }
+          : blog
+      ));
+
+      setShowEditForm(false);
       setEditId(null);
       setEditTitle('');
       setEditContent('');
       setEditCategory('');
-      
-      console.log('Cập nhật blog thành công!');
     } catch (error) {
-      console.error('Lỗi khi cập nhật blog:', error);
-      setError('Cập nhật blog thất bại!');
+      setError('Có lỗi xảy ra khi cập nhật blog');
+      console.error('Error updating blog:', error);
     } finally {
       setEditLoading(false);
     }
   };
 
+  const resetForm = () => {
+    setTitle('');
+    setContent('');
+    setCategory('');
+    setImage(null);
+    setImagePreview(null);
+    setShowForm(false);
+    setError('');
+  };
+
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px', fontFamily: 'Arial, sans-serif' }}>
+    <div className="space-y-6">
       {/* Header */}
-      <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-        <h1 style={{ color: '#1f2937', fontSize: '32px', fontWeight: 'bold', margin: '0 0 8px 0' }}>
-          Quản lý Blog
-        </h1>
-        <p style={{ color: '#6b7280', fontSize: '16px', margin: 0 }}>
-          Tạo và quản lý các bài viết blog của bạn
-        </p>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Quản lý Blog</h1>
+            <p className="text-gray-600 mt-1">Tạo và quản lý nội dung blog về vaccine</p>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button 
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Thêm Blog</span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Create Blog Form */}
-      <div style={{
-        background: '#ffffff',
-        padding: '32px',
-        borderRadius: '12px',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-        marginBottom: '32px'
-      }}>
-        <h2 style={{ color: '#1f2937', fontSize: '24px', fontWeight: '600', marginBottom: '24px', display: 'flex', alignItems: 'center' }}>
-          Tạo Blog Mới
-        </h2>
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <div className="w-6 h-6 bg-blue-600 rounded-full"></div>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-blue-600">Tổng số blog</p>
+              <p className="text-2xl font-bold text-blue-900">{blogs.length}</p>
+            </div>
+          </div>
+        </div>
         
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-          {/* Left Column */}
-          <div>
-            <label style={{ display: 'block', color: '#374151', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-              Tiêu đề blog *
-            </label>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <div className="w-6 h-6 bg-green-600 rounded-full"></div>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-green-600">Đã xuất bản</p>
+              <p className="text-2xl font-bold text-green-900">{publishedBlogs}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <div className="w-6 h-6 bg-orange-600 rounded-full"></div>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-orange-600">Bản nháp</p>
+              <p className="text-2xl font-bold text-orange-900">{draftBlogs}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex flex-col lg:flex-row gap-4 mb-6">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Nhập tiêu đề blog..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '2px solid #e5e7eb',
-                borderRadius: '8px',
-                fontSize: '16px',
-                outline: 'none',
-                transition: 'border-color 0.2s',
-                boxSizing: 'border-box'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-            />
-            
-            <label style={{ display: 'block', color: '#374151', fontSize: '14px', fontWeight: '500', marginBottom: '8px', marginTop: '16px' }}>
-              Danh mục
-            </label>
-            <input
-              type="text"
-              placeholder="Nhập danh mục..."
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '2px solid #e5e7eb',
-                borderRadius: '8px',
-                fontSize: '16px',
-                outline: 'none',
-                transition: 'border-color 0.2s',
-                boxSizing: 'border-box'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-              onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+              placeholder="Tìm kiếm blog..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
+          
+          <div className="flex gap-2">
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">Tất cả danh mục</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-          {/* Right Column */}
-          <div>
-            <label style={{ display: 'block', color: '#374151', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-              Hình ảnh
-            </label>
-            <div style={{
-              border: '2px dashed #d1d5db',
-              borderRadius: '8px',
-              padding: '24px',
-              textAlign: 'center',
-              background: '#f9fafb',
-              transition: 'border-color 0.2s'
-            }}>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-                  setImage(file);
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      setImagePreview(reader.result as string);
-                    };
-                    reader.readAsDataURL(file);
-                  } else {
-                    setImagePreview(null);
-                  }
-                }}
-                style={{ display: 'none' }}
-                id="imageInput"
-              />
-              <label htmlFor="imageInput" style={{
-                display: 'block',
-                cursor: 'pointer',
-                color: '#6b7280'
-              }}>
-                <div style={{ fontSize: '48px', marginBottom: '8px' }}>+</div>
-                <div style={{ fontSize: '14px', fontWeight: '500' }}>
-                  Nhấp để chọn ảnh
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-600">{error}</p>
+          </div>
+        )}
+
+        {/* Blog List */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredBlogs.map((blog) => (
+            <div key={blog.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              {blog.image && (
+                <div className="aspect-video bg-gray-100 rounded-t-lg overflow-hidden">
+                  <img 
+                    src={blog.image} 
+                    alt={blog.title}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
-                  PNG, JPG, GIF tối đa 10MB
+              )}
+              
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  {blog.category && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                      <Tag className="w-3 h-3" />
+                      {blog.category}
+                    </span>
+                  )}
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${
+                    blog.status === 'published' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {blog.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
+                  </span>
                 </div>
-              </label>
+                
+                <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+                  {blog.title}
+                </h3>
+                
+                <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                  {blog.content}
+                </p>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                    <Calendar className="w-3 h-3" />
+                    <span>Hôm nay</span>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEditBlog(blog)}
+                      className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
+                      title="Chỉnh sửa"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteBlog(blog.id)}
+                      disabled={deleteLoading === blog.id}
+                      className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors disabled:opacity-50"
+                      title="Xóa"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {filteredBlogs.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Không tìm thấy blog nào.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Add Blog Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Thêm Blog Mới</h2>
+              <button
+                onClick={resetForm}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
             </div>
             
-            {imagePreview && (
-              <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                <img 
-                  src={imagePreview} 
-                  alt="Xem trước ảnh" 
-                  style={{ 
-                    maxWidth: '100%', 
-                    maxHeight: '200px', 
-                    borderRadius: '8px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                  }} 
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tiêu đề
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nhập tiêu đề blog..."
                 />
-                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px' }}>
-                  Xem trước ảnh
-                </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div>
-          <label style={{ display: 'block', color: '#374151', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-            Nội dung blog *
-          </label>
-          <textarea
-            placeholder="Viết nội dung blog của bạn..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            style={{
-              width: '100%',
-              minHeight: '120px',
-              padding: '16px',
-              border: '2px solid #e5e7eb',
-              borderRadius: '8px',
-              fontSize: '16px',
-              outline: 'none',
-              transition: 'border-color 0.2s',
-              resize: 'vertical',
-              fontFamily: 'inherit',
-              boxSizing: 'border-box'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-            onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-          />
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div style={{
-            background: '#fef2f2',
-            color: '#dc2626',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            marginTop: '16px',
-            border: '1px solid #fecaca',
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            <span style={{ marginRight: '8px' }}>!</span>
-            {error}
-          </div>
-        )}
-
-        {/* Submit Button */}
-        <div style={{ marginTop: '24px', textAlign: 'right' }}>
-          <button 
-            onClick={handleAddBlog} 
-            disabled={loading}
-            style={{
-              background: loading ? '#9ca3af' : '#3b82f6',
-              color: '#ffffff',
-              padding: '12px 32px',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              marginLeft: 'auto'
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) (e.target as HTMLButtonElement).style.background = '#2563eb';
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) (e.target as HTMLButtonElement).style.background = '#3b82f6';
-            }}
-          >
-            {loading ? (
-              <>
-                <div style={{
-                  width: '16px',
-                  height: '16px',
-                  border: '2px solid #ffffff',
-                  borderTop: '2px solid transparent',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite',
-                  marginRight: '8px'
-                }}></div>
-                Đang tạo...
-              </>
-            ) : (
-              <>
-                <span style={{ marginRight: '8px' }}>+</span>
-                Tạo Blog
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-      {/* Blog List */}
-      <div>
-        <h2 style={{ 
-          color: '#1f2937', 
-          fontSize: '24px', 
-          fontWeight: '600', 
-          marginBottom: '24px',
-          display: 'flex',
-          alignItems: 'center'
-        }}>
-          Danh sách Blog
-        </h2>
-        
-        {blogs.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '48px',
-            background: '#f9fafb',
-            borderRadius: '12px',
-            border: '2px dashed #d1d5db'
-          }}>
-            <div style={{ fontSize: '64px', marginBottom: '16px' }}>□</div>
-            <h3 style={{ color: '#6b7280', fontSize: '18px', margin: '0 0 8px 0' }}>
-              Chưa có blog nào
-            </h3>
-            <p style={{ color: '#9ca3af', fontSize: '14px', margin: 0 }}>
-              Hãy tạo blog đầu tiên của bạn bằng form bên trên
-            </p>
-          </div>
-        ) : (
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', 
-            gap: '24px' 
-          }}>
-            {blogs.map((blog) => (
-              <div key={blog.id} style={{
-                background: '#ffffff',
-                borderRadius: '12px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                overflow: 'hidden',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                cursor: 'default'
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
-                (e.currentTarget as HTMLElement).style.boxShadow = '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
-              }}>
-                {editId === blog.id ? (
-                  <div style={{ padding: '24px' }}>
-                    <div style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', color: '#374151', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                        Tiêu đề
-                      </label>
-                      <input
-                        type="text"
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        disabled={editLoading}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          border: '2px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '16px',
-                          outline: 'none',
-                          boxSizing: 'border-box',
-                          backgroundColor: editLoading ? '#f9fafb' : 'white'
-                        }}
-                      />
-                    </div>
-                    <div style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', color: '#374151', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                        Danh mục
-                      </label>
-                      <input
-                        type="text"
-                        value={editCategory}
-                        onChange={(e) => setEditCategory(e.target.value)}
-                        disabled={editLoading}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          border: '2px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '16px',
-                          outline: 'none',
-                          boxSizing: 'border-box',
-                          backgroundColor: editLoading ? '#f9fafb' : 'white'
-                        }}
-                      />
-                    </div>
-                    <div style={{ marginBottom: '20px' }}>
-                      <label style={{ display: 'block', color: '#374151', fontSize: '14px', fontWeight: '500', marginBottom: '8px' }}>
-                        Nội dung
-                      </label>
-                      <textarea
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        disabled={editLoading}
-                        style={{
-                          width: '100%',
-                          minHeight: '100px',
-                          padding: '12px 16px',
-                          border: '2px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          outline: 'none',
-                          resize: 'vertical',
-                          fontFamily: 'inherit',
-                          boxSizing: 'border-box',
-                          backgroundColor: editLoading ? '#f9fafb' : 'white'
-                        }}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      <button 
-                        onClick={handleSaveEdit} 
-                        disabled={editLoading}
-                        style={{
-                          flex: 1,
-                          padding: '10px 16px',
-                          background: editLoading ? '#9ca3af' : '#10b981',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          cursor: editLoading ? 'not-allowed' : 'pointer',
-                          transition: 'background 0.2s',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!editLoading) (e.target as HTMLButtonElement).style.background = '#059669';
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!editLoading) (e.target as HTMLButtonElement).style.background = '#10b981';
-                        }}
-                      >
-                        {editLoading ? (
-                          <>
-                            <div style={{
-                              width: '14px',
-                              height: '14px',
-                              border: '2px solid #ffffff',
-                              borderTop: '2px solid transparent',
-                              borderRadius: '50%',
-                              animation: 'spin 1s linear infinite',
-                              marginRight: '6px'
-                            }}></div>
-                            Đang lưu...
-                          </>
-                        ) : (
-                          'Lưu'
-                        )}
-                      </button>
-                      <button 
-                        onClick={() => {
-                          setEditId(null);
-                          setEditTitle('');
-                          setEditContent('');
-                          setEditCategory('');
-                        }} 
-                        disabled={editLoading}
-                        style={{
-                          flex: 1,
-                          padding: '10px 16px',
-                          background: editLoading ? '#9ca3af' : '#6b7280',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          cursor: editLoading ? 'not-allowed' : 'pointer',
-                          transition: 'background 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!editLoading) (e.target as HTMLButtonElement).style.background = '#4b5563';
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!editLoading) (e.target as HTMLButtonElement).style.background = '#6b7280';
-                        }}
-                      >
-                        Hủy
-                      </button>
-                    </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Danh mục
+                </label>
+                <input
+                  type="text"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nhập danh mục..."
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nội dung
+                </label>
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nhập nội dung blog..."
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Hình ảnh
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img src={imagePreview} alt="Preview" className="w-32 h-24 object-cover rounded" />
                   </div>
-                ) : (
-                  <>
-                    {/* Image */}
-                    {blog.image && (
-                      <div style={{ height: '200px', overflow: 'hidden' }}>
-                        <img 
-                          src={blog.image} 
-                          alt={blog.title}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                      </div>
-                    )}
-                    
-                    {/* Content */}
-                    <div style={{ padding: '24px' }}>
-                      {/* Categories and Status */}
-                      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                        {blog.category && (
-                          <span style={{
-                            background: '#dbeafe',
-                            color: '#1e40af',
-                            padding: '4px 8px',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            fontWeight: '500'
-                          }}>
-                            {blog.category}
-                          </span>
-                        )}
-                        {blog.status && (
-                          <span style={{
-                            background: blog.status === 'published' ? '#dcfce7' : blog.status === 'draft' ? '#fef3c7' : '#f3f4f6',
-                            color: blog.status === 'published' ? '#166534' : blog.status === 'draft' ? '#92400e' : '#374151',
-                            padding: '4px 8px',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            fontWeight: '500'
-                          }}>
-                            {blog.status}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Title */}
-                      <h3 style={{
-                        color: '#1f2937',
-                        fontSize: '18px',
-                        fontWeight: '600',
-                        margin: '0 0 12px 0',
-                        lineHeight: '1.4'
-                      }}>
-                        {blog.title}
-                      </h3>
-                      
-                      {/* Content Preview */}
-                      <p style={{
-                        color: '#6b7280',
-                        fontSize: '14px',
-                        lineHeight: '1.6',
-                        margin: '0 0 20px 0',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
-                      }}>
-                        {blog.content}
-                      </p>
-                      
-                      {/* Actions */}
-                      <div style={{ display: 'flex', gap: '12px' }}>
-                        <button 
-                          onClick={() => handleEditBlog(blog)} 
-                          style={{
-                            flex: 1,
-                            padding: '10px 16px',
-                            background: '#f59e0b',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'background 0.2s'
-                          }}
-                          onMouseEnter={(e) => (e.target as HTMLButtonElement).style.background = '#d97706'}
-                          onMouseLeave={(e) => (e.target as HTMLButtonElement).style.background = '#f59e0b'}
-                        >
-                          Sửa
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteBlog(blog.id)} 
-                          disabled={deleteLoading === blog.id}
-                          style={{
-                            flex: 1,
-                            padding: '10px 16px',
-                            background: deleteLoading === blog.id ? '#9ca3af' : '#ef4444',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: deleteLoading === blog.id ? 'not-allowed' : 'pointer',
-                            transition: 'background 0.2s',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (deleteLoading !== blog.id) (e.target as HTMLButtonElement).style.background = '#dc2626';
-                          }}
-                          onMouseLeave={(e) => {
-                            if (deleteLoading !== blog.id) (e.target as HTMLButtonElement).style.background = '#ef4444';
-                          }}
-                        >
-                          {deleteLoading === blog.id ? (
-                            <>
-                              <div style={{
-                                width: '14px',
-                                height: '14px',
-                                border: '2px solid #ffffff',
-                                borderTop: '2px solid transparent',
-                                borderRadius: '50%',
-                                animation: 'spin 1s linear infinite',
-                                marginRight: '6px'
-                              }}></div>
-                              Đang xóa...
-                            </>
-                          ) : (
-                            'Xóa'
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </>
                 )}
               </div>
-            ))}
+              
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {loading ? 'Đang tạo...' : 'Tạo Blog'}
+                </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Hủy
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* CSS Animation for Loading Spinner */}
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
+      {/* Edit Blog Form Modal */}
+      {showEditForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Chỉnh sửa Blog</h2>
+              <button
+                onClick={() => setShowEditForm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tiêu đề
+                </label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Danh mục
+                </label>
+                <input
+                  type="text"
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nội dung
+                </label>
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {editLoading ? 'Đang cập nhật...' : 'Cập nhật'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEditForm(false)}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Hủy
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
