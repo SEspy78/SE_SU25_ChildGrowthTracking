@@ -33,6 +33,21 @@ export interface FacilityVaccine {
   vaccine: Vaccine;
 }
 
+export interface CreateVaccineRequest {
+  name: string;
+  description: string;
+  manufacturer: string;
+  category: string;
+  ageGroup: string;
+  numberOfDoses: number;
+  minIntervalBetweenDoses: number;
+  sideEffects: string;
+  contraindications: string;
+  price: number;
+  status: string;
+  diseaseIds: number[];
+}
+
 
 export const vaccineApi = {
   getAll: async (): Promise<Vaccine[]> => {
@@ -43,6 +58,17 @@ export const vaccineApi = {
     const response: Vaccine = await axiosClient.get(`api/Vaccines/${id}`);
     return response;
   },
+  create: async (payload: CreateVaccineRequest): Promise<Vaccine> => {
+    return await axiosClient.post("api/Vaccines", payload);
+  },
+
+  delete: async (vaccineId:number  ): Promise<any> => {
+    return await axiosClient.delete(`api/Vaccines/${vaccineId}`);
+  },
+  update: async (vaccineId: number, payload: CreateVaccineRequest): Promise<any> => {
+    return await axiosClient.put(`api/Vaccines/${vaccineId}`, payload);
+  }
+   
 };
 
 export interface FacilityVaccineResponse1 {

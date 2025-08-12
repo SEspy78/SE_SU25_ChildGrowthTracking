@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createBlog, getBlogList, deleteBlog, updateBlog } from '../../api/blogApi';
-import { Plus, Search, Edit, Trash2, Calendar, Tag } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Calendar, Tag,X } from 'lucide-react';
 
 interface Blog {
   id: number;
@@ -257,7 +257,7 @@ const BlogManagement: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3">
             <button 
               onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="flex items-center hover:cursor-pointer gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Thêm Blog</span>
@@ -425,7 +425,7 @@ const BlogManagement: React.FC = () => {
                 onClick={resetForm}
                 className="text-gray-400 hover:text-gray-600"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
             
