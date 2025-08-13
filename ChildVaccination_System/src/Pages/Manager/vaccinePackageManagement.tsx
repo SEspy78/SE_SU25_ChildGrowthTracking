@@ -1,59 +1,58 @@
 import React, { useEffect, useState } from "react";
-
-type AddVaccineState = {
-  packageId: number;
-  show: boolean;
-  facilityVaccineId: string;
-  quantity: number | string;
-  loading: boolean;
-  error: string | null;
-};
+import { Modal, Form, Input, Button, InputNumber, Select } from "antd";
+import {
+  Package,
+  Plus,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Pencil,
+  Trash2,
+  AlertCircle,
+} from "lucide-react";
 import { vaccinePackageApi, type CreateVaccinePackageRequest, type VaccinePackage } from "@/api/vaccinePackageApi";
 import { facilityVaccineApi, vaccineApi, type FacilityVaccine, type Vaccine } from "@/api/vaccineApi";
 import { getUserInfo } from "@/lib/storage";
- import { X } from "lucide-react";
+
+const { TextArea } = Input;
+
+interface AddVaccineState {
+  packageId: number;
+  show: boolean;
+  facilityVaccineId: string;
+  quantity: number;
+  loading: boolean;
+  error: string | null;
+}
+
 const VaccinePackageManagement: React.FC = () => {
-  const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" }>({ show: false, message: "", type: "success" });
-  const handleDeletePackage = async (packageId: number, name: string) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa gói ${name}?`)) return;
-    setLoading(true);
-    setError(null);
-    try {
-      await vaccinePackageApi.deleteVaccinePackage(packageId);
-      // reload list
-      const userInfo = getUserInfo();
-      if (userInfo?.facilityId) {
-        const res = await vaccinePackageApi.getAll(userInfo.facilityId);
-        setPackages(res.data);
-      }
-      setToast({ show: true, message: `Đã xóa gói ${name} thành công!`, type: "success" });
-    } catch (err) {
-      setToast({ show: true, message: `Xóa gói ${name} thất bại!`, type: "error" });
-    } finally {
-      setLoading(false);
-      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
-    }
-  };
-  // Không lưu user vào state, luôn lấy mới từ localStorage khi cần
   const [packages, setPackages] = useState<VaccinePackage[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<CreateVaccinePackageRequest>>({
+  const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [selectedPackage, setSelectedPackage] = useState<VaccinePackage | null>(null);
+  const [formData, setFormData] = useState<Partial<CreateVaccinePackageRequest>>({
     name: "",
     description: "",
     duration: 1,
     status: "true",
     vaccines: [],
   });
-  const [showForm, setShowForm] = useState(false);
   const [facilityVaccines, setFacilityVaccines] = useState<FacilityVaccine[]>([]);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [formLoading, setFormLoading] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
   const [vaccineInfoMap, setVaccineInfoMap] = useState<Record<number, Vaccine>>({});
-
-  // State for add vaccine mini form
   const [addVaccineState, setAddVaccineState] = useState<AddVaccineState | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage] = useState<number>(10);
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" }>({
+    show: false,
+    message: "",
+    type: "success",
+  });
+  const [addForm] = Form.useForm();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,8 +64,8 @@ const VaccinePackageManagement: React.FC = () => {
         setPackages(res.data);
         const vacRes = await facilityVaccineApi.getAll(userInfo.facilityId);
         setFacilityVaccines(vacRes.data);
-      } catch (err) {
-        setError("Không thể tải dữ liệu.");
+      } catch (err: any) {
+        setError(err.message || "Không thể tải dữ liệu.");
       } finally {
         setLoading(false);
       }
@@ -74,329 +73,716 @@ const VaccinePackageManagement: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: name === "duration" ? Number(value) : value }));
-  };
-
-  const handleVaccineChange = (idx: number, field: string, value: any) => {
-    setForm((prev) => {
-      const vaccines = prev.vaccines ? [...prev.vaccines] : [];
-      vaccines[idx] = { ...vaccines[idx], [field]: field === "facilityVaccineId" ? Number(value) : Number(value) };
-      return { ...prev, vaccines };
-    });
-  };
-
-  const handleAddVaccine = () => {
-    setForm((prev) => ({ ...prev, vaccines: [...(prev.vaccines || []), { facilityVaccineId: 0, quantity: 1 }] }));
-  };
-
-  const handleRemoveVaccine = (idx: number) => {
-    setForm((prev) => {
-      const vaccines = prev.vaccines ? [...prev.vaccines] : [];
-      vaccines.splice(idx, 1);
-      return { ...prev, vaccines };
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-    const userInfo = getUserInfo();
-    if (!userInfo?.facilityId) {
-      setFormError("Không tìm thấy mã cơ sở.");
-      return;
-    }
-    if (!form.name || !form.duration || !form.vaccines || form.vaccines.length === 0) {
-      setFormError("Vui lòng nhập đầy đủ thông tin và chọn ít nhất 1 vaccine.");
-      return;
-    }
-    setFormLoading(true);
-    try {
-      await vaccinePackageApi.create({
-        ...form,
-        facilityId: userInfo.facilityId,
-        vaccines: form.vaccines,
-        status: form.status || "true",
-      } as any);
-      setForm({ name: "", description: "", duration: 1, status: "true", vaccines: [] });
-      setShowForm(false);
-      // reload list
-      const res = await vaccinePackageApi.getAll(userInfo.facilityId);
-      setPackages(res.data);
-    } catch (err) {
-      setFormError("Tạo gói vaccine thất bại.");
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  // Lấy thông tin vaccine theo id, cache vào vaccineInfoMap
-  const fetchVaccineInfo = async (vaccineId: number) => {
-    if (vaccineInfoMap[vaccineId]) return vaccineInfoMap[vaccineId];
-    try {
-      const data = await vaccineApi.getById(vaccineId);
-      setVaccineInfoMap(prev => ({ ...prev, [vaccineId]: data }));
-      return data;
-    } catch {
-      return undefined;
-    }
-  };
-
-  // Khi mở dropdown, lấy thông tin vaccine cho các vaccine trong gói (nếu chưa có)
   useEffect(() => {
-    if (openDropdown) {
-      const pkg = packages.find(p => p.packageId === openDropdown);
+    if (addVaccineState?.packageId) {
+      const pkg = packages.find((p) => p.packageId === addVaccineState.packageId);
       if (pkg) {
         pkg.packageVaccines.forEach(async (pv) => {
           const vaccineId = pv.facilityVaccine?.vaccine?.vaccineId;
           if (vaccineId && !vaccineInfoMap[vaccineId]) {
-            await fetchVaccineInfo(vaccineId);
+            try {
+              const data = await vaccineApi.getById(vaccineId);
+              setVaccineInfoMap((prev) => ({ ...prev, [vaccineId]: data }));
+            } catch {
+              // Handle error silently
+            }
           }
         });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openDropdown]);
+  }, [addVaccineState, packages, vaccineInfoMap]);
 
-  return (
-     <div className="p-6 max-w-4xl mx-auto bg-white rounded-2xl shadow-lg border border-gray-100">
-    <div className="max-w-5xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6 text-blue-700">Quản lý gói vaccine</h1>
-      {!showForm && (
-        <button
-          className="mb-6 px-4 py-2 bg-blue-600 hover:cursor-pointer text-white rounded hover:bg-blue-700"
-          onClick={() => setShowForm(true)}
-        >
-          + Tạo gói vaccine mới
-        </button>
-      )}
-      {showForm && (
-        <form className="bg-white rounded shadow p-4 mb-8" onSubmit={handleSubmit}>
-          <h2 className="text-lg font-semibold mb-4">Tạo gói vaccine mới</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block mb-1 font-medium">Tên gói</label>
-              <input name="name" value={form.name || ""} onChange={handleFormChange} className="w-full border px-2 py-1 rounded" required />
+  const handleFormChange = (values: Partial<CreateVaccinePackageRequest>) => {
+    setFormData({ ...formData, ...values });
+  };
+
+  const handleVaccineChange = (idx: number, field: string, value: any) => {
+    setFormData((prev) => {
+      const vaccines = prev.vaccines ? [...prev.vaccines] : [];
+      vaccines[idx] = { ...vaccines[idx], [field]: field === "facilityVaccineId" ? Number(value) : Number(value) };
+      return { ...prev, vaccines };
+    });
+    // Cập nhật giá trị trong antd Form
+    addForm.setFieldsValue({ vaccines: formData.vaccines });
+  };
+
+  const handleAddVaccine = () => {
+    const newVaccine = { facilityVaccineId: 0, quantity: 1 };
+    setFormData((prev) => {
+      const vaccines = prev.vaccines ? [...prev.vaccines, newVaccine] : [newVaccine];
+      addForm.setFieldsValue({ vaccines }); // Đồng bộ với antd Form
+      return { ...prev, vaccines };
+    });
+  };
+
+  const handleRemoveVaccine = (idx: number) => {
+    setFormData((prev) => {
+      const vaccines = prev.vaccines ? [...prev.vaccines] : [];
+      vaccines.splice(idx, 1);
+      addForm.setFieldsValue({ vaccines }); // Đồng bộ với antd Form
+      return { ...prev, vaccines };
+    });
+  };
+
+  const handleCreatePackage = async () => {
+    const userInfo = getUserInfo();
+    if (!userInfo?.facilityId) {
+      setToast({ show: true, message: "Không tìm thấy mã cơ sở.", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+      return;
+    }
+
+    try {
+      await addForm.validateFields();
+      const validVaccines = formData.vaccines?.filter((v) => v.facilityVaccineId !== 0) || [];
+      if (validVaccines.length === 0) {
+        setToast({ show: true, message: "Vui lòng chọn ít nhất một vaccine hợp lệ.", type: "error" });
+        setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+        return;
+      }
+
+      setLoading(true);
+      await vaccinePackageApi.create({
+        ...formData,
+        facilityId: userInfo.facilityId,
+        vaccines: validVaccines,
+        status: formData.status || "true",
+      } as CreateVaccinePackageRequest);
+      const res = await vaccinePackageApi.getAll(userInfo.facilityId);
+      setPackages(res.data);
+      setShowAddModal(false);
+      addForm.resetFields();
+      setFormData({ name: "", description: "", duration: 1, status: "true", vaccines: [] });
+      setToast({ show: true, message: "Tạo gói vaccine thành công", type: "success" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+    } catch (err: any) {
+      setToast({ show: true, message: err.message || "Tạo gói vaccine thất bại.", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePackage = async () => {
+    if (!selectedPackage) return;
+    setLoading(true);
+    try {
+      await vaccinePackageApi.deleteVaccinePackage(selectedPackage.packageId);
+      const userInfo = getUserInfo();
+      if (userInfo?.facilityId) {
+        const res = await vaccinePackageApi.getAll(userInfo.facilityId);
+        setPackages(res.data);
+      }
+      setShowDeleteModal(false);
+      setSelectedPackage(null);
+      setToast({ show: true, message: `Đã xóa gói ${selectedPackage.name} thành công!`, type: "success" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+    } catch (err: any) {
+      setToast({ show: true, message: `Xóa gói ${selectedPackage.name} thất bại!`, type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddVaccineToPackage = async (packageId: number, data: { facilityVaccineId: number; quantity: number }) => {
+    setLoading(true);
+    try {
+      await vaccinePackageApi.addVaccineToPackage(packageId, data);
+      const userInfo = getUserInfo();
+      if (userInfo?.facilityId) {
+        const res = await vaccinePackageApi.getAll(userInfo.facilityId);
+        setPackages(res.data);
+      }
+      setAddVaccineState(null);
+      setToast({ show: true, message: "Thêm vaccine vào gói thành công", type: "success" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+    } catch (err: any) {
+      setAddVaccineState((s) => (s ? { ...s, error: err.message || "Thêm vaccine thất bại", loading: false } : s));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredPackages = packages.filter((pkg) => {
+    const matchesSearch =
+      pkg.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      pkg.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      filterStatus === "all" ||
+      (filterStatus === "true" && pkg.status === "true") ||
+      (filterStatus === "false" && pkg.status === "false");
+    return matchesSearch && matchesStatus;
+  });
+
+  const getCurrentPageData = (data: VaccinePackage[]) => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return data.slice(startIndex, endIndex);
+  };
+
+  const totalPages = Math.ceil(filteredPackages.length / itemsPerPage);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus]);
+
+  const currentPackages = getCurrentPageData(filteredPackages);
+
+  if (loading) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="animate-pulse space-y-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+              <div className="space-y-2">
+                <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              </div>
             </div>
-            <div>
-              <label className="block mb-1 font-medium">Thời hạn (tháng)</label>
-              <input name="duration" type="number" value={form.duration} onChange={handleFormChange} className="w-full border px-2 py-1 rounded" required min={1} />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block mb-1 font-medium">Mô tả</label>
-              <textarea name="description" value={form.description || ""} onChange={handleFormChange} className="w-full border px-2 py-1 rounded" />
-            </div>
+            <div className="h-10 bg-gray-200 rounded w-32"></div>
           </div>
-          <div className="mt-4">
-            <label className="block mb-1 font-medium">Danh sách vaccine trong gói</label>
-            {(form.vaccines || []).map((v, idx) => (
-              <div key={idx} className="flex gap-2 mb-2 items-center">
-                <select
-                  value={v.facilityVaccineId}
-                  onChange={e => handleVaccineChange(idx, "facilityVaccineId", e.target.value)}
-                  className="border px-2 py-1 rounded"
-                  required
-                >
-                  <option value="">-- Chọn vaccine --</option>
-                  {facilityVaccines.map(fv => (
-                    <option key={fv.facilityVaccineId} value={fv.facilityVaccineId}>{fv.vaccine.name}</option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  min={1}
-                  value={v.quantity}
-                  onChange={e => handleVaccineChange(idx, "quantity", e.target.value)}
-                  className="border px-2 py-1 rounded w-24"
-                  required
-                />
-                <button type="button" className="text-red-500 hover:cursor-pointer px-2" onClick={() => handleRemoveVaccine(idx)}><X/></button>
+          <div className="flex gap-4">
+            <div className="h-10 bg-gray-200 rounded flex-1"></div>
+            <div className="h-10 bg-gray-200 rounded w-1/6"></div>
+          </div>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, idx) => (
+              <div key={idx} className="flex gap-4">
+                <div className="h-10 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-10 bg-gray-200 rounded w-1/4"></div>
+                <div className="h-10 bg-gray-200 rounded w-1/6"></div>
+                <div className="h-10 bg-gray-200 rounded w-1/6"></div>
+                <div className="h-10 bg-gray-200 rounded w-1/6"></div>
               </div>
             ))}
-            <button type="button" className="mt-2 px-3 py-1 hover:cursor-pointer hover:bg-blue-800 bg-blue-500 text-white rounded" onClick={handleAddVaccine}>+ Thêm vaccine</button>
           </div>
-          <div className="mt-4">
-            <label className="block mb-1  font-medium">Trạng thái</label>
-            <select name="status" value={form.status || "true"} onChange={handleFormChange} className="border hover:cursor-pointer px-2 py-1 rounded">
-              <option value="true">Đang sử dụng</option>
-              <option value="false">Ngừng SD</option>
-            </select>
-          </div>
-          {formError && <div className="text-red-600 mt-2">{formError}</div>}
-          <div className="flex gap-2 mt-4">
-            <button type="submit" className="px-4 py-2 bg-green-600 hover:cursor-pointer text-white rounded hover:bg-green-700" disabled={formLoading}>
-              {formLoading ? "Đang tạo..." : "Tạo gói vaccine"}
-            </button>
-            <button type="button" className="px-4 py-2 bg-gray-400 hover:cursor-pointer text-white rounded hover:bg-gray-500" onClick={() => { setShowForm(false); setForm({ name: "", description: "", duration: 1, status: "true", vaccines: [] }); setFormError(null); }}>
-              Hủy
-            </button>
-          </div>
-        </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+          <AlertCircle className="w-6 h-6 text-red-600" />
+          <p className="text-red-600 font-medium">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div
+          className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded shadow-lg text-white font-semibold transition ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {toast.message}
+        </div>
       )}
 
-      <h2 className="text-lg font-semibold mb-2">Danh sách gói vaccine</h2>
-      {loading ? (
-        <div>Đang tải...</div>
-      ) : error ? (
-        <div className="text-red-600">{error}</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full table-auto border border-gray-200 text-sm text-left">
-            <thead className="bg-gray-50 text-gray-700">
-              <tr>
-                <th className="px-4 py-2">Tên gói</th>
-                <th className="px-4 py-2">Mô tả</th>
-                <th className="px-4 py-2">Thời hạn</th>
-                <th className="px-4 py-2">Giá</th>
-                <th className="px-4 py-2">Trạng thái</th>
-                <th className="px-4 py-2">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {packages.map(pkg => (
-                <React.Fragment key={pkg.packageId}>
-                  <tr className="border-t hover:bg-gray-50 cursor-pointer group" onClick={() => setOpenDropdown(openDropdown === pkg.packageId ? null : pkg.packageId)}>
-                    <td className="px-4 py-2 font-semibold text-blue-700">{pkg.name}</td>
-                    <td className="px-4 py-2">{pkg.description}</td>
-                    <td className="px-4 py-2">{pkg.duration} tháng</td>
-                    <td className="px-4 py-2">{pkg.price?.toLocaleString()} VNĐ</td>
-                    <td className="px-4 py-2">{pkg.status === "true" ? "Đang sử dụng" : "Ngừng SD"}</td>
-                    <td className="px-4 py-2">
-                      <button
-                        className="px-3 py-1 bg-red-600 text-white rounded hover:cursor-pointer hover:bg-red-700 transition font-semibold"
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleDeletePackage(pkg.packageId, pkg.name);
-                        }}
-                      >
-                        Xóa gói vaccine
-                      </button>
-                    </td>
-                  </tr>
-                  {openDropdown === pkg.packageId && (
-                    <tr>
-                      <td colSpan={6} className="bg-gray-50 border-b p-0">
-                        <div className="p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-semibold text-blue-700">Danh sách vaccine trong gói</h3>
-                            <button
-                              className="px-3 py-1 bg-green-600 text-white rounded hover:cursor-pointer hover:bg-green-700 transition"
-                              onClick={e => {
-                                e.stopPropagation();
-                                setAddVaccineState({
-                                  packageId: pkg.packageId,
-                                  show: true,
-                                  facilityVaccineId: '',
-                                  quantity: 1,
-                                  loading: false,
-                                  error: null
-                                });
-                              }}
-                            >
-                              + Thêm vaccine
-                            </button>
-                          </div>
-                          {/* Mini form for adding vaccine to package */}
-                          {addVaccineState?.show && addVaccineState.packageId === pkg.packageId && (
-                            <form
-                              className="flex gap-2 mb-4 items-center bg-gray-100 p-2 rounded"
-                              onClick={e => e.stopPropagation()}
-                              onSubmit={async e => {
-                                e.preventDefault();
-                                setAddVaccineState(s => s ? { ...s, loading: true, error: null } : s);
-                                try {
-                                  await vaccinePackageApi.addVaccineToPackage(pkg.packageId, {
-                                    facilityVaccineId: Number(addVaccineState.facilityVaccineId),
-                                    quantity: Number(addVaccineState.quantity)
-                                  });
-                                  // reload package list
-                                  const userInfo = getUserInfo();
-                                  if (userInfo?.facilityId) {
-                                    const res = await vaccinePackageApi.getAll(userInfo.facilityId);
-                                    setPackages(res.data);
-                                  }
-                                  setAddVaccineState(null);
-                                } catch (err) {
-                                  setAddVaccineState(s => s ? { ...s, error: 'Thêm vaccine thất bại', loading: false } : s);
-                                }
-                              }}
-                            >
-                              <select
-                                className="border px-2 py-1 rounded"
-                                required
-                                value={addVaccineState.facilityVaccineId}
-                                onChange={e => setAddVaccineState(s => s ? { ...s, facilityVaccineId: e.target.value } : s)}
-                              >
-                                <option value="">-- Chọn vaccine --</option>
-                                {facilityVaccines.map(fv => (
-                                  <option key={fv.facilityVaccineId} value={fv.facilityVaccineId}>{fv.vaccine.name}</option>
-                                ))}
-                              </select>
-                              <input
-                                type="number"
-                                min={1}
-                                className="border px-2 py-1 rounded w-24"
-                                required
-                                value={addVaccineState.quantity}
-                                onChange={e => setAddVaccineState(s => s ? { ...s, quantity: e.target.value } : s)}
-                              />
-                              <button
-                                type="submit"
-                                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-                                disabled={addVaccineState.loading}
-                              >
-                                {addVaccineState.loading ? 'Đang thêm...' : 'Xác nhận'}
-                              </button>
-                              <button
-                                type="button"
-                                className="px-3 py-1 bg-gray-400 text-white rounded hover:bg-gray-500 transition"
-                                onClick={() => setAddVaccineState(null)}
-                                disabled={addVaccineState.loading}
-                              >
-                                Hủy
-                              </button>
-                              {addVaccineState.error && <span className="text-red-600 ml-2">{addVaccineState.error}</span>}
-                            </form>
-                          )}
+      {/* Add Package Modal */}
+      <Modal
+        title="Thêm gói vaccine mới"
+        open={showAddModal}
+        onCancel={() => {
+          setShowAddModal(false);
+          addForm.resetFields();
+          setFormData({ name: "", description: "", duration: 1, status: "true", vaccines: [] });
+        }}
+        footer={null}
+        width={800}
+        centered
+      >
+        <Form
+          form={addForm}
+          layout="vertical"
+          onFinish={handleCreatePackage}
+          initialValues={formData}
+          onValuesChange={handleFormChange}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Form.Item
+              label="Tên gói"
+              name="name"
+              rules={[{ required: true, message: "Vui lòng nhập tên gói" }]}
+            >
+              <Input className="rounded-lg" />
+            </Form.Item>
 
-                          <ul className="list-disc ml-6 mb-4">
-                            {pkg.packageVaccines.length === 0 ? (
-                              <li>Không có vaccine nào trong gói này.</li>
-                            ) : (
-                              pkg.packageVaccines.map((pv, i) => {
-                                // Lấy thông tin facilityVaccine từ state facilityVaccines
-                                const fv = facilityVaccines.find(fv => fv.facilityVaccineId === pv.facilityVaccineId);
-                                return (
-                                  <li key={pv.packageVaccineId || i}>
-                                    <span className="font-medium text-blue-700">{fv?.vaccine?.name || "-"}</span>
-                                    {" - Giá: "}
-                                    <span className="text-green-700">{fv?.price?.toLocaleString()} VNĐ</span>
-                                    {" - Số lượng: "}
-                                    <span className="text-gray-800">{pv.quantity}</span>
-                                  </li>
-                                );
-                              })
-                            )}
-                          </ul>
-                          
+            <Form.Item
+              label="Thời hạn (tháng)"
+              name="duration"
+              rules={[{ required: true, message: "Vui lòng nhập thời hạn" }]}
+            >
+              <InputNumber min={1} className="w-full rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Mô tả"
+              name="description"
+              className="sm:col-span-2"
+            >
+              <TextArea rows={4} className="rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Danh sách vaccine trong gói"
+              name="vaccines"
+              className="sm:col-span-2"
+              rules={[
+                {
+                  validator: (_, value) => {
+                    const validVaccines = (value || []).filter((v: { facilityVaccineId: number }) => v.facilityVaccineId !== 0);
+                    return validVaccines.length > 0
+                      ? Promise.resolve()
+                      : Promise.reject("Vui lòng chọn ít nhất một vaccine hợp lệ");
+                  },
+                },
+              ]}
+            >
+              <div className="space-y-2">
+                {(formData.vaccines || []).map((v: { facilityVaccineId: number; quantity: number }, idx: number) => (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <Select
+                      value={v.facilityVaccineId || undefined}
+                      onChange={(value) => handleVaccineChange(idx, "facilityVaccineId", value)}
+                      className="w-full"
+                      placeholder="-- Chọn vaccine --"
+                    >
+                      {facilityVaccines.map((fv: FacilityVaccine) => (
+                        <Select.Option key={fv.facilityVaccineId} value={fv.facilityVaccineId}>
+                          {fv.vaccine.name}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                    <InputNumber
+                      min={1}
+                      value={v.quantity}
+                      onChange={(value) => handleVaccineChange(idx, "quantity", value !== null ? value : 1)}
+                      className="w-24"
+                    />
+                    <Button
+                      type="link"
+                      danger
+                      onClick={() => handleRemoveVaccine(idx)}
+                      icon={<X className="w-4 h-4" />}
+                    />
+                  </div>
+                ))}
+                <Button
+                  type="dashed"
+                  onClick={handleAddVaccine}
+                  className="w-full mt-2"
+                  icon={<Plus className="w-4 h-4" />}
+                >
+                  Thêm vaccine
+                </Button>
+              </div>
+            </Form.Item>
+
+            <Form.Item
+              label="Trạng thái"
+              name="status"
+              rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+            >
+              <Select className="rounded-lg">
+                <Select.Option value="true">Đang sử dụng</Select.Option>
+                <Select.Option value="false">Ngừng sử dụng</Select.Option>
+              </Select>
+            </Form.Item>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button
+              onClick={() => {
+                setShowAddModal(false);
+                addForm.resetFields();
+                setFormData({ name: "", description: "", duration: 1, status: "true", vaccines: [] });
+              }}
+              className="rounded-lg"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              className="bg-green-600 hover:bg-green-700 rounded-lg"
+            >
+              Lưu
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        title="Xác nhận xóa"
+        open={showDeleteModal}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setSelectedPackage(null);
+        }}
+        footer={null}
+        centered
+      >
+        <p className="text-gray-600 mb-4">
+          Bạn có chắc chắn muốn xóa gói <strong>{selectedPackage?.name}</strong> không?
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button
+            onClick={() => {
+              setShowDeleteModal(false);
+              setSelectedPackage(null);
+            }}
+            className="rounded-lg"
+          >
+            Hủy
+          </Button>
+          <Button
+            type="primary"
+            danger
+            onClick={handleDeletePackage}
+            className="rounded-lg"
+          >
+            Xóa
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Header */}
+      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Package className="w-8 h-8 text-blue-600" />
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Quản lý gói vaccine</h1>
+              <p className="text-gray-600 mt-1">Quản lý danh sách gói vaccine và thông tin chi tiết</p>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Thêm gói vaccine</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="flex flex-col lg:flex-row gap-4 mb-6">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên gói hoặc mô tả..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">Tất cả trạng thái</option>
+            <option value="true">Đang sử dụng</option>
+            <option value="false">Ngừng sử dụng</option>
+          </select>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="w-6 h-6 bg-blue-600 rounded-full"></div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-blue-600">Tổng số gói</p>
+                <p className="text-2xl font-bold text-blue-900">{packages.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <div className="w-6 h-6 bg-green-600 rounded-full"></div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-green-600">Đang sử dụng</p>
+                <p className="text-2xl font-bold text-green-900">{packages.filter((p) => p.status === "true").length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <div className="w-6 h-6 bg-orange-600 rounded-full"></div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-orange-600">Ngừng sử dụng</p>
+                <p className="text-2xl font-bold text-orange-900">{packages.filter((p) => p.status === "false").length}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Package Table */}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Danh sách gói vaccine ({filteredPackages.length})
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tên gói
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Mô tả
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Thời hạn
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Giá
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Trạng thái
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Hành động
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {currentPackages.map((pkg: VaccinePackage) => (
+                  <React.Fragment key={pkg.packageId}>
+                    <tr
+                      className="hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() =>
+                        setAddVaccineState((prev) =>
+                          prev?.packageId === pkg.packageId
+                            ? null
+                            : { packageId: pkg.packageId, show: false, facilityVaccineId: "", quantity: 1, loading: false, error: null }
+                        )
+                      }
+                    >
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-900">{pkg.name}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-500 max-w-xs truncate" title={pkg.description}>
+                          {pkg.description}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                          {pkg.duration} tháng
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-semibold text-green-600">{pkg.price.toLocaleString("vi-VN")}₫</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            pkg.status === "true" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {pkg.status === "true" ? "Đang sử dụng" : "Ngừng sử dụng"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex space-x-2">
+                          <button
+                            className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
+                            title="Cập nhật"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPackage(pkg);
+                              setShowDeleteModal(true);
+                            }}
+                            className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
+                            title="Xóa"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
+                    {addVaccineState?.packageId === pkg.packageId && (
+                      <tr>
+                        <td colSpan={6} className="bg-gray-50 border-b p-0">
+                          <div className="p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className="font-semibold text-blue-700">Danh sách vaccine trong gói</h3>
+                              <button
+                                className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAddVaccineState((prev) => ({ ...prev!, show: true }));
+                                }}
+                              >
+                                + Thêm vaccine
+                              </button>
+                            </div>
+                            {addVaccineState?.show && (
+                              <form
+                                className="flex gap-2 mb-4 items-center bg-gray-100 p-2 rounded"
+                                onClick={(e) => e.stopPropagation()}
+                                onSubmit={async (e) => {
+                                  e.preventDefault();
+                                  if (!addVaccineState?.facilityVaccineId || addVaccineState.facilityVaccineId === "") {
+                                    setAddVaccineState((s) => (s ? { ...s, error: "Vui lòng chọn vaccine", loading: false } : s));
+                                    return;
+                                  }
+                                  setAddVaccineState((s) => (s ? { ...s, loading: true, error: null } : s));
+                                  await handleAddVaccineToPackage(pkg.packageId, {
+                                    facilityVaccineId: Number(addVaccineState.facilityVaccineId),
+                                    quantity: addVaccineState.quantity,
+                                  });
+                                }}
+                              >
+                                <Select
+                                  className="w-full"
+                                  value={addVaccineState.facilityVaccineId}
+                                  onChange={(value) => setAddVaccineState((s) => (s ? { ...s, facilityVaccineId: value } : s))}
+                                  placeholder="-- Chọn vaccine --"
+                                >
+                                  {facilityVaccines.map((fv: FacilityVaccine) => (
+                                    <Select.Option key={fv.facilityVaccineId} value={fv.facilityVaccineId}>
+                                      {fv.vaccine.name}
+                                    </Select.Option>
+                                  ))}
+                                </Select>
+                                <InputNumber
+                                  min={1}
+                                  value={addVaccineState.quantity}
+                                  onChange={(value) =>
+                                    setAddVaccineState((s) => (s ? { ...s, quantity: value !== null ? value : 1 } : s))
+                                  }
+                                  className="w-24"
+                                />
+                                <Button
+                                  type="primary"
+                                  htmlType="submit"
+                                  className="bg-blue-600 hover:bg-blue-700"
+                                  disabled={addVaccineState.loading}
+                                >
+                                  {addVaccineState.loading ? "Đang thêm..." : "Xác nhận"}
+                                </Button>
+                                <Button
+                                  onClick={() => setAddVaccineState(null)}
+                                  disabled={addVaccineState.loading}
+                                >
+                                  Hủy
+                                </Button>
+                                {addVaccineState.error && <span className="text-red-600 ml-2">{addVaccineState.error}</span>}
+                              </form>
+                            )}
+                            <ul className="list-disc ml-6 mb-4">
+                              {pkg.packageVaccines.length === 0 ? (
+                                <li>Không có vaccine nào trong gói này.</li>
+                              ) : (
+                                pkg.packageVaccines.map((pv: any, i: number) => {
+                                  const fv = facilityVaccines.find((fv: FacilityVaccine) => fv.facilityVaccineId === pv.facilityVaccineId);
+                                  return (
+                                    <li key={pv.packageVaccineId || i}>
+                                      <span className="font-medium text-blue-700">{fv?.vaccine?.name || "-"}</span>
+                                      {" - Giá: "}
+                                      <span className="text-green-700">{fv?.price?.toLocaleString("vi-VN")}₫</span>
+                                      {" - Số lượng: "}
+                                      <span className="text-gray-800">{pv.quantity}</span>
+                                    </li>
+                                  );
+                                })
+                              )}
+                            </ul>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {filteredPackages.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Không tìm thấy gói vaccine nào.</p>
+            </div>
+          )}
+          {filteredPackages.length > 0 && (
+            <div className="px-6 py-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-700">
+                  Hiển thị {(currentPage - 1) * itemsPerPage + 1} đến{" "}
+                  {Math.min(currentPage * itemsPerPage, filteredPackages.length)} trong tổng số {filteredPackages.length} kết quả
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 1}
+                    className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg hover:bg-gray-100"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        currentPage === page ? "bg-blue-600 text-white" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                    className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg hover:bg-gray-100"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    {/* Toast thông báo nhỏ */}
-    {toast.show && (
-      <div className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded shadow-lg text-white font-semibold transition ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}>
-        {toast.message}
       </div>
-    )}
-    </div>
     </div>
   );
 };

@@ -11,6 +11,7 @@ import {
   X,
   LogOut,
   User,
+  ClipboardList
 } from "lucide-react";
 
 export default function AdminLayout() {
@@ -43,6 +44,12 @@ export default function AdminLayout() {
   };
 
   const navItems = [
+    {
+      to: "/admin/dashBoard",
+      icon: ClipboardList,
+      label: "Dashboard",
+      path: "/admin/dashBoard"
+    },
     {
       to: "/admin/members",
       icon: Users,

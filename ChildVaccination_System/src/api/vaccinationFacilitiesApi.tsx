@@ -29,6 +29,17 @@ export type GetByIdFacilitiesResponse = {
   data: Facility;
 };
 
+export type UpdateVaccineRequest = {
+   facilityId: number;
+  facilityName: string;
+  licenseNumber: number;
+  address:number;
+  phone:number;
+  email: string;
+  description: string;
+  status: boolean;
+}
+
 
 export const facilityApi = {
   getAll: async () => {
@@ -39,5 +50,10 @@ export const facilityApi = {
   getById:async (id: number) =>{
      const response: GetByIdFacilitiesResponse = await axiosClient.get(`api/VaccinationFacilities/${id}`);
     return response;
+  },
+  update: async (facilityId: number, payload: UpdateVaccineRequest): Promise<any> => {
+    return await axiosClient.put(`api/VaccinationFacilities/${facilityId}`, payload);
   }
+
+
 };

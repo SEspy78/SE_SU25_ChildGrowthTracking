@@ -43,6 +43,14 @@ export default function ManagerLayout() {
         </h2>
 
         <nav className="space-y-2">
+           <Link
+            to="/manager/dashboard"
+            className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-md
+              ${location.pathname === "/manager/dashboard" ? "bg-teal-100 text-teal-800 font-semibold" : "text-gray-700 hover:bg-teal-100 hover:text-teal-800"}`}
+          >
+            <Users className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" />
+            Dashboard
+          </Link>
           <Link
             to="/manager/staffs-management"
             className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-md

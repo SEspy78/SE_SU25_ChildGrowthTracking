@@ -21,6 +21,14 @@ export interface ScheduleSlot {
   slotNumber: number;
 }
 
+
+export interface BulkWorkingHoursRequest {
+  facilityId:Number;
+  workingHoursGroupId:number;
+  date:string;
+  status: string;
+}
+
 export interface ScheduleSlotResponse {
   data: ScheduleSlot[];
 }
@@ -29,4 +37,5 @@ export const scheduleApi = {
   getAllScheduleSlot: async (): Promise<ScheduleSlotResponse> => {
     return await axiosClient.get(`api/ScheduleSlots/my-facility`);
   },
+
 };

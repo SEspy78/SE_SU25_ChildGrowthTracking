@@ -82,7 +82,7 @@ export interface CreateFacilityVaccineRequest {
   vaccineId: number;
   price: number;
   availableQuantity: number;
-  batchNumber: 0;
+  batchNumber: number;
   expiryDate: string; 
   importDate: string;
   status: string; 
@@ -101,6 +101,10 @@ getById: async (facilityVaccineid: number) => {
   },
  create: async (payload: CreateFacilityVaccineRequest): Promise<FacilityVaccine> => {
     return  await axiosClient.post("api/FacilityVaccines", payload);
+  },
+
+  update: async (facilityVaccineId: number, payload: CreateFacilityVaccineRequest): Promise<FacilityVaccine> => {
+    return await axiosClient.put(`api/FacilityVaccines/${facilityVaccineId}`, payload);
   }
 
 }
