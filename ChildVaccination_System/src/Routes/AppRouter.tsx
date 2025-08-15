@@ -142,6 +142,7 @@ import FacilityDashboard from "@/Pages/Manager/facilityDashboard";
 import StaffManagement from "@/Pages/Manager/staffManagement";
 import CreateManager from "@/Pages/Admin/createAccount";
 import AdminDashboard from "@/Pages/Admin/adminDashboard";
+import DoctorAppointment from "@/Pages/Doctor/doctorAppointmentDetail";
 const App: React.FC = () => {
   return (
     <Router>
@@ -176,7 +177,7 @@ const App: React.FC = () => {
         </ProtectedRoute>
       }
     >
-      <Route path="appointments" element={<TodaySchedule />} />
+      <Route path="appointments" element={<DoctorAppointment />} />
       <Route path="appointments/:id/step-1" element={<VaccinationDetailPage />} />
       <Route path="appointments/:id/step-2" element={<HealthSurvey />} />
       <Route path="appointments/:id/step-3" element={<Payment />} />

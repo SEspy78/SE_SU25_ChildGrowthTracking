@@ -59,6 +59,7 @@ export type CreateFacilityRequest = {
 
 
 
+
 export const facilityApi = {
   getAll: async () => {
     const res :GetAllFacilitiesResponse = await axiosClient.get("api/VaccinationFacilities?pageIndex=1&pageSize=10");
