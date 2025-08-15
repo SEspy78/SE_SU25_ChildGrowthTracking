@@ -140,6 +140,8 @@ import OrderManagement from "@/Pages/Manager/orderManagement";
 import OrderManagementStyled from "@/Pages/Admin/order";
 import FacilityDashboard from "@/Pages/Manager/facilityDashboard";
 import StaffManagement from "@/Pages/Manager/staffManagement";
+import CreateManager from "@/Pages/Admin/createAccount";
+import AdminDashboard from "@/Pages/Admin/adminDashboard";
 const App: React.FC = () => {
   return (
     <Router>
@@ -195,9 +197,13 @@ const App: React.FC = () => {
     <Route path="facilities" element={<FacilityManagement />} />
    <Route path="order" element={<OrderManagementStyled />} />
     <Route path="blogs" element={<BlogManagement />} />
+    <Route path="create-account" element={<CreateManager />} />
+    <Route path="dashBoard" element={<AdminDashboard />} />
 
     </Route>
     {/* Admin */}
+
+
 
 
     {/* Manager */}

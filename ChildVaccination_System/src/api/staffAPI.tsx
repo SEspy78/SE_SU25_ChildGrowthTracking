@@ -68,7 +68,7 @@ export const FacilityStaffAPI = {
     return await axiosClient.post(`api/auth/create-staff`, staffData);
   },
 
-  updateStaff: async ( staffData: updateStatusPayload): Promise<any> => {
+  updateStaff: async ( staffData: UpdateStaffPayload): Promise<any> => {
     return await axiosClient.put(`api/auth/update-facility-staff-info`, staffData);
   }
 

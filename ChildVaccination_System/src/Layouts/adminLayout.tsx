@@ -11,7 +11,8 @@ import {
   X,
   LogOut,
   User,
-  ClipboardList
+  ClipboardList,
+  UserPlus,
 } from "lucide-react";
 
 export default function AdminLayout() {
@@ -79,6 +80,12 @@ export default function AdminLayout() {
       icon: NotebookPen,
       label: "Quản lý Blog",
       path: "/admin/blogs"
+    },
+    {
+      to: "/admin/create-account",
+      icon: UserPlus,
+      label: "Tạo tài khoản cho cơ sở ",
+      path: "/admin/create-account"
     }
   ];
 

@@ -7,7 +7,7 @@ import {
   type CreateFacilityVaccineRequest,
 } from "@/api/vaccineApi";
 import { getUserInfo } from "@/lib/storage";
-import { Loader2, Syringe, AlertCircle, Plus, Edit, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Syringe, AlertCircle, Plus, Edit, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Button, Col, Row, Form, Input, Select, Table, Modal, InputNumber } from "antd";
 
 const { Option } = Select;
@@ -43,8 +43,11 @@ const FacilityVaccinePage: React.FC = () => {
   const [detailError, setDetailError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize] = useState<number>(10);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   const user = getUserInfo();
+  const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
 
   const fetchVaccines = async (suppressSuccessNotification = false) => {
     if (!user?.facilityId) {
@@ -55,9 +58,24 @@ const FacilityVaccinePage: React.FC = () => {
     try {
       setLoading(true);
       const res: FacilityVaccineResponse = await facilityVaccineApi.getAll(user.facilityId);
-      const allVaccines = res.data || [];
-      setTotalCount(allVaccines.length);
-      setVaccines(allVaccines.slice((currentPage - 1) * pageSize, currentPage * pageSize));
+      let filteredVaccines = res.data || [];
+      
+      // Apply status filter
+      if (statusFilter !== "all") {
+        filteredVaccines = filteredVaccines.filter(v => v.status === statusFilter);
+      }
+
+      // Apply search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filteredVaccines = filteredVaccines.filter(
+          v => v.vaccine.name.toLowerCase().includes(query) || 
+              v.vaccine.manufacturer.toLowerCase().includes(query)
+        );
+      }
+
+      setTotalCount(filteredVaccines.length);
+      setVaccines(filteredVaccines.slice((currentPage - 1) * pageSize, currentPage * pageSize));
       if (!suppressSuccessNotification) {
         // No success notification for vaccine list loading
       }
@@ -71,7 +89,7 @@ const FacilityVaccinePage: React.FC = () => {
 
   useEffect(() => {
     fetchVaccines();
-  }, [user?.facilityId, currentPage, pageSize]);
+  }, [user?.facilityId, currentPage, pageSize, statusFilter, searchQuery]);
 
   useEffect(() => {
     const fetchAllVaccines = async () => {
@@ -120,12 +138,13 @@ const FacilityVaccinePage: React.FC = () => {
         ...values,
         facilityId: user.facilityId,
         batchNumber: generateRandomBatchNumber(),
+        importDate: today, 
       });
       setNotificationModal({ show: true, message: "Thêm vaccine thành công!", type: "success" });
       setShowCreateModal(false);
       form.resetFields();
-      setCurrentPage(1); // Reset to first page after adding
-      await fetchVaccines(true); // Suppress success notification
+      setCurrentPage(1); 
+      await fetchVaccines(true); 
     } catch {
       setNotificationModal({ show: true, message: "Thêm vaccine thất bại!", type: "error" });
     } finally {
@@ -145,6 +164,7 @@ const FacilityVaccinePage: React.FC = () => {
         facilityId: user.facilityId,
         vaccineId: selectedFacilityVaccine.vaccineId,
         batchNumber: selectedFacilityVaccine.batchNumber,
+        importDate: today, // Use today's date for importDate
       });
       setNotificationModal({ show: true, message: "Cập nhật vaccine thành công!", type: "success" });
       setShowUpdateModal(false);
@@ -164,7 +184,7 @@ const FacilityVaccinePage: React.FC = () => {
       vaccineId: facilityVaccine.vaccineId,
       availableQuantity: facilityVaccine.availableQuantity,
       price: facilityVaccine.price,
-      importDate: facilityVaccine.importDate.split("T")[0],
+      importDate: today, // Set to today's date
       expiryDate: facilityVaccine.expiryDate.split("T")[0],
       status: facilityVaccine.status,
     });
@@ -343,6 +363,37 @@ const FacilityVaccinePage: React.FC = () => {
             Danh sách vaccine ({totalCount})
           </h3>
         </div>
+        <div className="px-6 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="text-sm text-gray-700">
+              Tổng số vaccine: {totalCount}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Input
+                placeholder="Tìm kiếm theo tên hoặc hãng sản xuất"
+                prefix={<Search className="w-4 h-4 text-gray-500" />}
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1); // Reset to first page on search
+                }}
+                className="w-full sm:w-64"
+              />
+              <Select
+                value={statusFilter}
+                onChange={(value) => {
+                  setStatusFilter(value);
+                  setCurrentPage(1); // Reset to first page on filter change
+                }}
+                className="w-full sm:w-40"
+              >
+                <Option value="all">Tất cả trạng thái</Option>
+                <Option value="active">Đang sử dụng</Option>
+                <Option value="inactive">Ngừng SD</Option>
+              </Select>
+            </div>
+          </div>
+        </div>
         <Table
           dataSource={vaccines}
           columns={columns}
@@ -413,6 +464,7 @@ const FacilityVaccinePage: React.FC = () => {
             status: "active",
             price: 0,
             availableQuantity: 0,
+            importDate: today, // Auto-fill with today's date
           }}
         >
           <Row gutter={[16, 16]}>
@@ -462,7 +514,7 @@ const FacilityVaccinePage: React.FC = () => {
                 label="Ngày nhập"
                 rules={[{ required: true, message: "Vui lòng chọn ngày nhập!" }]}
               >
-                <Input type="date" />
+                <Input type="date" disabled value={today} />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -529,6 +581,7 @@ const FacilityVaccinePage: React.FC = () => {
             status: "active",
             price: 0,
             availableQuantity: 0,
+            importDate: today, 
           }}
         >
           <Row gutter={[16, 16]}>
@@ -578,7 +631,7 @@ const FacilityVaccinePage: React.FC = () => {
                 label="Ngày nhập"
                 rules={[{ required: true, message: "Vui lòng chọn ngày nhập!" }]}
               >
-                <Input type="date" />
+                <Input type="date" disabled value={today} />
               </Form.Item>
             </Col>
             <Col span={12}>

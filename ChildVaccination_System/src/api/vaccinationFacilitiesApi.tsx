@@ -26,11 +26,11 @@ export type GetAllFacilitiesResponse = {
 export type GetByIdFacilitiesResponse = {
   success: boolean;
   message: string;
-  data: Facility;
+  data: Facility | null;
 };
 
-export type UpdateVaccineRequest = {
-   facilityId: number;
+export type UpdateFacilityRequest = {
+  facilityId: number;
   facilityName: string;
   licenseNumber: number;
   address:number;
@@ -39,6 +39,24 @@ export type UpdateVaccineRequest = {
   description: string;
   status: boolean;
 }
+
+
+
+export type CreateFacilityRequest = {
+ accountName: string;
+ password: string;
+ managerEmail: string;
+ managerFullName: string;
+ managerPhone:string;
+ managerDescription: string;
+ facilityName: string;
+ licenseNumber: number;
+ facilityAddress: string;
+ facilityPhone: number;
+ facilityEmail: string;
+ facilityDescription: string;
+}
+
 
 
 export const facilityApi = {
@@ -51,9 +69,13 @@ export const facilityApi = {
      const response: GetByIdFacilitiesResponse = await axiosClient.get(`api/VaccinationFacilities/${id}`);
     return response;
   },
-  update: async (facilityId: number, payload: UpdateVaccineRequest): Promise<any> => {
+  update: async (facilityId: number, payload: UpdateFacilityRequest): Promise<any> => {
     return await axiosClient.put(`api/VaccinationFacilities/${facilityId}`, payload);
-  }
+  },
 
+
+  createFacility: async (payload: CreateFacilityRequest): Promise<any> => {
+    return await axiosClient.post(`api/auth/create-manager-with-facility`, payload);
+  }
 
 };

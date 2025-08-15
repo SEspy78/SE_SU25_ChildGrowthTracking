@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button, Card, Col, Row, Input, Select, Table, Modal, Form, InputNumber } from "antd";
 import { Search, Users, AlertCircle, Pencil, Trash2, ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { FacilityStaffAPI, type Staff, type CreateStaffPayload } from "@/api/staffAPI";
+import { FacilityStaffAPI, type Staff, type CreateStaffPayload, type UpdateStaffPayload } from "@/api/staffAPI";
 import { getUserInfo } from "@/lib/storage";
 
 const { Option } = Select;
@@ -18,6 +18,7 @@ const StaffManagement: React.FC = () => {
   const [pageSize] = useState<number>(10);
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" }>({
     show: false,
@@ -66,24 +67,23 @@ const StaffManagement: React.FC = () => {
     fetchStaffData();
   };
 
-  const handleDeleteStaff = async () => {
-    if (!selectedStaff) return;
-    setLoading(true);
-    try {
-      // Giả sử API xóa nhân viên, thay thế bằng API thực tế nếu có
-      // await FacilityStaffAPI.deleteStaff(selectedStaff.staffId);
-      setToast({ show: true, message: `Đã xóa nhân viên ${selectedStaff.fullName} thành công!`, type: "success" });
-      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
-      setShowDeleteModal(false);
-      setSelectedStaff(null);
-      fetchStaffData();
-    } catch (err: any) {
-      setToast({ show: true, message: `Xóa nhân viên ${selectedStaff.fullName} thất bại!`, type: "error" });
-      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const handleDeleteStaff = async () => {
+  //   if (!selectedStaff) return;
+  //   setLoading(true);
+  //   try {
+  //     await FacilityStaffAPI.deleteStaff(selectedStaff.staffId);
+  //     setToast({ show: true, message: `Đã xóa nhân viên ${selectedStaff.fullName} thành công!`, type: "success" });
+  //     setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+  //     setShowDeleteModal(false);
+  //     setSelectedStaff(null);
+  //     fetchStaffData();
+  //   } catch (err: any) {
+  //     setToast({ show: true, message: `Xóa nhân viên ${selectedStaff.fullName} thất bại: ${err.message || "Lỗi không xác định"}`, type: "error" });
+  //     setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const handleCreateStaff = async (values: CreateStaffPayload) => {
     setModalLoading(true);
@@ -95,7 +95,39 @@ const StaffManagement: React.FC = () => {
       form.resetFields();
       fetchStaffData();
     } catch (err: any) {
-      setToast({ show: true, message: err.message || "Thêm nhân viên thất bại!", type: "error" });
+      setToast({ show: true, message: `Thêm nhân viên thất bại: ${err.message || "Lỗi không xác định"}`, type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleUpdateStaff = async (values: UpdateStaffPayload) => {
+    if (!selectedStaff) return;
+    setModalLoading(true);
+    try {
+      const payload: UpdateStaffPayload = {
+        staffId: selectedStaff.staffId,
+        fullName: values.fullName,
+        phone: values.phone,
+        email: values.email,
+        position: values.position,
+        description: values.description,
+        status: values.status,
+        age: values.age,
+        specialization: values.specialization,
+        certifications: values.certifications,
+        university: values.university,
+        bio: values.bio,
+      };
+      await FacilityStaffAPI.updateStaff(payload);
+      setToast({ show: true, message: `Đã cập nhật nhân viên ${values.fullName} thành công!`, type: "success" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+      setShowEditModal(false);
+      form.resetFields();
+      fetchStaffData();
+    } catch (err: any) {
+      setToast({ show: true, message: `Cập nhật nhân viên thất bại: ${err.message || "Lỗi không xác định"}`, type: "error" });
       setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } finally {
       setModalLoading(false);
@@ -171,6 +203,19 @@ const StaffManagement: React.FC = () => {
       render: (_: any, record: Staff) => (
         <div className="flex space-x-2">
           <button
+            onClick={() => {
+              setSelectedStaff(record);
+              setShowEditModal(true);
+              form.setFieldsValue({
+                fullName: record.fullName,
+                email: record.email,
+                phone: record.phone,
+                position: record.position,
+                description: record.description,
+                status: record.status,
+                
+              });
+            }}
             className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
             title="Chỉnh sửa"
           >
@@ -445,7 +490,7 @@ const StaffManagement: React.FC = () => {
           <Button
             type="primary"
             danger
-            onClick={handleDeleteStaff}
+            // onClick={handleDeleteStaff}
             className="rounded-lg"
           >
             Xóa
@@ -513,7 +558,7 @@ const StaffManagement: React.FC = () => {
                 <Input placeholder="Nhập họ tên" />
               </Form.Item>
             </Col>
-            <Col span= {12}>
+            <Col span={12}>
               <Form.Item
                 name="phone"
                 label="Số điện thoại"
@@ -592,6 +637,143 @@ const StaffManagement: React.FC = () => {
               className="rounded-lg"
             >
               Thêm
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Edit Staff Modal */}
+      <Modal
+        title="Chỉnh sửa nhân viên"
+        open={showEditModal}
+        onCancel={() => {
+          setShowEditModal(false);
+          setSelectedStaff(null);
+          form.resetFields();
+        }}
+        footer={null}
+        centered
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleUpdateStaff}
+          initialValues={{ status: true }}
+        >
+          <Row gutter={[16, 16]}>
+            <Col span={12}>
+              <Form.Item
+                name="fullName"
+                label="Họ tên"
+                rules={[{ required: true, message: "Vui lòng nhập họ tên!" }]}
+              >
+                <Input placeholder="Nhập họ tên" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="email"
+                label="Email"
+                rules={[
+                  { required: true, message: "Vui lòng nhập email!" },
+                  { type: "email", message: "Email không hợp lệ!" },
+                ]}
+              >
+                <Input placeholder="Nhập email" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="phone"
+                label="Số điện thoại"
+                rules={[
+                  { required: true, message: "Vui lòng nhập số điện thoại!" },
+                  { pattern: /^[0-9]{10}$/, message: "Số điện thoại phải có 10 chữ số!" },
+                ]}
+              >
+                <Input placeholder="Nhập số điện thoại" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="position"
+                label="Vị trí"
+                rules={[{ required: true, message: "Vui lòng chọn vị trí!" }]}
+              >
+                <Select placeholder="Chọn vị trí">
+                  <Option value="Staff">Nhân viên</Option>
+                  <Option value="Doctor">Bác sĩ</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="age"
+                label="Tuổi"
+                rules={[
+                  { required: true, message: "Vui lòng nhập tuổi!" },
+                  { type: "number", min: 18, message: "Tuổi phải từ 18 trở lên!" },
+                ]}
+              >
+                <InputNumber className="w-full" placeholder="Nhập tuổi" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="status"
+                label="Trạng thái"
+                rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
+              >
+                <Select placeholder="Chọn trạng thái">
+                  <Option value={true}>Đang hoạt động</Option>
+                  <Option value={false}>Ngừng hoạt động</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="specialization" label="Chuyên môn">
+                <Input placeholder="Nhập chuyên môn (nếu có)" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="certifications" label="Chứng chỉ">
+                <Input placeholder="Nhập chứng chỉ (nếu có)" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="university" label="Trường đại học">
+                <Input placeholder="Nhập trường đại học (nếu có)" />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item name="description" label="Mô tả">
+                <Input.TextArea rows={3} placeholder="Nhập mô tả (nếu có)" />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item name="bio" label="Tiểu sử">
+                <Input.TextArea rows={3} placeholder="Nhập tiểu sử (nếu có)" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <div className="flex justify-end gap-3">
+            <Button
+              onClick={() => {
+                setShowEditModal(false);
+                setSelectedStaff(null);
+                form.resetFields();
+              }}
+              className="rounded-lg"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={modalLoading}
+              className="rounded-lg"
+            >
+              Cập nhật
             </Button>
           </div>
         </Form>

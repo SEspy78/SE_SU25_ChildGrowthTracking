@@ -1,494 +1,523 @@
-import { useEffect, useState, useRef, useCallback } from "react"
-import { surveyAPI } from "@/api/surveyAPI"
-import type { Survey, Question, createQuestionPayload, createSurveyPayload } from "@/api/surveyAPI"
+import { useEffect, useState, useRef, useCallback } from "react";
+import { surveyAPI } from "@/api/surveyAPI";
+import type { Survey, Question, createQuestionPayload, createSurveyPayload } from "@/api/surveyAPI";
+import { Button, Table, Modal, Input, Checkbox, Spin, type InputRef } from "antd";
+
+const { TextArea } = Input;
 
 export default function SurveyManagement() {
-  const [surveys, setSurveys] = useState<Survey[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string>("")
-  const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null)
-  const [questions, setQuestions] = useState<Question[]>([])
-  const [loadingQuestions, setLoadingQuestions] = useState(false)
-  const [showPopup, setShowPopup] = useState(false)
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [surveys, setSurveys] = useState<Survey[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
+  const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [newQuestion, setNewQuestion] = useState<createQuestionPayload>({
     questionText: "",
     questionType: "Text",
-    isRequired: false
-  })
-  const [adding, setAdding] = useState(false)
-  const [addError, setAddError] = useState("")
-  const [showDropdown, setShowDropdown] = useState<false | 'questionType' | 'status'>(false)
-  const popupRef = useRef<HTMLDivElement>(null)
-  const closeButtonRef = useRef<HTMLButtonElement>(null)
-  const questionInputRef = useRef<HTMLInputElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const dropdownButtonRef = useRef<HTMLButtonElement>(null)
-  const [showCreateSurvey, setShowCreateSurvey] = useState(false)
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState("")
+    isRequired: false,
+  });
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState("");
+  const [showDropdown, setShowDropdown] = useState<false | "questionType" | "status">(false);
+  const [showCreateSurvey, setShowCreateSurvey] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
   const [newSurvey, setNewSurvey] = useState<createSurveyPayload>({
     title: "",
     description: "",
-    startDate: "",
+    startDate: new Date().toISOString().split("T")[0], // Auto-fill with today's date
     endDate: "",
     status: "Active",
-  })
-  
+  });
+  const [searchTerm, setSearchTerm] = useState("");
+  const questionInputRef = useRef<InputRef>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const fetchSurveys = async () => {
       try {
-        setLoading(true)
-        const res = await surveyAPI.getAllSurveys()
-        setSurveys(res.data)
-      } catch (err) {
-        setError("Failed to load surveys.")
+        setLoading(true);
+        const res = await surveyAPI.getAllSurveys();
+        setSurveys(res.data);
+      } catch {
+        setError("Không thể tải danh sách khảo sát.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchSurveys()
-  }, [])
-
+    };
+    fetchSurveys();
+  }, []);
 
   const handleCreateSurvey = async () => {
     if (!newSurvey.title.trim() || !newSurvey.startDate || !newSurvey.endDate) {
-      setCreateError("Title, Start Date, and End Date are required.")
-      return
+      setCreateError("Tiêu đề, ngày bắt đầu và ngày kết thúc là bắt buộc.");
+      return;
     }
-    setCreating(true)
-    setCreateError("")
+    setCreating(true);
+    setCreateError("");
     try {
-      await surveyAPI.createSurvey(newSurvey)
-      setShowCreateSurvey(false)
+      await surveyAPI.createSurvey(newSurvey);
+      setShowCreateSurvey(false);
       setNewSurvey({
         title: "",
         description: "",
-        startDate: "",
+        startDate: new Date().toISOString().split("T")[0],
         endDate: "",
         status: "Active",
-      })
-      const res = await surveyAPI.getAllSurveys()
-      setSurveys(res.data)
+      });
+      setSearchTerm(""); // Reset search term
+      const res = await surveyAPI.getAllSurveys();
+      setSurveys(res.data);
     } catch {
-      setCreateError("Failed to create survey.")
+      setCreateError("Tạo khảo sát thất bại.");
     } finally {
-      setCreating(false)
+      setCreating(false);
     }
-  }
+  };
 
   const handleView = async (survey: Survey) => {
-    setSelectedSurvey(survey)
-    setLoadingQuestions(true)
-    setShowPopup(true)
+    setSelectedSurvey(survey);
+    setLoadingQuestions(true);
+    setShowPopup(true);
     try {
-      const res = await surveyAPI.getSurveybyId(survey.surveyId)
-      setQuestions(res.data)
+      const res = await surveyAPI.getSurveybyId(survey.surveyId);
+      setQuestions(res.data);
     } catch {
-      setQuestions([])
+      setQuestions([]);
     } finally {
-      setLoadingQuestions(false)
+      setLoadingQuestions(false);
     }
-  }
+  };
 
   const handleAddQuestion = async () => {
-    if (!selectedSurvey) return
+    if (!selectedSurvey) return;
     if (!newQuestion.questionText.trim()) {
-      setAddError("Question text is required.")
-      questionInputRef.current?.focus()
-      return
+      setAddError("Văn bản câu hỏi là bắt buộc.");
+      questionInputRef.current?.focus();
+      return;
     }
-    setAdding(true)
-    setAddError("")
+    setAdding(true);
+    setAddError("");
     try {
-      await surveyAPI.addQuestion(selectedSurvey.surveyId, newQuestion)
-      const res = await surveyAPI.getSurveybyId(selectedSurvey.surveyId)
-      setQuestions(res.data)
-      setNewQuestion({ questionText: "", questionType: "Text", isRequired: false })
-      setShowAddForm(false)
-      questionInputRef.current?.focus()
+      await surveyAPI.addQuestion(selectedSurvey.surveyId, newQuestion);
+      const res = await surveyAPI.getSurveybyId(selectedSurvey.surveyId);
+      setQuestions(res.data);
+      setNewQuestion({ questionText: "", questionType: "Text", isRequired: false });
+      setShowAddForm(false);
+      questionInputRef.current?.focus();
     } catch {
-      setAddError("Failed to add question.")
+      setAddError("Thêm câu hỏi thất bại.");
     } finally {
-      setAdding(false)
+      setAdding(false);
     }
-  }
+  };
 
   const closePopup = useCallback(() => {
-    setShowPopup(false)
-    setSelectedSurvey(null)
-    setQuestions([])
-    setNewQuestion({ questionText: "", questionType: "Text", isRequired: false })
-    setAddError("")
-    setShowAddForm(false)
-    setShowDropdown(false)
-  }, [])
+    setShowPopup(false);
+    setSelectedSurvey(null);
+    setQuestions([]);
+    setNewQuestion({ questionText: "", questionType: "Text", isRequired: false });
+    setAddError("");
+    setShowAddForm(false);
+    setShowDropdown(false);
+  }, []);
 
-  const handleDropdownSelect = (value: string) => {
-    setNewQuestion(q => ({ ...q, questionType: value }))
-    setShowDropdown(false)
-    dropdownButtonRef.current?.focus()
-  }
+  const handleDropdownSelect = (value: string, type: "questionType" | "status") => {
+    if (type === "questionType") {
+      setNewQuestion((q) => ({ ...q, questionType: value }));
+    } else {
+      setNewSurvey((s) => ({ ...s, status: value }));
+    }
+    setShowDropdown(false);
+    dropdownButtonRef.current?.focus();
+  };
 
   useEffect(() => {
-    if (showPopup && closeButtonRef.current) {
-      closeButtonRef.current.focus()
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && showPopup) {
-        closePopup()
-      }
-    }
-
     const handleDropdownKeyDown = (event: KeyboardEvent) => {
-      if (!showDropdown) return
+      if (!showDropdown) return;
       if (event.key === "Escape") {
-        setShowDropdown(false)
-        dropdownButtonRef.current?.focus()
+        setShowDropdown(false);
+        dropdownButtonRef.current?.focus();
       }
-    }
+    };
 
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false)
+        setShowDropdown(false);
       }
-    }
+    };
 
-    document.addEventListener("keydown", handleDropdownKeyDown)
-    document.addEventListener("mousedown", handleClickOutside)
-    document.addEventListener("keydown", handleKeyDown)
+    document.addEventListener("keydown", handleDropdownKeyDown);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("keydown", handleDropdownKeyDown)
-      document.removeEventListener("mousedown", handleClickOutside)
-      document.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [showPopup, closePopup, showDropdown])
+      document.removeEventListener("keydown", handleDropdownKeyDown);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showDropdown]);
+
+  const filteredSurveys = surveys.filter((survey) =>
+    survey.title.toLowerCase().includes(searchTerm.trim().toLowerCase())
+  );
+
+  const columns = [
+    {
+      title: "Tiêu đề",
+      dataIndex: "title",
+      key: "title",
+      render: (text: string) => <span className="font-semibold text-gray-900">{text}</span>,
+    },
+    {
+      title: "Mô tả",
+      dataIndex: "description",
+      key: "description",
+      render: (text: string) => <span className="text-gray-600">{text}</span>,
+    },
+    {
+      title: "Ngày bắt đầu",
+      dataIndex: "startDate",
+      key: "startDate",
+      render: (text: string) => new Date(text).toLocaleDateString("vi-VN"),
+    },
+    {
+      title: "Ngày kết thúc",
+      dataIndex: "endDate",
+      key: "endDate",
+      render: (text: string) => new Date(text).toLocaleDateString("vi-VN"),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status: string) => (
+        <span
+          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+            status === "Active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+          }`}
+        >
+          {status}
+        </span>
+      ),
+    },
+    {
+      title: "Hành động",
+      key: "action",
+      render: (_: any, survey: Survey) => (
+        <div className="flex space-x-2">
+          <Button
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg"
+            onClick={() => handleView(survey)}
+          >
+            Xem
+          </Button>
+          <Button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg">
+            Xóa
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <Spin size="large" className="text-blue-600" />
+        <span className="mt-4 text-gray-600 text-lg font-medium">Đang tải...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="bg-red-100 text-red-700 p-6 rounded-lg flex items-center gap-3 max-w-md">
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 9v2m0 4h.01M12 17h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
+            />
+          </svg>
+          <span className="text-lg font-medium">{error}</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 sm:p-8">
-      <div className={`transition-all duration-300 ${(showPopup || showCreateSurvey ) ? 'blur-sm' : ''}`}>
-        <h2 className="text-2xl font-bold mb-6">Survey Management</h2>
-        <button
-          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg mb-4 transition-colors duration-200 cursor-pointer"
-          onClick={() => setShowCreateSurvey(true)}
-          type="button"
-        >
-          Tạo khảo sát mới 
-        </button>
-        {loading ? (
-          <div>Loading...</div>
-        ) : error ? (
-          <div className="text-red-500">{error}</div>
-        ) : (
-          <table className="min-w-full bg-white rounded-xl shadow overflow-hidden mb-8">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-4 text-left">Tiêu đề</th>
-                <th className="p-4 text-left">Mô tả</th>
-                <th className="p-4 text-left">Ngày bắt đầu</th>
-                <th className="p-4 text-left">Ngày kết thúc</th>
-                <th className="p-4 text-left">Trạng thái</th>
-                <th className="p-4 text-left"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {surveys.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-8">No surveys found</td></tr>
-              ) : (
-                surveys.map(survey => (
-                  <tr key={survey.surveyId} className="border-t hover:bg-gray-50">
-                    <td className="p-4 font-semibold">{survey.title}</td>
-                    <td className="p-4">{survey.description}</td>
-                    <td className="p-4">{survey.startDate}</td>
-                    <td className="p-4">{survey.endDate}</td>
-                    <td className="p-4">{survey.status}</td>
-                    <td className="p-4">
-                      <button
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded mr-2 transition-colors duration-200 cursor-pointer"
-                        onClick={() => handleView(survey)}
-                      >
-                        Xem
-                      </button>
-                      <button
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition-colors duration-200 cursor-pointer"
-                      >
-                        Xóa
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        )}
-      </div>
-      {showCreateSurvey && (
-          <div
-  className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-  role="dialog"
-  aria-modal="true"
->
-        <div
-          ref={popupRef}
-          role="dialog"
-          aria-labelledby="popup-title"
-          aria-modal="false"
-          className="bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full max-w-2xl mx-auto mt-4 transition-all duration-300 transform translate-y-0 opacity-100 z-10 relative border border-gray-200"
-          style={{ animation: showCreateSurvey ? 'slideIn 0.3s ease-out' : 'none' }}
-        >
-          <style>
-            {`
-              @keyframes slideIn {
-                from { transform: translateY(-20px); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-              }
-            `}
-          </style>
-        
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold">Tạo khảo sát mới</h3>
-            <button
-              className="text-gray-400 hover:text-gray-600 text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full w-8 h-8 flex items-center justify-center cursor-pointer"
-              onClick={() => setShowCreateSurvey(false)}
-              type="button"
-              aria-label="Close create survey popup"
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+          <h2 className="text-3xl font-bold text-gray-900">Quản lý khảo sát</h2>
+          <div className="flex gap-4 w-full sm:w-auto">
+            <Input
+              className="w-full sm:w-64 border-gray-200 rounded-lg"
+              placeholder="Tìm kiếm theo tiêu đề..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"
+              onClick={() => setShowCreateSurvey(true)}
             >
-              ×
-            </button>
+              Tạo khảo sát mới
+            </Button>
           </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <Table
+            dataSource={filteredSurveys}
+            columns={columns}
+            rowKey="surveyId"
+            locale={{ emptyText: "Không tìm thấy khảo sát nào." }}
+            pagination={false}
+            className="overflow-x-auto"
+          />
+        </div>
+
+        {/* Create Survey Modal */}
+        <Modal
+          title="Tạo khảo sát mới"
+          open={showCreateSurvey}
+          onCancel={() => {
+            setShowCreateSurvey(false);
+            setCreateError("");
+            setNewSurvey({
+              title: "",
+              description: "",
+              startDate: new Date().toISOString().split("T")[0],
+              endDate: "",
+              status: "Active",
+            });
+          }}
+          footer={null}
+          centered
+        >
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Tiêu đề</label>
-              <input
-                className="w-full border rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề</label>
+              <Input
+                className="w-full border-gray-200 rounded-lg"
                 value={newSurvey.title}
-                onChange={e => setNewSurvey(s => ({ ...s, title: e.target.value }))}
+                onChange={(e) => setNewSurvey((s) => ({ ...s, title: e.target.value }))}
                 disabled={creating}
+                placeholder="Nhập tiêu đề khảo sát"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Mô tả</label>
-              <textarea
-                className="w-full border rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+              <TextArea
+                className="w-full border-gray-200 rounded-lg"
                 value={newSurvey.description}
-                onChange={e => setNewSurvey(s => ({ ...s, description: e.target.value }))}
+                onChange={(e) => setNewSurvey((s) => ({ ...s, description: e.target.value }))}
                 disabled={creating}
+                placeholder="Nhập mô tả khảo sát"
+                rows={4}
               />
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium mb-1">Ngày bắt đầu</label>
-                <input
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ngày bắt đầu</label>
+                <Input
                   type="date"
-                  className="w-full border rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                  className="w-full border-gray-200 rounded-lg"
                   value={newSurvey.startDate}
-                  onChange={e => setNewSurvey(s => ({ ...s, startDate: e.target.value }))}
-                  disabled={creating}
+                  onChange={(e) => setNewSurvey((s) => ({ ...s, startDate: e.target.value }))}
+                  disabled
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-sm font-medium mb-1">Ngày kết thúc</label>
-                <input
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ngày kết thúc</label>
+                <Input
                   type="date"
-                  className="w-full border rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
+                  className="w-full border-gray-200 rounded-lg"
                   value={newSurvey.endDate}
-                  onChange={e => setNewSurvey(s => ({ ...s, endDate: e.target.value }))}
+                  onChange={(e) => setNewSurvey((s) => ({ ...s, endDate: e.target.value }))}
                   disabled={creating}
+                  placeholder="Chọn ngày kết thúc"
                 />
               </div>
             </div>
             <div>
-             <div>
-  <label className="block text-sm font-medium mb-1">Trạng thái</label>
-  <div className="relative" style={{ zIndex: 60 }}>
-    <button
-      type="button"
-      className={`w-full border rounded-lg px-3 py-2 text-gray-700 bg-white text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${creating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
-      onClick={() => setShowDropdown(showDropdown === 'status' ? false : 'status')}
-      disabled={creating}
-      aria-expanded={showDropdown === 'status'}
-      aria-haspopup="listbox"
-    >
-      <span>{newSurvey.status === 'Active' ? 'Hoạt động' : 'Ngừng hoạt động'}</span>
-      <span className="text-gray-600">▼</span>
-    </button>
-    {showDropdown === 'status' && (
-      <ul
-        className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto"
-        role="listbox"
-      >
-        {[
-          { value: 'Active', label: 'Hoạt động' },
-          { value: 'Inactive', label: 'Ngừng hoạt động' }
-        ].map(opt => (
-          <li
-            key={opt.value}
-            className={`px-3 py-2 border-b border-gray-200 last:border-b-0 text-gray-700 hover:bg-blue-50 cursor-pointer transition-colors duration-200 ${newSurvey.status === opt.value ? 'bg-blue-100 font-medium' : ''}`}
-            onClick={() => {
-              setNewSurvey(s => ({ ...s, status: opt.value }));
-              setShowDropdown(false);
-            }}
-            role="option"
-            aria-selected={newSurvey.status === opt.value}
-          >
-            {opt.label}
-          </li>
-        ))}
-      </ul>
-    )}
-  </div>
-</div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+              <div className="relative" ref={dropdownRef}>
+                <Button
+                  className={`w-full border border-gray-200 rounded-lg text-left flex justify-between items-center ${
+                    creating ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
+                  }`}
+                  onClick={() => setShowDropdown(showDropdown === "status" ? false : "status")}
+                  disabled={creating}
+                >
+                  <span>{newSurvey.status}</span>
+                  <span className="text-gray-600">▼</span>
+                </Button>
+                {showDropdown === "status" && (
+                  <ul className="absolute w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
+                    {[
+                      { value: "Active", label: "Active" },
+                      { value: "Inactive", label: "Inactive" },
+                    ].map((opt) => (
+                      <li
+                        key={opt.value}
+                        className={`px-3 py-2 border-b border-gray-200 last:border-b-0 text-gray-700 hover:bg-blue-50 cursor-pointer ${
+                          newSurvey.status === opt.value ? "bg-blue-100 font-medium" : ""
+                        }`}
+                        onClick={() => handleDropdownSelect(opt.value, "status")}
+                      >
+                        {opt.label}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
-            {createError && (
-              <div className="text-red-500 text-sm">{createError}</div>
-            )}
-            <div className="flex justify-end gap-2">
-              <button
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            {createError && <div className="text-red-500 text-sm">{createError}</div>}
+            <div className="flex justify-end gap-3">
+              <Button
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg"
                 onClick={() => setShowCreateSurvey(false)}
-                type="button"
                 disabled={creating}
               >
-                Cancel
-              </button>
-              <button
-                className={`bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors duration-200 ${creating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'}`}
+                Hủy
+              </Button>
+              <Button
+                className={`bg-blue-600 hover:bg-blue-700 text-white rounded-lg ${
+                  creating ? "opacity-50 cursor-not-allowed" : ""
+                }`}
                 onClick={handleCreateSurvey}
                 disabled={creating}
-                type="button"
               >
-                {creating ? "Creating..." : "Create Survey"}
-              </button>
+                {creating ? "Đang tạo..." : "Tạo khảo sát"}
+              </Button>
             </div>
           </div>
-        </div>
-        </div>
-      )}
+        </Modal>
 
-
-
-
-
-
-
-
-
-      {showPopup && selectedSurvey && (
-        <div
-  className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-  role="dialog"
-  aria-modal="true"
->
-        <div
-          ref={popupRef}
-          role="dialog"
-          aria-labelledby="popup-title"
-          aria-modal="false"
-          className="bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full max-w-2xl mx-auto mt-4 transition-all duration-300 transform translate-y-0 opacity-100 z-10 relative border border-gray-200"
-          style={{ animation: showPopup ? 'slideIn 0.3s ease-out' : 'none' }}
+        {/* Survey Details Modal */}
+        <Modal
+          title={`Khảo sát: ${selectedSurvey?.title}`}
+          open={showPopup && !!selectedSurvey}
+          onCancel={closePopup}
+          footer={null}
+          centered
         >
-          <style>
-            {`
-              @keyframes slideIn {
-                from { transform: translateY(-20px); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-              }
-            `}
-          </style>
-          <div className="flex justify-between items-center mb-4">
-            <h3 id="popup-title" className="text-xl sm:text-2xl font-semibold text-gray-800">Survey: {selectedSurvey.title}</h3>
-            <button
-              ref={closeButtonRef}
-              className="text-gray-400 hover:text-gray-600 text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full w-8 h-8 flex items-center justify-center cursor-pointer"
-              onClick={closePopup}
-              aria-label="Close popup"
-            >
-              ×
-            </button>
-          </div>
           <div className="max-h-80 overflow-y-auto px-2 mb-6">
             {loadingQuestions ? (
-              <div className="text-center text-gray-500">Loading questions...</div>
+              <div className="flex flex-col items-center py-6">
+                <Spin size="large" className="text-blue-600" />
+                <span className="mt-4 text-gray-600 text-lg font-medium">Đang tải câu hỏi...</span>
+              </div>
             ) : questions.length === 0 ? (
-              <div className="text-center text-gray-500">No questions found for this survey.</div>
+              <div className="bg-gray-50 text-gray-600 p-4 rounded-lg flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
+                  />
+                </svg>
+                Không tìm thấy câu hỏi nào cho khảo sát này.
+              </div>
             ) : (
-              <ul className="space-y-3">
+              <ul className="space-y-4">
                 {questions.map((q, index) => (
-                  <li key={q.questionId} className="text-gray-700 text-base border-b border-gray-200 pb-2">
-                    <span className="font-medium text-gray-800">Question {index + 1} ({q.questionType || 'Unknown'}):</span> {q.questionText}
+                  <li
+                    key={q.questionId}
+                    className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200"
+                  >
+                    <span className="font-medium text-gray-800">
+                      Câu hỏi {index + 1} ({q.questionType || "Không xác định"}):
+                    </span>{" "}
+                    {q.questionText}
                   </li>
                 ))}
               </ul>
             )}
           </div>
-          <div className="border-t pt-4">
-            <button
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 mb-4 cursor-pointer"
+          <div className="border-t border-gray-200 pt-4">
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white rounded-lg mb-4"
               onClick={() => setShowAddForm(!showAddForm)}
-              type="button"
-              aria-label={showAddForm ? "Hide add question form" : "Show add question form"}
             >
-              {showAddForm ? "Hide Add Question" : "Add New Question"}
-            </button>
+              {showAddForm ? "Ẩn thêm câu hỏi" : "Thêm câu hỏi mới"}
+            </Button>
             {showAddForm && (
-              <div className="transition-all duration-300 ease-in-out">
-                <h4 className="text-lg font-semibold text-gray-800 mb-3">Add New Question</h4>
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-gray-800">Thêm câu hỏi mới</h4>
                 <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <label htmlFor="question-text" className="block text-sm font-medium text-gray-700 mb-1">
-                      Question Text
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Văn bản câu hỏi
                     </label>
-                    <input
-                      id="question-text"
-                      type="text"
+                    <Input
                       ref={questionInputRef}
-                      className={`w-full border rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${addError && !newQuestion.questionText.trim() ? 'border-red-500' : 'border-gray-300'}`}
-                      placeholder="Enter question text"
+                      className={`w-full border-gray-200 rounded-lg ${
+                        addError && !newQuestion.questionText.trim() ? "border-red-500" : ""
+                      }`}
+                      placeholder="Nhập văn bản câu hỏi"
                       value={newQuestion.questionText}
-                      onChange={e => setNewQuestion(q => ({ ...q, questionText: e.target.value }))}
+                      onChange={(e) =>
+                        setNewQuestion((q) => ({ ...q, questionText: e.target.value }))
+                      }
                       disabled={adding}
-                      aria-invalid={addError && !newQuestion.questionText.trim() ? 'true' : 'false'}
-                      aria-describedby={addError && !newQuestion.questionText.trim() ? 'question-error' : undefined}
                     />
                     {addError && !newQuestion.questionText.trim() && (
-                      <p id="question-error" className="text-red-500 text-sm mt-1">{addError}</p>
+                      <p className="text-red-500 text-sm mt-1">{addError}</p>
                     )}
                   </div>
                   <div>
-                    <label htmlFor="question-type" className="block text-sm font-medium text-gray-700 mb-1">
-                      Question Type
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Loại câu hỏi
                     </label>
                     <div className="relative" ref={dropdownRef}>
-                      <button
-                        id="question-type"
-                        type="button"
+                      <Button
                         ref={dropdownButtonRef}
-                        className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-700 bg-white text-left flex justify-between items-center focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200 ${adding ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
-                        onClick={() => setShowDropdown(showDropdown === 'questionType' ? false : 'questionType')}
+                        className={`w-full border border-gray-200 rounded-lg text-left flex justify-between items-center ${
+                          adding ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
+                        }`}
+                        onClick={() =>
+                          setShowDropdown(showDropdown === "questionType" ? false : "questionType")
+                        }
                         disabled={adding}
-                        aria-expanded={showDropdown === 'questionType'}
-                        aria-haspopup="listbox"
                       >
-                        <span>{newQuestion.questionType === 'Text' ? 'Text' : newQuestion.questionType === 'YesNo' ? 'Yes/No' : 'Multiple Choice'}</span>
+                        <span>
+                          {newQuestion.questionType === "Text"
+                            ? "Text"
+                            : newQuestion.questionType === "YesNo"
+                            ? "Có/Không"
+                            : "Trắc nghiệm"}
+                        </span>
                         <span className="text-gray-600">▼</span>
-                      </button>
-                      {showDropdown === 'questionType' && (
-                        <ul
-                          className="absolute w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-20 max-h-40 overflow-y-auto"
-                          role="listbox"
-                          aria-labelledby="question-type"
-                        >
-                          {['Text', 'YesNo', 'MultipleChoice'].map(type => (
+                      </Button>
+                      {showDropdown === "questionType" && (
+                        <ul className="absolute w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
+                          {["Text", "YesNo", "MultipleChoice"].map((type) => (
                             <li
                               key={type}
-                              className={`px-3 py-2 border-b border-gray-200 last:border-b-0 text-gray-700 hover:bg-blue-50 cursor-pointer transition-colors duration-200 ${newQuestion.questionType === type ? 'bg-blue-100 font-medium' : ''}`}
-                              onClick={() => handleDropdownSelect(type)}
-                              role="option"
-                              aria-selected={newQuestion.questionType === type}
+                              className={`px-3 py-2 border-b border-gray-200 last:border-b-0 text-gray-700 hover:bg-blue-50 cursor-pointer ${
+                                newQuestion.questionType === type ? "bg-blue-100 font-medium" : ""
+                              }`}
+                              onClick={() => handleDropdownSelect(type, "questionType")}
                             >
-                              {type === 'Text' ? 'Text' : type === 'YesNo' ? 'Yes/No' : 'Multiple Choice'}
+                              {type === "Text" ? "Text" : type === "YesNo" ? "Có/Không" : "Trắc nghiệm"}
                             </li>
                           ))}
                         </ul>
@@ -496,51 +525,45 @@ export default function SurveyManagement() {
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="is-required" className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <input
-                        id="is-required"
-                        type="checkbox"
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <Checkbox
                         checked={newQuestion.isRequired}
-                        onChange={e => setNewQuestion(q => ({ ...q, isRequired: e.target.checked }))}
+                        onChange={(e) =>
+                          setNewQuestion((q) => ({ ...q, isRequired: e.target.checked }))
+                        }
                         disabled={adding}
                       />
-                      Required
+                      Bắt buộc
                     </label>
                   </div>
                   {addError && newQuestion.questionText.trim() && (
-                    <div>
-                      <p id="question-error" className="text-red-500 text-sm">{addError}</p>
-                    </div>
+                    <p className="text-red-500 text-sm">{addError}</p>
                   )}
                   <div className="flex justify-end">
-                    <button
-                      className={`bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors duration-200 ${adding ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer'}`}
+                    <Button
+                      className={`bg-blue-600 hover:bg-blue-700 text-white rounded-lg ${
+                        adding ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
                       onClick={handleAddQuestion}
                       disabled={adding}
-                      type="button"
-                      aria-label="Add new question"
                     >
-                      {adding ? "Adding..." : "Add Question"}
-                    </button>
+                      {adding ? "Đang thêm..." : "Thêm câu hỏi"}
+                    </Button>
                   </div>
                 </div>
               </div>
             )}
           </div>
-          <div className="mt-6 flex justify-end space-x-3">
-            <button
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+          <div className="flex justify-end mt-6">
+            <Button
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg"
               onClick={closePopup}
-              type="button"
-              aria-label="Close popup"
             >
-              Close
-            </button>
+              Đóng
+            </Button>
           </div>
-        </div>
-        </div>
-      )}
+        </Modal>
+      </div>
     </div>
-  )
+  );
 }
