@@ -23,11 +23,25 @@ export interface ScheduleSlot {
 
 
 export interface BulkWorkingHoursRequest {
-  facilityId:Number;
+  facilityId:number;
   workingHoursGroupId:number;
   date:string;
   status: string;
 }
+ 
+
+export type CreateScheduleSlotRequest = {
+      startTime:string,
+      endTime:string,
+      slotDurationMinutes:number,
+      lunchBreakStart:string,
+      lunchBreakEnd:string,
+      maxCapacity:number,
+      status:string,
+      isWorkingHours:boolean,
+}
+
+
 
 export interface ScheduleSlotResponse {
   data: ScheduleSlot[];
@@ -38,4 +52,11 @@ export const scheduleApi = {
     return await axiosClient.get(`api/ScheduleSlots/my-facility`);
   },
 
-};
+   createScheduleSlot: async (request: CreateScheduleSlotRequest): Promise<any> => {
+    return await axiosClient.post(`api/ScheduleSlots`, request);
+  },
+
+  BulkWorkingHours: async (request: BulkWorkingHoursRequest): Promise<any> => {
+    return await axiosClient.post(`api/AppointmentSchedules/bulk-assign-working-hours`, request);
+  }
+}

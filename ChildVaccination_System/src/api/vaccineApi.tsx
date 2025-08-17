@@ -88,10 +88,6 @@ export interface CreateFacilityVaccineRequest {
   status: string; 
 }
 
-export type response = {
-  message:string;
-
-}
 
 
 
@@ -104,7 +100,7 @@ getById: async (facilityVaccineid: number) => {
    const res :FacilityVaccine = await axiosClient.get(`api/FacilityVaccines/${facilityVaccineid}`);
   return res;
   },
- create: async (payload: CreateFacilityVaccineRequest): Promise<response> => {
+ create: async (payload: CreateFacilityVaccineRequest): Promise<any> => {
     return  await axiosClient.post("api/FacilityVaccines", payload);
   },
 

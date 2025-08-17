@@ -164,13 +164,13 @@ const FacilityVaccinePage: React.FC = () => {
         facilityId: user.facilityId,
         vaccineId: selectedFacilityVaccine.vaccineId,
         batchNumber: selectedFacilityVaccine.batchNumber,
-        importDate: today, // Use today's date for importDate
+        importDate: today,
       });
       setNotificationModal({ show: true, message: "Cập nhật vaccine thành công!", type: "success" });
       setShowUpdateModal(false);
       setSelectedFacilityVaccine(null);
       updateForm.resetFields();
-      await fetchVaccines(true); // Suppress success notification
+      await fetchVaccines(true);
     } catch {
       setNotificationModal({ show: true, message: "Cập nhật vaccine thất bại!", type: "error" });
     } finally {
@@ -184,7 +184,7 @@ const FacilityVaccinePage: React.FC = () => {
       vaccineId: facilityVaccine.vaccineId,
       availableQuantity: facilityVaccine.availableQuantity,
       price: facilityVaccine.price,
-      importDate: today, // Set to today's date
+      importDate: today,
       expiryDate: facilityVaccine.expiryDate.split("T")[0],
       status: facilityVaccine.status,
     });
@@ -375,7 +375,7 @@ const FacilityVaccinePage: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setCurrentPage(1); // Reset to first page on search
+                  setCurrentPage(1);
                 }}
                 className="w-full sm:w-64"
               />
@@ -383,7 +383,7 @@ const FacilityVaccinePage: React.FC = () => {
                 value={statusFilter}
                 onChange={(value) => {
                   setStatusFilter(value);
-                  setCurrentPage(1); // Reset to first page on filter change
+                  setCurrentPage(1);
                 }}
                 className="w-full sm:w-40"
               >
@@ -464,7 +464,7 @@ const FacilityVaccinePage: React.FC = () => {
             status: "active",
             price: 0,
             availableQuantity: 0,
-            importDate: today, // Auto-fill with today's date
+            importDate: today,
           }}
         >
           <Row gutter={[16, 16]}>
@@ -474,7 +474,13 @@ const FacilityVaccinePage: React.FC = () => {
                 label="Vaccine"
                 rules={[{ required: true, message: "Vui lòng chọn vaccine!" }]}
               >
-                <Select placeholder="Chọn vaccine">
+                <Select
+                  showSearch
+                  placeholder="Tìm kiếm và chọn vaccine"
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                >
                   <Option value="">-- Chọn vaccine --</Option>
                   {allVaccines.map((v) => (
                     <Option key={v.vaccineId} value={v.vaccineId}>
@@ -581,7 +587,7 @@ const FacilityVaccinePage: React.FC = () => {
             status: "active",
             price: 0,
             availableQuantity: 0,
-            importDate: today, 
+            importDate: today,
           }}
         >
           <Row gutter={[16, 16]}>
@@ -591,7 +597,13 @@ const FacilityVaccinePage: React.FC = () => {
                 label="Vaccine"
                 rules={[{ required: true, message: "Vui lòng chọn vaccine!" }]}
               >
-                <Select placeholder="Chọn vaccine" >
+                <Select
+                  showSearch
+                  placeholder="Tìm kiếm và chọn vaccine"
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                >
                   <Option value="">-- Chọn vaccine --</Option>
                   {allVaccines.map((v) => (
                     <Option key={v.vaccineId} value={v.vaccineId}>

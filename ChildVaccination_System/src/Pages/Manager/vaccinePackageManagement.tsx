@@ -26,6 +26,16 @@ interface AddVaccineState {
   error: string | null;
 }
 
+// Define a stricter type for VaccineEntry to ensure type safety
+interface VaccineEntry {
+  facilityVaccineId: number;
+  quantity: number;
+}
+
+interface StrictCreateVaccinePackageRequest extends Omit<CreateVaccinePackageRequest, 'vaccines'> {
+  vaccines: VaccineEntry[];
+}
+
 const VaccinePackageManagement: React.FC = () => {
   const [packages, setPackages] = useState<VaccinePackage[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -33,7 +43,7 @@ const VaccinePackageManagement: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [selectedPackage, setSelectedPackage] = useState<VaccinePackage | null>(null);
-  const [formData, setFormData] = useState<Partial<CreateVaccinePackageRequest>>({
+  const [formData, setFormData] = useState<Partial<StrictCreateVaccinePackageRequest>>({
     name: "",
     description: "",
     duration: 1,
@@ -92,35 +102,47 @@ const VaccinePackageManagement: React.FC = () => {
     }
   }, [addVaccineState, packages, vaccineInfoMap]);
 
-  const handleFormChange = (values: Partial<CreateVaccinePackageRequest>) => {
-    setFormData({ ...formData, ...values });
+  const handleFormChange = (values: Partial<StrictCreateVaccinePackageRequest>) => {
+    // Ensure vaccines is always an array
+    const updatedFormData = {
+      ...formData,
+      ...values,
+      vaccines: Array.isArray(values.vaccines) ? values.vaccines : formData.vaccines || [],
+    };
+    setFormData(updatedFormData);
+    console.log("Updated formData:", updatedFormData); // Debugging
   };
 
   const handleVaccineChange = (idx: number, field: string, value: any) => {
     setFormData((prev) => {
-      const vaccines = prev.vaccines ? [...prev.vaccines] : [];
+      const vaccines = Array.isArray(prev.vaccines) ? [...prev.vaccines] : [];
       vaccines[idx] = { ...vaccines[idx], [field]: field === "facilityVaccineId" ? Number(value) : Number(value) };
-      return { ...prev, vaccines };
+      const updatedFormData = { ...prev, vaccines };
+      addForm.setFieldsValue({ vaccines });
+      console.log("Updated vaccines after change:", vaccines); // Debugging
+      return updatedFormData;
     });
-    // Cập nhật giá trị trong antd Form
-    addForm.setFieldsValue({ vaccines: formData.vaccines });
   };
 
   const handleAddVaccine = () => {
-    const newVaccine = { facilityVaccineId: 0, quantity: 1 };
+    const newVaccine: VaccineEntry = { facilityVaccineId: 0, quantity: 1 };
     setFormData((prev) => {
-      const vaccines = prev.vaccines ? [...prev.vaccines, newVaccine] : [newVaccine];
-      addForm.setFieldsValue({ vaccines }); // Đồng bộ với antd Form
-      return { ...prev, vaccines };
+      const vaccines = Array.isArray(prev.vaccines) ? [...prev.vaccines, newVaccine] : [newVaccine];
+      const updatedFormData = { ...prev, vaccines };
+      addForm.setFieldsValue({ vaccines });
+      console.log("Updated vaccines after add:", vaccines); // Debugging
+      return updatedFormData;
     });
   };
 
   const handleRemoveVaccine = (idx: number) => {
     setFormData((prev) => {
-      const vaccines = prev.vaccines ? [...prev.vaccines] : [];
+      const vaccines = Array.isArray(prev.vaccines) ? [...prev.vaccines] : [];
       vaccines.splice(idx, 1);
-      addForm.setFieldsValue({ vaccines }); // Đồng bộ với antd Form
-      return { ...prev, vaccines };
+      const updatedFormData = { ...prev, vaccines };
+      addForm.setFieldsValue({ vaccines });
+      console.log("Updated vaccines after remove:", vaccines); // Debugging
+      return updatedFormData;
     });
   };
 
@@ -134,7 +156,7 @@ const VaccinePackageManagement: React.FC = () => {
 
     try {
       await addForm.validateFields();
-      const validVaccines = formData.vaccines?.filter((v) => v.facilityVaccineId !== 0) || [];
+      const validVaccines = (formData.vaccines || []).filter((v) => v.facilityVaccineId !== 0);
       if (validVaccines.length === 0) {
         setToast({ show: true, message: "Vui lòng chọn ít nhất một vaccine hợp lệ.", type: "error" });
         setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
@@ -351,7 +373,7 @@ const VaccinePackageManagement: React.FC = () => {
               rules={[
                 {
                   validator: (_, value) => {
-                    const validVaccines = (value || []).filter((v: { facilityVaccineId: number }) => v.facilityVaccineId !== 0);
+                    const validVaccines = (Array.isArray(value) ? value : []).filter((v: { facilityVaccineId: number }) => v.facilityVaccineId !== 0);
                     return validVaccines.length > 0
                       ? Promise.resolve()
                       : Promise.reject("Vui lòng chọn ít nhất một vaccine hợp lệ");
@@ -360,13 +382,17 @@ const VaccinePackageManagement: React.FC = () => {
               ]}
             >
               <div className="space-y-2">
-                {(formData.vaccines || []).map((v: { facilityVaccineId: number; quantity: number }, idx: number) => (
+                {(Array.isArray(formData.vaccines) ? formData.vaccines : []).map((v: VaccineEntry, idx: number) => (
                   <div key={idx} className="flex gap-2 items-center">
                     <Select
+                      showSearch
                       value={v.facilityVaccineId || undefined}
                       onChange={(value) => handleVaccineChange(idx, "facilityVaccineId", value)}
                       className="w-full"
-                      placeholder="-- Chọn vaccine --"
+                      placeholder="Tìm kiếm và chọn vaccine"
+                      filterOption={(input, option) =>
+                        (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                      }
                     >
                       {facilityVaccines.map((fv: FacilityVaccine) => (
                         <Select.Option key={fv.facilityVaccineId} value={fv.facilityVaccineId}>
@@ -676,10 +702,14 @@ const VaccinePackageManagement: React.FC = () => {
                                 }}
                               >
                                 <Select
+                                  showSearch
                                   className="w-full"
                                   value={addVaccineState.facilityVaccineId}
                                   onChange={(value) => setAddVaccineState((s) => (s ? { ...s, facilityVaccineId: value } : s))}
-                                  placeholder="-- Chọn vaccine --"
+                                  placeholder="Tìm kiếm và chọn vaccine"
+                                  filterOption={(input, option) =>
+                                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                                  }
                                 >
                                   {facilityVaccines.map((fv: FacilityVaccine) => (
                                     <Select.Option key={fv.facilityVaccineId} value={fv.facilityVaccineId}>

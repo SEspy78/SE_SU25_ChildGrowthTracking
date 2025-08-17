@@ -726,13 +726,14 @@ const VaccineManagement: React.FC = () => {
                 <p className="text-2xl font-bold text-green-900">
                   {
                     vaccines.filter(
-                      (v) => v.status.toLowerCase() === "Approved"
+                      (v) => v.status === "Approved"
                     ).length
                   }
                 </p>
               </div>
             </div>
           </div>
+
 
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
             <div className="flex items-center">
