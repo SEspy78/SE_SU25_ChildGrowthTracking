@@ -105,7 +105,7 @@ const MemberManagement: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Quản lý members</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Quản lý người dùng</h1>
             <p className="text-gray-600 mt-1">Quản lý tài khoản người dùng và thành viên VIP</p>
           </div>
           

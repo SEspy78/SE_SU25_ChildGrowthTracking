@@ -1,5 +1,3 @@
-
-
 import axiosClient from "./axiosClient";
 
 export type AppointmentResponse = {
@@ -139,6 +137,49 @@ export type GetOrderResponse = {
   data: Order[];
 };
 
+export type CancelAppointmentPayload = {
+  currentAppointmentId: number;
+  newScheduleId: number;
+  childVaccineProfileId: number;
+  cancelReason: string;
+  note: string;
+};
+
+export type FacilityScheduleResponse = {
+  facilityId: number;
+  facilityName: string;
+  fromDate: string;
+  toDate: string;
+  dailySchedules: DailySchedule[];
+};
+
+export type DailySchedule = {
+  date: string;
+  dayOfWeek: string;
+  isAvailable: boolean;
+  availableSlots: AvailableSlot[];
+};
+
+export type AvailableSlot = {
+  scheduleId: number;
+  slotId: number;
+  slotTime: string;
+  maxCapacity: number;
+  bookedCount: number;
+  availableCapacity: number;
+  status: string;
+  isBookable: boolean;
+  bookingPercentage: number;
+};
+
+
+export type cancelResponse= {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+
 
 export const appointmentApi = {
   getAllAppointments: async (pageIndex: number = 1, pageSize: number = 10): Promise<AppointmentResponse> => {
@@ -153,25 +194,28 @@ export const appointmentApi = {
   completeVaccination: async (payload: finishVaccinationPayload): Promise<any> => {
     return await axiosClient.post(`api/ChildVaccineProfiles/complete-vaccination`, payload);
   },
+  getFacilitySchedule: async (facilityId: number, fromDate: string, toDate: string): Promise<FacilityScheduleResponse> => {
+    return await axiosClient.get(`api/AppointmentBooking/facilities/${facilityId}/schedules?fromDate=${fromDate}&toDate=${toDate}`);
+  },
+  cancelAndReBook: async (payload: CancelAppointmentPayload): Promise<cancelResponse> => {
+    return await axiosClient.post(`api/AppointmentBooking/cancel-and-rebook`, payload);
+  }
 };
 
 export const orderApi = {
-  getAllOrder: async ( facilityId: number ,status: string, pageIndex: number = 1, pageSize: number = 10): Promise<GetOrderResponse> => {
+  getAllOrder: async (facilityId: number, status: string, pageIndex: number = 1, pageSize: number = 10): Promise<GetOrderResponse> => {
     return await axiosClient.get(`api/Order?facilityId=${facilityId}&status=${status}&pageIndex=${pageIndex}&pageSize=${pageSize}`);
   },
-
-   getAllOrderPaid: async ( facilityId: number ,status: string = "Paid", pageIndex: number = 1, pageSize: number = 10): Promise<GetOrderResponse> => {
+  getAllOrderPaid: async (facilityId: number, status: string = "Paid", pageIndex: number = 1, pageSize: number = 10): Promise<GetOrderResponse> => {
     return await axiosClient.get(`api/Order?facilityId=${facilityId}&status=${status}&pageIndex=${pageIndex}&pageSize=${pageSize}`);
   },
-   getAllOrderPending: async ( facilityId: number ,status: string = "Pending", pageIndex: number = 1, pageSize: number = 10): Promise<GetOrderResponse> => {
+  getAllOrderPending: async (facilityId: number, status: string = "Pending", pageIndex: number = 1, pageSize: number = 10): Promise<GetOrderResponse> => {
     return await axiosClient.get(`api/Order?facilityId=${facilityId}&status=${status}&pageIndex=${pageIndex}&pageSize=${pageSize}`);
   },
-
-  getAllOrderAdmin: async ( status: string, pageIndex: number = 1, pageSize: number = 10): Promise<GetOrderResponse> => {
+  getAllOrderAdmin: async (status: string, pageIndex: number = 1, pageSize: number = 10): Promise<GetOrderResponse> => {
     return await axiosClient.get(`api/Order?status=${status}&pageIndex=${pageIndex}&pageSize=${pageSize}`);
   },
-
   getOrderById: async (orderId: number): Promise<Order> => {
     return await axiosClient.get(`api/Order/${orderId}`);
   }
-}
+};

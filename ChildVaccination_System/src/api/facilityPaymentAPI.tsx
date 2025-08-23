@@ -1,58 +1,45 @@
 import axiosClient from "./axiosClient";
 
-export type AllPaymentAccountResponse = {
-  totalCount: number;
-  pageIndex: number;
-  pageSize: number;
-  data: PaymentAccount[];
+
+export type PayloadPayment = {
+  appointmentId: number;
 };
 
-export type PaymentAccount = {
-  id: number;
-  facilityId: number;
-  bankName: string;
-  accountNumber: string;
-  accountHolder: string;
-  qrcodeImageUrl: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type PayloadCreateAccount = {
-  facilityId: number;
-  bankName: string;
-  accountNumber: string;
-  accountHolder: string;
-  QrcodeImage : File;
-  isActive: boolean;
+export type PaymentResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    paymentUrl: string;
+    orderCode: string;
+    amount:number;
+    status: string;
+    appointmentId: number;
+    paymentType: string;
+    description: string;
+    orderId: number;
+    transactionId: number;
+  };
+}
+export type FinishPaymentResponse = {
+  success: boolean;
+  data: {
+    status: string;
+    message: string;
+    amount: number;
+    paidAt: string;
+  };
 };
 
 export const FacilityPaymentAccountApi = {
-  getAllAccount: async (pageIndex: number, pageSize: number): Promise<AllPaymentAccountResponse> => {
-    return await axiosClient.get(`api/VaccinationFacilityPaymentAccount`, {
-      params: {
-        pageIndex,
-        pageSize,
-      },
-    });
+
+  payment: async (data: PayloadPayment): Promise<PaymentResponse> => {
+    return await axiosClient.post(`api/VaccinationFacilityPaymentAccount/payment`, data);
   },
 
-  getTrueAccount : async (facilityId: number): Promise<AllPaymentAccountResponse> => {
-      return await axiosClient.get(`api/VaccinationFacilityPaymentAccount/byFacility/${facilityId}?isActive=true&pageIndex=1&pageSize=10`)
+  finishPayment: async (orderCode:string): Promise<FinishPaymentResponse> => {
+    return await axiosClient.get(`api/VaccinationFacilityPaymentAccount/payment-status/${orderCode}`);
   },
 
-  createAccount: async (data: FormData): Promise<any> => {
-    return await axiosClient.post(`api/VaccinationFacilityPaymentAccount`, data, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-  },
-   
-  deleteAccount: async (accountId:number): Promise<any> => {
-    return await axiosClient.delete(`api/VaccinationFacilityPaymentAccount/${accountId}`)
-  }
 
 }
 

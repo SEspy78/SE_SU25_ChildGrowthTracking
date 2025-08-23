@@ -7,6 +7,7 @@ import Pagination from "@/Components/Pagination";
 const statusStyle: Record<string, string> = {
   Paid: "bg-yellow-400 text-gray-900",
   Completed: "bg-emerald-500 text-white",
+  Pending: "bg-gray-600 text-white",
 };
 
 export default function DoctorAppointment() {
@@ -24,9 +25,8 @@ export default function DoctorAppointment() {
       try {
         setLoading(true);
         const res: AppointmentResponse = await appointmentApi.getAllAppointments(pageIndex, pageSize);
-        // Filter appointments to only include Paid and Completed
         const filteredAppointments = (res.appointments || []).filter(
-          (item) => item.status === "Paid" || item.status === "Completed"
+          (item) => item.status === "Paid" || item.status === "Completed" || item.status === "Pending"
         );
         setAppointments(filteredAppointments);
         setHasNextPage((res.appointments?.length || 0) === pageSize);
@@ -49,6 +49,7 @@ export default function DoctorAppointment() {
     const user = getUserInfo();
     let stepIndex = 0;
     switch (status) {
+      case "Pending": stepIndex = 1; break;
       case "Paid": stepIndex = 2; break;
       case "Completed": stepIndex = 3; break;
       default: stepIndex = 0;

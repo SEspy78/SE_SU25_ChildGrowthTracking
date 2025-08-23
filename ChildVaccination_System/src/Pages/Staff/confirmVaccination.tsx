@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import VaccinationSteps from "@/Components/VaccinationStep";
-import { Button as AntButton, message } from "antd";
+import { Button as AntButton, message, Modal } from "antd";
 import { appointmentApi, type Appointment } from "@/api/appointmentAPI";
-import { vaccinePackageApi, type VaccinePackage } from "@/api/vaccinePackageApi";
 import { getUserInfo } from "@/lib/storage";
 import { Button } from "@/Components/ui/button";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
@@ -12,11 +11,10 @@ export default function ConfirmVaccination() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [appointment, setAppointment] = useState<Appointment | null>(null);
-  const [vaccinePackage, setVaccinePackage] = useState<VaccinePackage | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingPackage, setLoadingPackage] = useState(true);
   const [error, setError] = useState("");
-  const [errorPackage, setErrorPackage] = useState("");
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const user = getUserInfo();
 
   useEffect(() => {
@@ -42,29 +40,6 @@ export default function ConfirmVaccination() {
     fetchAppointment();
   }, [id]);
 
-  // Fetch vaccine package if order exists
-  useEffect(() => {
-    if (appointment?.order?.packageId) {
-      const fetchVaccinePackage = async () => {
-        setLoadingPackage(true);
-        setErrorPackage("");
-        try {
-          const response = await vaccinePackageApi.getById(appointment.order!.packageId);
-          setVaccinePackage(response);
-        } catch {
-          setErrorPackage("Không thể tải thông tin gói vắc xin.");
-        } finally {
-          setLoadingPackage(false);
-        }
-      };
-      fetchVaccinePackage();
-    } else {
-      setLoadingPackage(false);
-      setVaccinePackage(null);
-    }
-  }, [appointment]);
-
-  // Function to calculate age
   const calculateAge = (birthDate: string): string => {
     if (!birthDate) return "Không có";
     const birth = new Date(birthDate);
@@ -73,7 +48,7 @@ export default function ConfirmVaccination() {
 
     const diffMs = today.getTime() - birth.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffMonths = Math.floor(diffDays / 30.436875); // Average month length
+    const diffMonths = Math.floor(diffDays / 30.436875);
     const diffWeeks = Math.floor(diffDays / 7);
 
     if (diffMonths >= 12) {
@@ -93,19 +68,39 @@ export default function ConfirmVaccination() {
 
   const handleBack = () => {
     if (!id) return;
-    const basePath = user?.role === "Doctor" ? "/doctor" : "/staff";
+    const basePath = user?.position === "Doctor" ? "/doctor" : "/staff";
     navigate(`${basePath}/appointments/${id}/step-3`);
   };
 
-  if (loading || loadingPackage) return (
+  const handleConfirmVaccination = async () => {
+    if (!id) {
+      message.error("Không có ID lịch hẹn.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await appointmentApi.updateAppointmentStatus(Number(id), {
+        status: "Completed",
+        note: "",
+      });
+      setShowCompleteModal(true);
+      setAppointment((prev) => prev ? { ...prev, status: "Completed" } : null);
+    } catch {
+      message.error("Không thể xác nhận hoàn tất tiêm chủng.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return (
     <div className="p-6 bg-gray-50 rounded-lg max-w-4xl mx-auto flex justify-center items-center">
       <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-indigo-600 mr-2"></div>
       <span className="text-gray-600">Đang tải thông tin...</span>
     </div>
   );
-  if (error || errorPackage) return (
+  if (error) return (
     <div className="p-6 bg-rose-50 text-rose-600 rounded-lg max-w-4xl mx-auto text-center">
-      {error || errorPackage}
+      {error}
     </div>
   );
   if (!appointment) return (
@@ -118,28 +113,7 @@ export default function ConfirmVaccination() {
   const isCompletedStatus = appointment.status === "Completed";
   const isPaidStatus = appointment.status === "Paid";
   const isApprovalOrPending = appointment.status === "Approval" || appointment.status === "Pending";
-
-  // Vaccine display logic
-  const vaccineNames = Array.isArray(appointment.facilityVaccines)
-    ? appointment.facilityVaccines.map(fv => fv.vaccine.name)
-    : [];
-  const packageName = vaccinePackage?.name;
-  const packageVaccineNames = vaccinePackage?.packageVaccines
-    ? vaccinePackage.packageVaccines.map(pv => pv.facilityVaccine.vaccine.name)
-    : [];
-
-  const vaccineDisplayParts: string[] = [];
-  if (appointment.order && packageName) {
-    const packageDisplay = packageVaccineNames.length > 0
-      ? `${packageName} (${packageVaccineNames.join(", ")})`
-      : packageName;
-    vaccineDisplayParts.push(packageDisplay);
-  } else if (vaccineNames.length > 0) {
-    vaccineDisplayParts.push(vaccineNames.join(", "));
-  }
-  const vaccineDisplay = vaccineDisplayParts.length > 0
-    ? vaccineDisplayParts.join(", ")
-    : "Không có vắc xin";
+  const vaccineDisplay = appointment.order?.packageName || "Không có gói vắc xin";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
@@ -156,7 +130,35 @@ export default function ConfirmVaccination() {
           <VaccinationSteps currentStep={isCompletedStatus ? 5 : 3} />
         </div>
 
-        {/* Notifications */}
+        <Modal
+          title="Thành công"
+          open={showCompleteModal}
+          onCancel={() => setShowCompleteModal(false)}
+          footer={[
+            <AntButton
+              key="close"
+              onClick={() => setShowCompleteModal(false)}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+            >
+              Đóng
+            </AntButton>,
+            <AntButton
+              key="continue"
+              type="primary"
+              onClick={() => {
+                setShowCompleteModal(false);
+                handleComplete();
+              }}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+            >
+              Tiếp tục
+            </AntButton>,
+          ]}
+          centered
+        >
+          <p className="text-gray-700">Đã hoàn tất lịch tiêm chủng!</p>
+        </Modal>
+
         {isApprovalOrPending && (
           <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center">
             <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -180,7 +182,6 @@ export default function ConfirmVaccination() {
           </div>
         )}
 
-        {/* Patient Information Card */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-indigo-600">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Thông tin bệnh nhân</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -225,7 +226,20 @@ export default function ConfirmVaccination() {
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {isCompletedStatus && (
+          <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-yellow-400">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Ghi chú sau tiêm
+            </h3>
+            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+              <p className="text-gray-800 whitespace-pre-wrap">{appointment.note || "Không có ghi chú sau tiêm."}</p>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-end space-x-4 mt-8 items-center">
           <AntButton
             type="default"
@@ -234,6 +248,18 @@ export default function ConfirmVaccination() {
           >
             Trở lại
           </AntButton>
+          {(isPaidStatus || appointment.status === "Approval") && user?.position === "Doctor" && (
+            <AntButton
+              type="primary"
+              onClick={handleConfirmVaccination}
+              disabled={submitting}
+              className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-colors ${
+                submitting ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              {submitting ? "Đang xử lý..." : "Xác nhận tiêm chủng"}
+            </AntButton>
+          )}
           {isCompletedStatus && (
             <AntButton
               type="primary"

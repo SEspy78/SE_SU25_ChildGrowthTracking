@@ -84,7 +84,7 @@ export default function ManagerLayout() {
               ${location.pathname === "/manager/survey-management" ? "bg-teal-100 text-teal-800 font-semibold" : "text-gray-700 hover:bg-teal-100 hover:text-teal-800"}`}
           >
             <File className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" />
-            Khảo sát tiêm chủng
+            Phiếu thăm khám
           </Link>
           
           <Link

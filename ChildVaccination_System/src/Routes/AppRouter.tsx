@@ -135,7 +135,7 @@ import ScheduleSlotPage from "@/Pages/Manager/scheduleSlot";
 import SurveyManagement from "@/Pages/Manager/surveyManagement";
 import DoctorConfirmVaccination from "@/Pages/Doctor/doctorVaccination";
 import CompletedVaccinationInfo from "@/Pages/Staff/finishVaccination";
-import PaymentAccountManagement from "@/Pages/Manager/paymentAccount";
+// import PaymentAccountManagement from "@/Pages/Manager/paymentAccount";
 import OrderManagement from "@/Pages/Manager/orderManagement";
 import OrderManagementStyled from "@/Pages/Admin/order";
 import FacilityDashboard from "@/Pages/Manager/facilityDashboard";
@@ -143,6 +143,7 @@ import StaffManagement from "@/Pages/Manager/staffManagement";
 import CreateManager from "@/Pages/Admin/createAccount";
 import AdminDashboard from "@/Pages/Admin/adminDashboard";
 import DoctorAppointment from "@/Pages/Doctor/doctorAppointmentDetail";
+import PaymentComplete from "@/Pages/Staff/paymentComplete";
 const App: React.FC = () => {
   return (
     <Router>
@@ -165,6 +166,7 @@ const App: React.FC = () => {
       <Route path="appointments/:id/step-1" element={<VaccinationDetailPage />} />
       <Route path="appointments/:id/step-2" element={<HealthSurvey />} />
       <Route path="appointments/:id/step-3" element={<Payment />} />
+      <Route path="appointments/:id/payment-complete" element={<PaymentComplete />} />
       <Route path="appointments/:id/step-4" element={<ConfirmVaccination />} />
     </Route>
 
@@ -220,7 +222,6 @@ const App: React.FC = () => {
     <Route path="facility-management" element={<FacilityDetail />} />
     <Route path="vaccine-packages" element={<VaccinePackageManagement />} />
     <Route path="schedule-slots" element={<ScheduleSlotPage />} />
-    <Route path="payment-accounts" element={<PaymentAccountManagement/>} />
     <Route path="order" element={<OrderManagement/>} />
     </Route>
     {/* Manager */}

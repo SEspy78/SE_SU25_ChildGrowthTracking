@@ -3,57 +3,91 @@ import { getUserInfo } from "@/lib/storage";
 import VaccinationSteps from "@/Components/VaccinationStep";
 import { Button } from "@/Components/ui/button";
 import { useEffect, useState } from "react";
-import { appointmentApi, type Appointment } from "@/api/appointmentAPI";
-import { surveyAPI, type Survey, type Question } from "@/api/surveyAPI";
-import { Collapse, Select, message, Modal, Input } from "antd";
+import { appointmentApi, type Appointment, type FacilityScheduleResponse } from "@/api/appointmentAPI";
+import { surveyAPI, type Survey, type Question, type QuestionResponse } from "@/api/surveyAPI";
+import { childprofileApi, type VaccineProfile } from "@/api/childInfomationAPI";
+import { Collapse, Select, message, Input, Checkbox, Modal, DatePicker } from "antd";
 import { CaretRightOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 
 const { Option } = Select;
 const { TextArea } = Input;
 
 export default function HealthSurvey() {
-  const [showSurveySelect, setShowSurveySelect] = useState(true);
-  const [surveyAnswers, setSurveyAnswers] = useState<any[]>([]);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState("");
-  const [isAnswersVisible, setIsAnswersVisible] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
-  const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams<{ id?: string }>();
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(true);
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
   const [surveyQuestions, setSurveyQuestions] = useState<Question[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [surveyAnswers, setSurveyAnswers] = useState<{
+    appointmentId: number;
+    submittedAt: string;
+    temperatureC: number;
+    heartRateBpm: number;
+    systolicBpmmHg: number;
+    diastolicBpmmHg: number;
+    oxygenSatPercent: number;
+    decisionNote: string;
+    consentObtained: boolean;
+    questions: QuestionResponse[];
+  } | null>(null);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showCancelSuccessModal, setShowCancelSuccessModal] = useState(false);
+  const [isAnswersVisible, setIsAnswersVisible] = useState(false);
+  const [healthInfo, setHealthInfo] = useState<{
+    temperatureC: number | null;
+    heartRateBpm: number | null;
+    systolicBpmmHg: number | null;
+    diastolicBpmmHg: number | null;
+    oxygenSatPercent: number | null;
+    decisionNote: string;
+    consentObtained: boolean;
+  }>({
+    temperatureC: null,
+    heartRateBpm: null,
+    systolicBpmmHg: null,
+    diastolicBpmmHg: null,
+    oxygenSatPercent: null,
+    decisionNote: "",
+    consentObtained: false,
+  });
+  const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false);
+  const [showCancelReasonModal, setShowCancelReasonModal] = useState(false);
+  const [showRebookModal, setShowRebookModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
+  const [schedules, setSchedules] = useState<FacilityScheduleResponse | null>(null);
+  const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [note, setNote] = useState("");
+  const [childVaccineProfileId, setChildVaccineProfileId] = useState<number | null>(null);
   const user = getUserInfo();
+
+  const showSurveySelect = appointment && user?.position === "Doctor" && appointment.status === "Pending";
 
   useEffect(() => {
     const fetchAppointment = async () => {
       try {
         setLoading(true);
-        if (id) {
-          const res = await appointmentApi.getAppointmentById(Number(id));
-          const appointmentData = (res as any).data || res;
-          setAppointment(appointmentData);
-          if (
-            appointmentData &&
-            ["Approval", "Paid", "Completed", "Cancelled"].includes(appointmentData.status)
-          ) {
-            setShowSurveySelect(false);
-            const response = await surveyAPI.getSurveyResponse(appointmentData.appointmentId);
-            setSurveyAnswers(response.data || []);
-          } else {
-            setShowSurveySelect(true);
-          }
-        } else {
+        if (!id) {
           setAppointment(null);
+          message.error("Không có ID lịch hẹn trong URL.");
+          return;
         }
-      } catch (error) {
+        const res = await appointmentApi.getAppointmentById(Number(id));
+        const appointmentData = (res as any).data || res;
+        setAppointment(appointmentData);
+        if (appointmentData && ["Approval", "Paid", "Completed", "Cancelled"].includes(appointmentData.status)) {
+          const response = await surveyAPI.getSurveyResponse(appointmentData.appointmentId);
+          setSurveyAnswers(response.data || null);
+        }
+      } catch {
         setAppointment(null);
+        message.error("Không thể tải thông tin cuộc hẹn.");
       } finally {
         setLoading(false);
       }
@@ -68,10 +102,13 @@ export default function HealthSurvey() {
         setSurveys(res.data || []);
       } catch {
         setSurveys([]);
+        message.error("Không thể tải danh sách khảo sát.");
       }
     };
-    fetchSurveys();
-  }, []);
+    if (user?.position === "Doctor") {
+      fetchSurveys();
+    }
+  }, [user?.position]);
 
   useEffect(() => {
     if (!selectedSurvey) {
@@ -86,7 +123,40 @@ export default function HealthSurvey() {
       .finally(() => setLoadingQuestions(false));
   }, [selectedSurvey]);
 
-  // Function to calculate age
+  useEffect(() => {
+    if (appointment?.child?.childId) {
+      const fetchChildVaccineProfile = async () => {
+        try {
+          const profiles = await childprofileApi.getChildVaccineProfile(appointment.child.childId);
+          const matchingProfile = profiles.find(profile => profile.appointmentId === Number(id));
+          if (matchingProfile) {
+            setChildVaccineProfileId(matchingProfile.vaccineProfileId);
+          } else {
+            message.error("Không tìm thấy hồ sơ vắc xin cho lịch hẹn này.");
+          }
+        } catch {
+          message.error("Không thể tải hồ sơ vắc xin của trẻ.");
+        }
+      };
+      fetchChildVaccineProfile();
+    }
+  }, [appointment, id]);
+
+  useEffect(() => {
+    if (selectedDate && user?.facilityId) {
+      const fetchSchedules = async () => {
+        try {
+          const dateStr = selectedDate.format("YYYY-MM-DD");
+          const response = await appointmentApi.getFacilitySchedule(user.facilityId, dateStr, dateStr);
+          setSchedules(response);
+        } catch {
+          message.error("Không thể tải lịch trình.");
+        }
+      };
+      fetchSchedules();
+    }
+  }, [selectedDate, user?.facilityId]);
+
   const calculateAge = (birthDate: string): string => {
     if (!birthDate) return "N/A";
     const birth = new Date(birthDate);
@@ -106,12 +176,45 @@ export default function HealthSurvey() {
     }
   };
 
-  const handleBack = () => {
-    navigate(`/staff/appointments/${id}/step-1`);
+  const validateHealthInfo = () => {
+    const { temperatureC, heartRateBpm, systolicBpmmHg, diastolicBpmmHg, oxygenSatPercent } = healthInfo;
+
+    if (
+      temperatureC === null &&
+      heartRateBpm === null &&
+      systolicBpmmHg === null &&
+      diastolicBpmmHg === null &&
+      oxygenSatPercent === null
+    ) {
+      return true;
+    }
+
+    if (temperatureC !== null && (temperatureC < 35.0 || temperatureC > 40.0)) {
+      message.error("Nhiệt độ cơ thể phải từ 35.0°C đến 40.0°C.");
+      return false;
+    }
+    if (heartRateBpm !== null && (heartRateBpm < 60 || heartRateBpm > 160)) {
+      message.error("Nhịp tim phải từ 60 đến 160 bpm.");
+      return false;
+    }
+    if (systolicBpmmHg !== null && (systolicBpmmHg < 70 || systolicBpmmHg > 120)) {
+      message.error("Huyết áp tâm thu phải từ 70 đến 120 mmHg.");
+      return false;
+    }
+    if (diastolicBpmmHg !== null && (diastolicBpmmHg < 40 || diastolicBpmmHg > 80)) {
+      message.error("Huyết áp tâm trương phải từ 40 đến 80 mmHg.");
+      return false;
+    }
+    if (oxygenSatPercent !== null && (oxygenSatPercent < 90 || oxygenSatPercent > 100)) {
+      message.error("Độ bão hòa oxy phải từ 90% đến 100%.");
+      return false;
+    }
+
+    return true;
   };
 
-  const handleChangeAnswer = (questionId: number, value: string) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: value }));
+  const handleBack = () => {
+    navigate(`/staff/appointments/${id}/step-1`);
   };
 
   const handleBackByPosition = () => {
@@ -122,77 +225,99 @@ export default function HealthSurvey() {
     }
   };
 
+  const handleCancelConfirm = () => {
+    setShowCancelConfirmModal(true);
+  };
+
+  const handleCancel = async () => {
+    if (!id) {
+      message.error("Không có ID lịch hẹn.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await appointmentApi.updateAppointmentStatus(Number(id), {
+        status: "Cancelled",
+        note: cancelReason || "Không có lý do hủy",
+      });
+      setShowCancelReasonModal(false);
+      setShowCancelSuccessModal(true);
+    } catch {
+      message.error("Không thể hủy lịch hẹn.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRebook = async () => {
+    if (!id || !selectedSlotId || !childVaccineProfileId) {
+      message.error("Vui lòng chọn ngày và slot.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const payload = {
+        currentAppointmentId: Number(id),
+        newScheduleId: selectedSlotId,
+        childVaccineProfileId,
+        cancelReason: "",
+        note: note || "",
+      };
+      await appointmentApi.cancelAndReBook(payload);
+      message.success("Đã hủy và đặt lại lịch thành công!");
+      setShowRebookModal(false);
+      navigate("/staff/appointments");
+    } catch {
+      message.error("Không thể hủy và đặt lại lịch.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleChangeAnswer = (questionId: number, value: string) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: value }));
+  };
+
+  const handleHealthInfoChange = (
+    field: keyof typeof healthInfo,
+    value: string | boolean | number | null
+  ) => {
+    setHealthInfo((prev) => ({ ...prev, [field]: value }));
+  };
+
   const handleSubmit = async () => {
     if (!appointment || !selectedSurvey) {
       message.error("Vui lòng chọn khảo sát trước khi gửi.");
       return;
     }
+    if (!validateHealthInfo()) {
+      return;
+    }
     setSubmitting(true);
-    setSubmitMessage("");
     try {
       const answerPayload = surveyQuestions.map((q) => ({
         questionId: q.questionId,
         answerId: null,
         answerText: answers[q.questionId] || "",
+        temperatureC: healthInfo.temperatureC ?? 0,
+        heartRateBpm: healthInfo.heartRateBpm ?? 0,
+        systolicBpmmHg: healthInfo.systolicBpmmHg ?? 0,
+        diastolicBpmmHg: healthInfo.diastolicBpmmHg ?? 0,
+        oxygenSatPercent: healthInfo.oxygenSatPercent ?? 0,
+        decisionNote: healthInfo.decisionNote,
+        consentObtained: healthInfo.consentObtained,
       }));
       await surveyAPI.submitSurveyAnswer(appointment.appointmentId, answerPayload);
       await appointmentApi.updateAppointmentStatus(appointment.appointmentId, {
         status: "Approval",
         note: "",
       });
-      setSubmitMessage("Lưu câu trả lời khảo sát thành công");
-      message.success("Lưu câu trả lời khảo sát thành công");
-      setTimeout(() => {
-        navigate(`/staff/appointments/${id}/step-3`);
-      }, 1200);
-    } catch (error) {
-      setSubmitMessage("Lỗi khi lưu câu trả lời khảo sát");
+      setShowSuccessModal(true);
+    } catch {
       message.error("Lỗi khi lưu câu trả lời khảo sát");
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleCancelAppointment = () => {
-    if (!appointment) {
-      message.error("Không có cuộc hẹn để hủy.");
-      return;
-    }
-    setIsCancelModalVisible(true);
-  };
-
-  const handleConfirmCancel = async () => {
-    if (!cancelReason.trim()) {
-      message.error("Vui lòng nhập lý do hủy cuộc hẹn.");
-      return;
-    }
-    setCancelling(true);
-    setSubmitMessage("");
-    try {
-      await appointmentApi.updateAppointmentStatus(appointment!.appointmentId, {
-        status: "Cancelled",
-        note: cancelReason,
-      });
-      message.success("Hủy cuộc hẹn thành công");
-      setIsCancelModalVisible(false);
-      setCancelReason("");
-      setTimeout(() => {
-        if (user?.position === "Doctor") {
-          navigate("/doctor/appointments");
-        } else {
-          navigate("/staff/appointments");
-        }
-      }, 1200);
-    } catch (error) {
-      message.error("Lỗi khi hủy cuộc hẹn");
-    } finally {
-      setCancelling(false);
-    }
-  };
-
-  const handleCancelModalClose = () => {
-    setIsCancelModalVisible(false);
-    setCancelReason("");
   };
 
   if (loading) {
@@ -229,91 +354,251 @@ export default function HealthSurvey() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
-      
       <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-6">
         <div className="flex justify-between items-center mb-6">
-        <Button
-          type="button"
-          className="bg-gray-300 hover:bg-blue-400 text-black px-6 py-2 rounded-full transition-colors"
-          onClick={handleBackByPosition}
-        >
-          Quay lại
-        </Button>
-        {appointment.status !== "Cancelled" && (
           <Button
             type="button"
-            className={`bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full transition-colors ${
-              cancelling ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-            onClick={handleCancelAppointment}
-            disabled={cancelling}
+            className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-full transition-colors"
+            onClick={handleBackByPosition}
           >
-            {cancelling ? "Đang hủy..." : "Hủy lịch hẹn"}
+            Quay lại
           </Button>
-        )}
-      </div>
-              <h2 className="text-3xl font-bold text-indigo-900 mb-6">
-                Quy trình tiêm chủng
-              </h2>
-
+        </div>
+        <h2 className="text-3xl font-bold text-indigo-900 mb-6">Quy trình tiêm chủng</h2>
         <div className="mb-8">
           <VaccinationSteps currentStep={1} />
         </div>
 
-        {/* Appointment Information Card */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-            Thông tin cuộc hẹn
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <div className="flex items-center">
-                <span className="font-medium text-gray-600 w-32">Tên bé:</span>
-                <span className="text-gray-800">
-                  {child.fullName} ({calculateAge(child.birthDate)})
-                </span>
-              </div>
-              <div className="flex items-center">
-                <span className="font-medium text-gray-600 w-32">Giới tính:</span>
-                <span className="text-gray-800">{child.gender.trim()}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="font-medium text-gray-600 w-32">Tên phụ huynh:</span>
-                <span className="text-gray-800">{appointment.memberName}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="font-medium text-gray-600 w-32">Số liên lạc:</span>
-                <span className="text-gray-800">{appointment.memberPhone}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="font-medium text-gray-600 w-32">Email:</span>
-                <span className="text-gray-800">{appointment.memberEmail.trim()}</span>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center">
-                <span className="font-medium text-gray-600 w-32">Nhóm máu:</span>
-                <span className="text-gray-800">{child.bloodType || "N/A"}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="font-medium text-gray-600 w-32">Tiền sử dị ứng:</span>
-                <span className="text-gray-800">{child.allergiesNotes || "Không có"}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="font-medium text-gray-600 w-32">Tiền sử bệnh lý:</span>
-                <span className="text-gray-800">{child.medicalHistory || "Không có"}</span>
-              </div>
+        {appointment.status === "Cancelled" && (
+          <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center">
+            <svg
+              className="w-6 h-6 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span className="font-semibold">Lịch tiêm đã bị hủy</span>
+          </div>
+        )}
+
+        <Modal
+          title="Thành công"
+          open={showSuccessModal}
+          onCancel={() => {
+            setShowSuccessModal(false);
+            navigate(`/doctor/appointments/${id}/step-3`);
+          }}
+          footer={[
+            <Button
+              key="ok"
+              onClick={() => {
+                setShowSuccessModal(false);
+                navigate(`/doctor/appointments/${id}/step-3`);
+              }}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+            >
+              OK
+            </Button>,
+          ]}
+          centered
+        >
+          <p className="text-gray-700">Lưu câu trả lời khảo sát thành công!</p>
+        </Modal>
+
+        <Modal
+          title="Thành công"
+          open={showCancelSuccessModal}
+          onCancel={() => {
+            setShowCancelSuccessModal(false);
+            navigate("/staff/appointments");
+          }}
+          footer={[
+            <Button
+              key="ok"
+              onClick={() => {
+                setShowCancelSuccessModal(false);
+                navigate("/staff/appointments");
+              }}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+            >
+              OK
+            </Button>,
+          ]}
+          centered
+        >
+          <p className="text-gray-700">Hủy lịch hẹn thành công!</p>
+        </Modal>
+
+        <Modal
+          title="Xác nhận hủy lịch hẹn"
+          open={showCancelConfirmModal}
+          onCancel={() => setShowCancelConfirmModal(false)}
+          footer={[
+            <Button
+              key="no"
+              onClick={() => {
+                setShowCancelConfirmModal(false);
+                setShowCancelReasonModal(true);
+              }}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+            >
+              Không
+            </Button>,
+            <Button
+              key="yes"
+              onClick={() => {
+                setShowCancelConfirmModal(false);
+                setShowRebookModal(true);
+              }}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+            >
+              Có
+            </Button>,
+          ]}
+          centered
+        >
+          <p className="text-gray-700">Bạn có muốn đặt lại lịch mới không?</p>
+        </Modal>
+
+        <Modal
+          title="Lý do hủy lịch hẹn"
+          open={showCancelReasonModal}
+          onCancel={() => setShowCancelReasonModal(false)}
+          footer={[
+            <Button
+              key="cancel"
+              onClick={() => setShowCancelReasonModal(false)}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+            >
+              Hủy
+            </Button>,
+            <Button
+              key="submit"
+              onClick={handleCancel}
+              disabled={submitting}
+              className={`bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors ${
+                submitting ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              {submitting ? "Đang xử lý..." : "Xác nhận hủy"}
+            </Button>,
+          ]}
+          centered
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Lý do hủy</label>
+              <Input.TextArea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Nhập lý do hủy lịch hẹn (không bắt buộc)"
+                rows={3}
+              />
             </div>
           </div>
-        </div>
+        </Modal>
 
-        {showSurveySelect && (
+        <Modal
+          title="Đặt lại lịch hẹn"
+          open={showRebookModal}
+          onCancel={() => setShowRebookModal(false)}
+          footer={[
+            <Button
+              key="cancel"
+              onClick={() => setShowRebookModal(false)}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+            >
+              Hủy
+            </Button>,
+            <Button
+              key="submit"
+              onClick={handleRebook}
+              disabled={submitting || !selectedSlotId}
+              className={`bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors ${
+                submitting || !selectedSlotId ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              {submitting ? "Đang xử lý..." : "Xác nhận đặt lại"}
+            </Button>,
+          ]}
+          centered
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Chọn ngày</label>
+              <DatePicker
+                value={selectedDate}
+                onChange={(date) => setSelectedDate(date)}
+                format="YYYY-MM-DD"
+                className="w-full"
+                disabledDate={(current) => current && current < dayjs().startOf("day")}
+              />
+            </div>
+            {schedules && (
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">Chọn giờ tiêm</label>
+                <Select
+                  value={selectedSlotId}
+                  onChange={(value) => setSelectedSlotId(value)}
+                  placeholder="Chọn giờ tiêm"
+                  className="w-full"
+                >
+                  {schedules.dailySchedules[0]?.availableSlots.map(slot => (
+                    <Select.Option key={slot.scheduleId} value={slot.scheduleId}>
+                      {slot.slotTime}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+            )}
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Ghi chú</label>
+              <Input.TextArea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Nhập ghi chú"
+                required
+                rows={3}
+              />
+            </div>
+          </div>
+        </Modal>
+
+        {user?.position === "Staff" && appointment.status === "Pending" && (
+          <div className="mb-8 p-4 bg-yellow-100 text-yellow-700 rounded-lg flex items-center">
+            <svg
+              className="w-6 h-6 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 9v2m0 4h.01M12 17h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
+              ></path>
+            </svg>
+            <span className="font-semibold">Đang đợi bác sĩ làm thăm khám</span>
+          </div>
+        )}
+
+        {user?.position === "Doctor" && showSurveySelect && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-              Chọn khảo sát tiêm chủng
+              Chọn bộ câu hỏi thăm khám trước tiêm chủng
             </h3>
             <Select
-              placeholder="-- Chọn khảo sát --"
+              placeholder="-- Chọn bộ câu hỏi --"
               className="w-full"
               onChange={(value) => {
                 const survey = surveys.find((s) => s.surveyId === value);
@@ -330,10 +615,10 @@ export default function HealthSurvey() {
           </div>
         )}
 
-        {showSurveySelect && selectedSurvey && (
+        {user?.position === "Doctor" && showSurveySelect && selectedSurvey && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
             <h3 className="text-lg font-semibold text-blue-700 mb-4 border-b pb-2">
-              Câu hỏi khảo sát: {selectedSurvey.title}
+              Câu hỏi thăm khám trước khi tiêm chủng: {selectedSurvey.title}
             </h3>
             {loadingQuestions ? (
               <div className="flex flex-col items-center py-4">
@@ -362,76 +647,179 @@ export default function HealthSurvey() {
                     d="M13 16h-1v-4h-1m1-4h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
                   ></path>
                 </svg>
-                Không có câu hỏi nào cho khảo sát này.
+                Không có câu hỏi nào cho bộ câu hỏi này.
               </div>
             ) : (
-              <ul className="space-y-4">
-                {surveyQuestions.map((q: Question) => (
-                  <li
-                    key={q.questionId}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200"
-                  >
-                    <div className="flex items-center">
-                      <svg
-                        className="w-5 h-5 mr-2 text-blue-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
+              <>
+                <h4 className="text-md font-semibold text-gray-800 mb-4">Câu hỏi thăm khám sức khỏe</h4>
+                <ul className="space-y-4 mb-8">
+                  {surveyQuestions.map((q: Question) => (
+                    <li
+                      key={q.questionId}
+                      className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200"
+                    >
+                      <div className="flex items-center">
+                        <svg
+                          className="w-5 h-5 mr-2 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5v-2a2 2 0 012-2h10a2 2 0 012 2v2h-4m-6 0h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
+                          ></path>
+                        </svg>
+                        <span className="font-medium text-gray-800">{q.questionText}</span>
+                        {q.isRequired && <span className="text-red-500 ml-2">*</span>}
+                      </div>
+                      <div className="mt-3">
+                        {q.questionType === "Text" ? (
+                          <textarea
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            value={answers[q.questionId] || ""}
+                            onChange={(e) => handleChangeAnswer(q.questionId, e.target.value)}
+                            rows={4}
+                          />
+                        ) : q.questionType === "YesNo" ? (
+                          <div className="flex gap-6">
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`q_${q.questionId}`}
+                                value="yes"
+                                checked={answers[q.questionId] === "yes"}
+                                onChange={() => handleChangeAnswer(q.questionId, "yes")}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-gray-700">Có</span>
+                            </label>
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`q_${q.questionId}`}
+                                value="no"
+                                checked={answers[q.questionId] === "no"}
+                                onChange={() => handleChangeAnswer(q.questionId, "no")}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-gray-700">Không</span>
+                            </label>
+                          </div>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+
+                <h4 className="text-md font-semibold text-gray-800 mb-4">Thông tin sức khỏe</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-1">
+                        Nhiệt độ cơ thể (°C)
+                      </label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={healthInfo.temperatureC ?? ""}
+                        onChange={(e) =>
+                          handleHealthInfoChange("temperatureC", parseFloat(e.target.value) || null)
+                        }
+                        placeholder="Nhập nhiệt độ cơ thể (tùy chọn)"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-1">
+                        Nhịp tim (bpm)
+                      </label>
+                      <Input
+                        type="number"
+                        value={healthInfo.heartRateBpm ?? ""}
+                        onChange={(e) =>
+                          handleHealthInfoChange("heartRateBpm", parseInt(e.target.value) || null)
+                        }
+                        placeholder="Nhập nhịp tim (tùy chọn)"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-1">
+                        Huyết áp tâm thu (mmHg)
+                      </label>
+                      <Input
+                        type="number"
+                        value={healthInfo.systolicBpmmHg ?? ""}
+                        onChange={(e) =>
+                          handleHealthInfoChange("systolicBpmmHg", parseInt(e.target.value) || null)
+                        }
+                        placeholder="Nhập huyết áp tâm thu (tùy chọn)"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-1">
+                        Huyết áp tâm trương (mmHg)
+                      </label>
+                      <Input
+                        type="number"
+                        value={healthInfo.diastolicBpmmHg ?? ""}
+                        onChange={(e) =>
+                          handleHealthInfoChange("diastolicBpmmHg", parseInt(e.target.value) || null)
+                        }
+                        placeholder="Nhập huyết áp tâm trương (tùy chọn)"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-1">
+                        Độ bão hòa oxy (%)
+                      </label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        value={healthInfo.oxygenSatPercent ?? ""}
+                        onChange={(e) =>
+                          handleHealthInfoChange("oxygenSatPercent", parseFloat(e.target.value) || null)
+                        }
+                        placeholder="Nhập độ bão hòa oxy (tùy chọn)"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-1">Ghi chú quyết định</label>
+                      <TextArea
+                        value={healthInfo.decisionNote}
+                        onChange={(e) => handleHealthInfoChange("decisionNote", e.target.value)}
+                        placeholder="Nhập ghi chú quyết định (tùy chọn)"
+                        rows={3}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <Checkbox
+                        checked={healthInfo.consentObtained}
+                        onChange={(e) => handleHealthInfoChange("consentObtained", e.target.checked)}
+                        className="text-gray-700"
+                        required
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5v-2a2 2 0 012-2h10a2 2 0 012 2v2h-4m-6 0h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
-                        ></path>
-                      </svg>
-                      <span className="font-medium text-gray-800">{q.questionText}</span>
-                      {q.isRequired && <span className="text-red-500 ml-2">*</span>}
+                        Đã nhận được sự đồng ý
+                      </Checkbox>
                     </div>
-                    <div className="mt-3">
-                      {q.questionType === "Text" ? (
-                        <textarea
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                          value={answers[q.questionId] || ""}
-                          onChange={(e) => handleChangeAnswer(q.questionId, e.target.value)}
-                          rows={4}
-                        />
-                      ) : q.questionType === "YesNo" ? (
-                        <div className="flex gap-6">
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              name={`q_${q.questionId}`}
-                              value="yes"
-                              checked={answers[q.questionId] === "yes"}
-                              onChange={() => handleChangeAnswer(q.questionId, "yes")}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="text-gray-700">Có</span>
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              name={`q_${q.questionId}`}
-                              value="no"
-                              checked={answers[q.questionId] === "no"}
-                              onChange={() => handleChangeAnswer(q.questionId, "no")}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="text-gray-700">Không</span>
-                          </label>
-                        </div>
-                      ) : null}
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         )}
 
-        {!showSurveySelect && surveyAnswers.length > 0 && (
+        {!showSurveySelect && surveyAnswers && surveyAnswers.questions.length > 0 && (
           <Collapse
             activeKey={isAnswersVisible ? ["1"] : []}
             className="mb-8 bg-white rounded-xl shadow-lg"
@@ -447,10 +835,10 @@ export default function HealthSurvey() {
               header={
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-blue-700 mb-0">
-                    Câu trả lời khảo sát
+                    Câu trả lời thăm khám sức khỏe
                   </h3>
                   <span className="text-sm text-gray-500">
-                    {surveyAnswers.length} câu trả lời
+                    {surveyAnswers.questions.length} câu trả lời
                   </span>
                 </div>
               }
@@ -460,13 +848,28 @@ export default function HealthSurvey() {
               <div className="space-y-4">
                 <div className="bg-blue-50 rounded-lg p-4 flex items-center justify-between">
                   <span className="text-blue-700 font-semibold">
-                    Tổng cộng: {surveyAnswers.length} câu trả lời
+                    Tổng cộng: {surveyAnswers.questions.length} câu trả lời
                   </span>
                   <span className="text-sm text-gray-500">
-                    Cập nhật đến {new Date().toLocaleDateString("vi-VN")}
+                    Cập nhật đến {new Date(surveyAnswers.submittedAt).toLocaleDateString("vi-VN")}
                   </span>
                 </div>
-                {surveyAnswers.map((ans, idx) => (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                  <h4 className="text-md font-semibold text-gray-800 mb-2">Thông tin sức khỏe</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p><strong>Nhiệt độ cơ thể:</strong> {surveyAnswers.temperatureC || "0"}°C</p>
+                      <p><strong>Nhịp tim:</strong> {surveyAnswers.heartRateBpm || "0"} bpm</p>
+                      <p><strong>Huyết áp:</strong> {surveyAnswers.systolicBpmmHg || "0"}/{surveyAnswers.diastolicBpmmHg || "0"} mmHg</p>
+                    </div>
+                    <div>
+                      <p><strong>Độ bão hòa oxy:</strong> {surveyAnswers.oxygenSatPercent || "0"}%</p>
+                      <p><strong>Ghi chú quyết định:</strong> {surveyAnswers.decisionNote || "Không có"}</p>
+                      <p><strong>Đồng ý:</strong> {surveyAnswers.consentObtained ? "Có" : "Không"}</p>
+                    </div>
+                  </div>
+                </div>
+                {surveyAnswers.questions.map((ans: QuestionResponse, idx: number) => (
                   <div
                     key={idx}
                     className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200"
@@ -500,7 +903,7 @@ export default function HealthSurvey() {
           </Collapse>
         )}
 
-        {!showSurveySelect && surveyAnswers.length === 0 && (
+        {!showSurveySelect && (!surveyAnswers || surveyAnswers.questions.length === 0) && (
           <div className="bg-gray-50 text-gray-600 p-4 rounded-lg flex items-center justify-center">
             <svg
               className="w-6 h-6 mr-2"
@@ -516,87 +919,60 @@ export default function HealthSurvey() {
                 d="M13 16h-1v-4h-1m1-4h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
               ></path>
             </svg>
-            Không có câu trả lời khảo sát.
+            Không có câu trả lời.
           </div>
         )}
-
-        <Modal
-          title="Hủy cuộc hẹn"
-          open={isCancelModalVisible}
-          onOk={handleConfirmCancel}
-          onCancel={handleCancelModalClose}
-          okText="Xác nhận"
-          cancelText="Hủy bỏ"
-          okButtonProps={{
-            className: "bg-blue-600 hover:bg-blue-700 text-white",
-            disabled: cancelling,
-          }}
-          cancelButtonProps={{
-            className: "bg-gray-300 hover:bg-gray-400 text-gray-800",
-            disabled: cancelling,
-          }}
-        >
-          <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-2">
-              Lý do hủy <span className="text-red-500">*</span>
-            </label>
-            <TextArea
-              rows={4}
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Nhập lý do hủy cuộc hẹn"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-          </div>
-        </Modal>
 
         <div className="flex justify-end space-x-4 mt-8 items-center">
           <Button
             type="button"
             onClick={handleBack}
             className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-full transition-colors"
-            disabled={submitting || cancelling || appointment.status === "Cancelled"}
+            disabled={submitting || appointment.status === "Cancelled"}
           >
             Trở lại
           </Button>
-          {appointment?.status === "Approval" ||
-          appointment?.status === "Paid" ||
-          appointment?.status === "Completed" ? (
+          {user?.position === "Staff" && appointment.status === "Approval" && (
             <Button
               type="button"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-colors"
-              onClick={() => {
-                const user = getUserInfo();
-                if (user?.position === "Doctor") {
-                  navigate(`/doctor/appointments/${id}/step-3`);
-                } else {
-                  navigate(`/staff/appointments/${id}/step-3`);
-                }
-              }}
-              disabled={submitting || cancelling}
+              onClick={handleCancelConfirm}
+              disabled={submitting}
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full transition-colors"
             >
-              Tiếp tục
+              Hủy lịch hẹn
             </Button>
-          ) : appointment?.status !== "Cancelled" ? (
+          )}
+          {user?.position === "Doctor" && showSurveySelect && (
             <Button
               type="button"
               onClick={handleSubmit}
               className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-colors ${
                 submitting ? "opacity-50 cursor-not-allowed" : ""
               }`}
-              disabled={submitting || cancelling}
+              disabled={submitting}
             >
-              {submitting ? "Đang lưu..." : "Gửi khảo sát"}
+              {submitting ? "Đang lưu..." : "Gửi"}
             </Button>
-          ) : null}
-          {submitMessage && (
-            <span
-              className={`ml-4 font-medium ${
-                submitMessage.includes("Lỗi") ? "text-red-600" : "text-green-600"
-              }`}
+          )}
+          {user?.position === "Staff" && appointment.status !== "Pending" && appointment.status !== "Cancelled" && (
+            <Button
+              type="button"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-colors"
+              onClick={() => navigate(`/staff/appointments/${id}/step-3`)}
+              disabled={submitting}
             >
-              {submitMessage}
-            </span>
+              Tiếp tục
+            </Button>
+          )}
+          {user?.position === "Doctor" && !showSurveySelect && appointment.status !== "Cancelled" && (
+            <Button
+              type="button"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-colors"
+              onClick={() => navigate(`/doctor/appointments/${id}/step-3`)}
+              disabled={submitting}
+            >
+              Tiếp tục
+            </Button>
           )}
         </div>
       </div>

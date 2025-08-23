@@ -40,4 +40,7 @@ export const childprofileApi = {
     getChildVaccineProfile: async (childId: number): Promise<VaccineProfile[]> => {
         return await axiosClient.get(`api/ChildVaccineProfiles/public/child/${childId}`);
     }
+
+
+    
 }

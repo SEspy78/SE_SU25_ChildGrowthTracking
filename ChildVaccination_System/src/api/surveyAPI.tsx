@@ -1,7 +1,5 @@
 import axiosClient from "./axiosClient";
 
-
-
 export type surveyResponse = {
   totalCount: number;
   pageIndex: number;
@@ -10,9 +8,9 @@ export type surveyResponse = {
 };
 
 export type AllSurveyResponse = {
-  totalCount: number; 
-  pageIndex: number;  
-  pageSize: number; 
+  totalCount: number;
+  pageIndex: number;
+  pageSize: number;
   data: Survey[];
 };
 
@@ -28,13 +26,11 @@ export type Survey = {
   questions: Question[];
 };
 
-
-
 export type Question = {
   questionId: number;
   questionText: string;
   questionType: string;
-  isRequired:boolean;
+  isRequired: boolean;
 };
 
 export type createSurveyPayload = {
@@ -43,7 +39,6 @@ export type createSurveyPayload = {
   startDate: string;
   endDate: string;
   status: string;
-
 };
 
 export type createQuestionPayload = {
@@ -52,27 +47,41 @@ export type createQuestionPayload = {
   isRequired: boolean;
 };
 
-
 export type AnswerPayload = {
   questionId: number;
   answerId: number | null;
   answerText: string;
+  temperatureC: number;
+  heartRateBpm: number;
+  systolicBpmmHg: number;
+  diastolicBpmmHg: number;
+  oxygenSatPercent: number;
+  decisionNote: string;
+  consentObtained: boolean;
 };
 
-export type Answer = {
-  appointmentId: number;
+export type QuestionResponse = {
   questionId: number;
   questionText: string;
   answerText: string;
-  submittedAt: string;
 };
-
 
 export type AnswerResponse = {
   totalCount: number;
   pageIndex: number;
   pageSize: number;
-  data: Answer[];
+  data: {
+    appointmentId: number;
+    submittedAt: string;
+    temperatureC: number;
+    heartRateBpm: number;
+    systolicBpmmHg: number;
+    diastolicBpmmHg: number;
+    oxygenSatPercent: number;
+    decisionNote: string;
+    consentObtained: boolean;
+    questions: QuestionResponse[];
+  };
 };
 
 export const surveyAPI = {
@@ -84,8 +93,10 @@ export const surveyAPI = {
     return await axiosClient.get("api/Survey");
   },
 
-
-  addQuestion: async (surveyId: number, payload: createQuestionPayload): Promise<any> => {
+  addQuestion: async (
+    surveyId: number,
+    payload: createQuestionPayload
+  ): Promise<any> => {
     return await axiosClient.post(`api/Survey/${surveyId}/questions`, payload);
   },
 
@@ -93,12 +104,14 @@ export const surveyAPI = {
     return await axiosClient.post("api/Survey", payload);
   },
 
-  submitSurveyAnswer: async (appointmentId: number, answer: AnswerPayload[]): Promise<any> => {
-    return await axiosClient.post(`api/Survey/${appointmentId}/submit`, answer );
+  submitSurveyAnswer: async (
+    appointmentId: number,
+    answer: AnswerPayload[]
+  ): Promise<any> => {
+    return await axiosClient.post(`api/Survey/${appointmentId}/submit`, answer);
   },
-  
+
   getSurveyResponse: async (appointmentId: number): Promise<AnswerResponse> => {
     return await axiosClient.get(`api/Survey/${appointmentId}/responses`);
-  }
- 
+  },
 };

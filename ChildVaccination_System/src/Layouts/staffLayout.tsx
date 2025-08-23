@@ -30,9 +30,8 @@ export default function StaffLayout() {
 
           <nav className="space-y-3">
             <SidebarItem label="Lịch hôm nay" active={active === "schedule"} onClick={() => setActive("schedule")} />
-            <SidebarItem label="Hồ sơ trẻ em" />
-            <SidebarItem label="Chỉ định mũi tiêm" />
-            <SidebarItem label="Thống kê" />
+            <SidebarItem label="Vắc xin cơ sở" />
+            <SidebarItem label="Gói vắc xin cơ sở" />
           </nav>
         </div>
         <button

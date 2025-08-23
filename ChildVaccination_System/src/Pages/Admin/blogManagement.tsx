@@ -103,8 +103,8 @@ const BlogManagement: React.FC = () => {
   });
 
   const categories = [...new Set(blogs.map(b => b.category).filter(Boolean))];
-  const publishedBlogs = blogs.filter(b => b.status === 'published').length;
-  const draftBlogs = blogs.filter(b => b.status === 'draft').length;
+  const publishedBlogs = blogs.filter(b => b.status?.toLocaleLowerCase() === 'published').length;
+  const draftBlogs = blogs.filter(b => b.status?.toLocaleLowerCase() === 'draft').length;
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -363,11 +363,11 @@ const BlogManagement: React.FC = () => {
                     </span>
                   )}
                   <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${
-                    blog.status === 'published' 
+                    blog.status?.toLocaleLowerCase() === 'published' 
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {blog.status === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
+                    {blog.status?.toLocaleLowerCase() === 'published' ? 'Đã xuất bản' : 'Bản nháp'}
                   </span>
                 </div>
                 

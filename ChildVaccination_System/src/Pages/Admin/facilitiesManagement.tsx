@@ -52,12 +52,7 @@ const FacilityManagement: React.FC = () => {
             <p className="text-gray-600 mt-1">Quản lý danh sách cơ sở tiêm chủng</p>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Thêm cơ sở</span>
-            </button>
-          </div>
+         
         </div>
       </div>
 
