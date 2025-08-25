@@ -274,7 +274,7 @@ const OrderManagementStyled: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-green-600">Hoàn thành</p>
               <p className="text-2xl font-bold text-green-900">
-                {allOrders.filter(o => o.status === 'Completed').length}
+                {allOrders.filter(o => o.status === 'Paid').length}
               </p>
             </div>
           </div>
@@ -299,12 +299,7 @@ const OrderManagementStyled: React.FC = () => {
             <div className="p-2 bg-red-100 rounded-lg">
               <div className="w-6 h-6 bg-red-600 rounded-full"></div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-red-600">Đã hủy</p>
-              <p className="text-2xl font-bold text-red-900">
-                {allOrders.filter(o => o.status === 'Cancelled').length}
-              </p>
-            </div>
+            
           </div>
         </div>
       </div>
@@ -437,11 +432,11 @@ const OrderManagementStyled: React.FC = () => {
                           </td>
                           <td className="px-6 py-4">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              order.status === 'Completed'
+                              order.status === 'Paid'
                                 ? 'bg-green-100 text-green-800'
-                                : order.status === 'Cancelled'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-blue-100 text-blue-800'
+                                : order.status === 'Pending'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-red-100 text-red-800'
                             }`}>
                               {order.status === 'Paid' ? 'Hoàn thành' : 
                                order.status === 'Pending' ? 'Đang xử lý' : 'Đã hủy'}
