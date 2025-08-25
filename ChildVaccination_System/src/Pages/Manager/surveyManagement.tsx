@@ -258,7 +258,7 @@ export default function SurveyManagement() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-          <h2 className="text-3xl font-bold text-gray-900">Quản lý khảo sát</h2>
+          <h2 className="text-3xl font-bold text-gray-900">Quản lý bộ câu hỏi thăm khám sức khỏe</h2>
           <div className="flex gap-4 w-full sm:w-auto">
             <Input
               className="w-full sm:w-64 border-gray-200 rounded-lg"

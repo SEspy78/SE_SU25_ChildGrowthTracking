@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUserInfo } from "@/lib/storage";
 import { appointmentApi, type AppointmentResponse, type Appointment } from "../../api/appointmentAPI";
@@ -20,26 +20,27 @@ export default function DoctorAppointment() {
   const [pageSize] = useState<number>(10);
   const [hasNextPage, setHasNextPage] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const res: AppointmentResponse = await appointmentApi.getAllAppointments(pageIndex, pageSize);
-        const filteredAppointments = (res.appointments || []).filter(
-          (item) => item.status === "Paid" || item.status === "Completed" || item.status === "Pending"
-        );
-        setAppointments(filteredAppointments);
-        setHasNextPage((res.appointments?.length || 0) === pageSize);
-      } catch {
-        setError("Không thể tải danh sách cuộc hẹn.");
-        setAppointments([]);
-        setHasNextPage(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res: AppointmentResponse = await appointmentApi.getAllAppointments(pageIndex, pageSize);
+      const filteredAppointments = (res.appointments || []).filter(
+        (item) => item.status === "Paid" || item.status === "Completed" || item.status === "Pending"
+      );
+      setAppointments(filteredAppointments);
+      setHasNextPage((res.appointments?.length || 0) === pageSize);
+    } catch {
+      setError("Không thể tải danh sách cuộc hẹn.");
+      setAppointments([]);
+      setHasNextPage(false);
+    } finally {
+      setLoading(false);
+    }
   }, [pageIndex, pageSize]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const filteredAppointments = appointments
     .filter(item => item.child.fullName.toLowerCase().includes(search.toLowerCase()))
@@ -80,7 +81,15 @@ export default function DoctorAppointment() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <h2 className="text-3xl font-bold text-indigo-900 mb-6">Tất cả lịch hẹn</h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-3xl font-bold text-indigo-900">Tất cả lịch hẹn</h2>
+          <button
+            onClick={fetchData}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition"
+          >
+            Làm mới
+          </button>
+        </div>
 
         {/* Search */}
         <div className="mb-6">

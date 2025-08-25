@@ -36,6 +36,7 @@ export default function HealthSurvey() {
   } | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showCancelSuccessModal, setShowCancelSuccessModal] = useState(false);
   const [isAnswersVisible, setIsAnswersVisible] = useState(false);
@@ -59,6 +60,7 @@ export default function HealthSurvey() {
   const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false);
   const [showCancelReasonModal, setShowCancelReasonModal] = useState(false);
   const [showRebookModal, setShowRebookModal] = useState(false);
+  const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
   const [schedules, setSchedules] = useState<FacilityScheduleResponse | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
@@ -157,6 +159,16 @@ export default function HealthSurvey() {
     }
   }, [selectedDate, user?.facilityId]);
 
+  // Auto-refresh every 10 seconds for Staff when appointment is Pending
+  useEffect(() => {
+    if (appointment?.status === "Pending" && user?.position === "Staff") {
+      const interval = setInterval(() => {
+        window.location.reload();
+      }, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [appointment?.status, user?.position]);
+
   const calculateAge = (birthDate: string): string => {
     if (!birthDate) return "N/A";
     const birth = new Date(birthDate);
@@ -174,6 +186,14 @@ export default function HealthSurvey() {
     } else {
       return `${diffWeeks} tuần tuổi`;
     }
+  };
+
+  const isInputComplete = () => {
+    if (!healthInfo.consentObtained) {
+      return false;
+    }
+    const requiredQuestions = surveyQuestions.filter((q) => q.isRequired);
+    return requiredQuestions.every((q) => answers[q.questionId] && answers[q.questionId].trim() !== "");
   };
 
   const validateHealthInfo = () => {
@@ -287,6 +307,7 @@ export default function HealthSurvey() {
 
   const handleSubmit = async () => {
     if (!appointment || !selectedSurvey) {
+      setSubmitMessage("Vui lòng chọn khảo sát trước khi gửi.");
       message.error("Vui lòng chọn khảo sát trước khi gửi.");
       return;
     }
@@ -294,6 +315,7 @@ export default function HealthSurvey() {
       return;
     }
     setSubmitting(true);
+    setSubmitMessage("");
     try {
       const answerPayload = surveyQuestions.map((q) => ({
         questionId: q.questionId,
@@ -307,17 +329,43 @@ export default function HealthSurvey() {
         decisionNote: healthInfo.decisionNote,
         consentObtained: healthInfo.consentObtained,
       }));
-      await surveyAPI.submitSurveyAnswer(appointment.appointmentId, answerPayload);
-      await appointmentApi.updateAppointmentStatus(appointment.appointmentId, {
-        status: "Approval",
-        note: "",
-      });
-      setShowSuccessModal(true);
+      const response = await surveyAPI.submitSurveyAnswer(appointment.appointmentId, answerPayload);
+      if (response.success) {
+        await appointmentApi.updateAppointmentStatus(appointment.appointmentId, {
+          status: "Approval",
+          note: "",
+        });
+        setSubmitMessage("Đã hoàn thành khảo sát sức khỏe.");
+        message.success("Đã hoàn thành khảo sát sức khỏe.");
+        setShowSuccessModal(true);
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          navigate(`/doctor/appointments/${id}/step-3`);
+        }, 1200);
+      } else {
+        setSubmitMessage(response.message);
+        message.error(response.message);
+      }
     } catch {
-      message.error("Lỗi khi lưu câu trả lời khảo sát");
+      setSubmitMessage("Lỗi khi lưu câu trả lời khảo sát.");
+      message.error("Lỗi khi lưu câu trả lời khảo sát.");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleConfirmSubmit = () => {
+    if (!appointment || !selectedSurvey) {
+      setSubmitMessage("Vui lòng chọn khảo sát trước khi gửi.");
+      message.error("Vui lòng chọn khảo sát trước khi gửi.");
+      return;
+    }
+    if (!isInputComplete()) {
+      setSubmitMessage("Vui lòng điền đầy đủ thông tin bắt buộc.");
+      message.error("Vui lòng điền đầy đủ thông tin bắt buộc.");
+      return;
+    }
+    setShowConfirmSubmitModal(true);
   };
 
   if (loading) {
@@ -369,6 +417,34 @@ export default function HealthSurvey() {
           <VaccinationSteps currentStep={1} />
         </div>
 
+        <Modal
+          title="Xác nhận gửi khảo sát sức khỏe"
+          open={showConfirmSubmitModal}
+          onCancel={() => setShowConfirmSubmitModal(false)}
+          footer={[
+            <Button
+              key="no"
+              onClick={() => setShowConfirmSubmitModal(false)}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+            >
+              Không
+            </Button>,
+            <Button
+              key="submit"
+              onClick={() => {
+                setShowConfirmSubmitModal(false);
+                handleSubmit();
+              }}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+            >
+              Gửi
+            </Button>,
+          ]}
+          centered
+        >
+          <p className="text-gray-700">Bạn có muốn gửi khảo sát sức khỏe này không?</p>
+        </Modal>
+
         {appointment.status === "Cancelled" && (
           <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center">
             <svg
@@ -392,25 +468,11 @@ export default function HealthSurvey() {
         <Modal
           title="Thành công"
           open={showSuccessModal}
-          onCancel={() => {
-            setShowSuccessModal(false);
-            navigate(`/doctor/appointments/${id}/step-3`);
-          }}
-          footer={[
-            <Button
-              key="ok"
-              onClick={() => {
-                setShowSuccessModal(false);
-                navigate(`/doctor/appointments/${id}/step-3`);
-              }}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
-            >
-              OK
-            </Button>,
-          ]}
+          onCancel={() => setShowSuccessModal(false)}
+          footer={null}
           centered
         >
-          <p className="text-gray-700">Lưu câu trả lời khảo sát thành công!</p>
+          <p className="text-gray-700">Đã hoàn thành khảo sát sức khỏe.</p>
         </Modal>
 
         <Modal
@@ -732,6 +794,7 @@ export default function HealthSurvey() {
                         placeholder="Nhập nhiệt độ cơ thể (tùy chọn)"
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-sm text-gray-500 mt-1">Nhiệt độ cơ thể bình thường từ 35.0°C đến 40.0°C</p>
                     </div>
                     <div>
                       <label className="block text-gray-700 font-medium mb-1">
@@ -746,6 +809,7 @@ export default function HealthSurvey() {
                         placeholder="Nhập nhịp tim (tùy chọn)"
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-sm text-gray-500 mt-1">Nhịp tim bình thường từ 60 đến 160 bpm</p>
                     </div>
                     <div>
                       <label className="block text-gray-700 font-medium mb-1">
@@ -760,6 +824,7 @@ export default function HealthSurvey() {
                         placeholder="Nhập huyết áp tâm thu (tùy chọn)"
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-sm text-gray-500 mt-1">Huyết áp tâm thu bình thường từ 70 đến 120 mmHg</p>
                     </div>
                   </div>
                   <div className="space-y-3">
@@ -776,6 +841,7 @@ export default function HealthSurvey() {
                         placeholder="Nhập huyết áp tâm trương (tùy chọn)"
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-sm text-gray-500 mt-1">Huyết áp tâm trương bình thường từ 40 đến 80 mmHg</p>
                     </div>
                     <div>
                       <label className="block text-gray-700 font-medium mb-1">
@@ -791,6 +857,7 @@ export default function HealthSurvey() {
                         placeholder="Nhập độ bão hòa oxy (tùy chọn)"
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
+                      <p className="text-sm text-gray-500 mt-1">Độ bão hòa oxy bình thường từ 90% đến 100%</p>
                     </div>
                     <div>
                       <label className="block text-gray-700 font-medium mb-1">Ghi chú quyết định</label>
@@ -803,14 +870,16 @@ export default function HealthSurvey() {
                       />
                     </div>
                     <div>
-                      <Checkbox
-                        checked={healthInfo.consentObtained}
-                        onChange={(e) => handleHealthInfoChange("consentObtained", e.target.checked)}
-                        className="text-gray-700"
-                        required
-                      >
-                        Đã nhận được sự đồng ý
-                      </Checkbox>
+                      <label className="flex items-center">
+                        <Checkbox
+                          checked={healthInfo.consentObtained}
+                          onChange={(e) => handleHealthInfoChange("consentObtained", e.target.checked)}
+                          className="text-gray-700"
+                          required
+                        />
+                        <span className="ml-2">Đã nhận được sự đồng ý</span>
+                        <span className="text-red-500 ml-1">*</span>
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -945,7 +1014,7 @@ export default function HealthSurvey() {
           {user?.position === "Doctor" && showSurveySelect && (
             <Button
               type="button"
-              onClick={handleSubmit}
+              onClick={handleConfirmSubmit}
               className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-colors ${
                 submitting ? "opacity-50 cursor-not-allowed" : ""
               }`}
@@ -973,6 +1042,11 @@ export default function HealthSurvey() {
             >
               Tiếp tục
             </Button>
+          )}
+          {submitMessage && (
+            <span className={`ml-4 font-medium ${submitMessage.includes("thành công") || submitMessage.includes("hoàn thành") ? "text-emerald-600" : "text-rose-500"}`}>
+              {submitMessage}
+            </span>
           )}
         </div>
       </div>

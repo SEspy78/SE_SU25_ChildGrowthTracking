@@ -25,31 +25,43 @@ export default function Payment() {
   const user = getUserInfo();
 
   const isApprovalOrPendingStatus = appointment?.status === "Approval" || appointment?.status === "Pending";
-  const isPaidStatus = appointment?.status === "Paid" || appointment?.order?.status === "Paid" || appointment?.status === "Completed";
+  const isAppointmentPaid = appointment?.status === "Paid" || appointment?.status === "Completed";
+  const isOrderPaid = appointment?.order?.status === "Paid" && !isAppointmentPaid;
   const showPaymentSection = appointment && appointment.status === "Approval" && (!appointment.order || (appointment.order && appointment.order.status === "Pending")) && user?.position !== "Doctor";
 
-  useEffect(() => {
-    const fetchAppointment = async () => {
-      try {
-        setLoading(true);
-        if (!id) {
-          setError("Không có ID lịch hẹn trong URL.");
-          setAppointment(null);
-          return;
-        }
-        const res = await appointmentApi.getAppointmentById(Number(id));
-        const appointmentData = (res as any).data || res;
-        setAppointment(appointmentData);
-      } catch {
-        setError("Không thể tải thông tin thanh toán.");
+  const fetchAppointment = async () => {
+    try {
+      setLoading(true);
+      if (!id) {
+        setError("Không có ID lịch hẹn trong URL.");
         setAppointment(null);
-        message.error("Không thể tải thông tin thanh toán.");
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
+      const res = await appointmentApi.getAppointmentById(Number(id));
+      const appointmentData = (res as any).data || res;
+      setAppointment(appointmentData);
+    } catch {
+      setError("Không thể tải thông tin thanh toán.");
+      setAppointment(null);
+      message.error("Không thể tải thông tin thanh toán.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchAppointment();
   }, [id]);
+
+  // Auto-refresh every 10 seconds for Doctor when appointment is Approval
+  useEffect(() => {
+    if (appointment?.status === "Approval" && user?.position === "Doctor") {
+      const interval = setInterval(() => {
+        fetchAppointment();
+      }, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [appointment?.status, user?.position]);
 
   useEffect(() => {
     if (appointment?.order?.packageId) {
@@ -74,7 +86,7 @@ export default function Payment() {
 
   useEffect(() => {
     const initiatePayment = async () => {
-      if (selectedPaymentMethod === "bank" && showPaymentSection && !isPaidStatus) {
+      if (selectedPaymentMethod === "bank" && showPaymentSection && !isAppointmentPaid && !isOrderPaid) {
         setSubmitting(true);
         setSubmitMessage("");
         try {
@@ -98,7 +110,7 @@ export default function Payment() {
       }
     };
     initiatePayment();
-  }, [selectedPaymentMethod, id, showPaymentSection, isPaidStatus]);
+  }, [selectedPaymentMethod, id, showPaymentSection, isAppointmentPaid, isOrderPaid]);
 
   const calculateAge = (birthDate: string): string => {
     if (!birthDate) return "Không có";
@@ -130,24 +142,33 @@ export default function Payment() {
   };
 
   const handleConfirmPayment = async () => {
-    if (selectedPaymentMethod === "cash") {
-      setSubmitting(true);
-      setSubmitMessage("");
-      try {
-        await appointmentApi.updateAppointmentStatus(Number(id), {
-          status: "Paid",
-          note: "Thanh toán bằng tiền mặt",
-        });
-        setAppointment({ ...appointment!, status: "Paid" });
-        setFinishMessage("Xác nhận thanh toán tiền mặt thành công!");
-        setShowFinishModal(true);
-        navigate(`/payment/${id}/complete`);
-      } catch {
-        setFinishMessage("Có lỗi khi xác nhận thanh toán tiền mặt.");
-        setShowFinishModal(true);
-      } finally {
-        setSubmitting(false);
-      }
+    if (!id) {
+      setSubmitMessage("Không có ID lịch hẹn.");
+      message.error("Không có ID lịch hẹn.");
+      return;
+    }
+    setSubmitting(true);
+    setSubmitMessage("");
+    setFinishMessage("");
+    try {
+      await appointmentApi.updateAppointmentStatus(Number(id), {
+        status: "Paid",
+        note: isOrderPaid ? "Thanh toán bằng chuyển khoản" : "Thanh toán bằng tiền mặt",
+      });
+      setAppointment({ ...appointment!, status: "Paid" });
+      setFinishMessage("Xác nhận thanh toán thành công!");
+      setSubmitMessage("Xác nhận thanh toán thành công!");
+      setShowFinishModal(true);
+      setTimeout(() => {
+        setShowFinishModal(false);
+        navigate(user?.position === "Doctor" ? `/doctor/appointments/${id}/step-4` : `/staff/appointments/${id}/step-4`);
+      }, 1200);
+    } catch {
+      setFinishMessage("Có lỗi khi xác nhận thanh toán.");
+      setSubmitMessage("Có lỗi khi xác nhận thanh toán.");
+      setShowFinishModal(true);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -224,14 +245,7 @@ export default function Payment() {
           title={finishMessage.includes("thành công") ? "Thành công" : "Lỗi"}
           open={showFinishModal}
           onCancel={() => setShowFinishModal(false)}
-          footer={[<AntButton
-            key="continue"
-            type="primary"
-            onClick={handleContinue}
-            className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
-          >
-            Tiếp tục
-          </AntButton>]}
+          footer={null}
           centered
         >
           <div className={`flex items-center gap-3 p-4 ${finishMessage.includes("thành công") ? "text-emerald-600" : "text-rose-600"}`}>
@@ -248,7 +262,7 @@ export default function Payment() {
           </div>
         </Modal>
 
-        {isApprovalOrPendingStatus && !isPaidStatus && appointment.status !== "Cancelled" && user?.position === "Doctor" && (
+        {isApprovalOrPendingStatus && !isAppointmentPaid && !isOrderPaid && appointment.status !== "Cancelled" && user?.position === "Doctor" && (
           <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center">
             <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -257,16 +271,7 @@ export default function Payment() {
           </div>
         )}
 
-        {isApprovalOrPendingStatus && !isPaidStatus && appointment.status !== "Cancelled" && user?.position === "Staff" && (
-          <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center">
-            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="font-semibold">Vui lòng đợi bác sĩ hoàn thành thăm khám.</span>
-          </div>
-        )}
-
-        {isPaidStatus && (
+        {(isAppointmentPaid || isOrderPaid) && (
           <div className="mb-8 p-4 bg-emerald-100 text-emerald-800 rounded-lg flex items-center">
             <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -358,7 +363,7 @@ export default function Payment() {
           >
             Trở lại
           </AntButton>
-          {showPaymentSection && !isPaidStatus && selectedPaymentMethod === "cash" && (
+          {showPaymentSection && !isAppointmentPaid && !isOrderPaid && selectedPaymentMethod === "cash" && (
             <AntButton
               type="primary"
               onClick={handleConfirmPayment}
@@ -369,10 +374,20 @@ export default function Payment() {
               {submitting ? "Đang xử lý..." : "Xác nhận thanh toán"}
             </AntButton>
           )}
-          {isPaidStatus && (
+          {isAppointmentPaid && (
             <AntButton
               type="primary"
               onClick={handleContinue}
+              disabled={submitting}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+            >
+              Tiếp tục
+            </AntButton>
+          )}
+          {isOrderPaid && (
+            <AntButton
+              type="primary"
+              onClick={handleConfirmPayment}
               disabled={submitting}
               className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
             >

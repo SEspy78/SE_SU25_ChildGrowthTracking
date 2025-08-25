@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUserInfo } from "@/lib/storage";
 import { appointmentApi, type AppointmentResponse, type Appointment } from "../../api/appointmentAPI";
@@ -28,27 +28,30 @@ export default function DashboardStaff() {
   const [pageSize] = useState<number>(10);
   const [hasNextPage, setHasNextPage] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const res: AppointmentResponse = await appointmentApi.getAllAppointments(pageIndex, pageSize);
-        setAppointments(res.appointments || []);
-        setPendingCount(res.pendingCount || 0);
-        setCompletedCount(res.completedCount || 0);
-        setHasNextPage((res.appointments?.length || 0) === pageSize);
-      } catch {
-        setError("Không thể tải danh sách cuộc hẹn.");
-        setAppointments([]);
-        setPendingCount(0);
-        setCompletedCount(0);
-        setHasNextPage(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+  // Tách fetchData để có thể gọi lại
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res: AppointmentResponse = await appointmentApi.getAllAppointments(pageIndex, pageSize);
+      setAppointments(res.appointments || []);
+      setPendingCount(res.pendingCount || 0);
+      setCompletedCount(res.completedCount || 0);
+      setHasNextPage((res.appointments?.length || 0) === pageSize);
+      setError("");
+    } catch {
+      setError("Không thể tải danh sách cuộc hẹn.");
+      setAppointments([]);
+      setPendingCount(0);
+      setCompletedCount(0);
+      setHasNextPage(false);
+    } finally {
+      setLoading(false);
+    }
   }, [pageIndex, pageSize]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const filteredAppointments = appointments
     .filter(item => item.child.fullName.toLowerCase().includes(search.toLowerCase()))
@@ -90,7 +93,15 @@ export default function DashboardStaff() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <h2 className="text-3xl font-bold text-indigo-900 mb-6">Tất cả lịch hẹn</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-3xl font-bold text-indigo-900">Tất cả lịch hẹn</h2>
+          <button
+            onClick={fetchData}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition"
+          >
+            Làm mới
+          </button>
+        </div>
 
         {/* Thống kê */}
         <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -186,11 +197,11 @@ export default function DashboardStaff() {
             </div>
 
             <Pagination
-  pageIndex={pageIndex}
-  pageSize={pageSize} 
-  setPageIndex={setPageIndex}
-  hasNextPage={hasNextPage}
-/>
+              pageIndex={pageIndex}
+              pageSize={pageSize} 
+              setPageIndex={setPageIndex}
+              hasNextPage={hasNextPage}
+            />
           </>
         )}
       </div>

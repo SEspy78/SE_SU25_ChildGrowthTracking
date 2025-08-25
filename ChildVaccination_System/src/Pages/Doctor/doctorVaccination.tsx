@@ -239,22 +239,27 @@ export default function DoctorConfirmVaccination() {
       message.error("Vắc xin đã chọn đã được tiêm hết.")
       return
     }
+    if (!postVaccinationNotes.trim()) {
+      setSubmitMessage("Vui lòng nhập ghi chú sau tiêm.")
+      message.error("Vui lòng nhập ghi chú sau tiêm.")
+      return
+    }
     setSubmitting(true)
     setSubmitMessage("")
     try {
       const payload: finishVaccinationPayload = {
         appointmentId: Number(id),
         facilityVaccineId,
-        note: postVaccinationNotes || "Tiêm chủng hoàn tất bởi bác sĩ",
+        note: postVaccinationNotes,
         doseNumber: doseNum,
         expectedDateForNextDose,
       }
       console.log("Vaccination Payload:", payload)
       await appointmentApi.completeVaccination(payload)
-      setSubmitMessage("Xác nhận tiêm chủng thành công!")
+      setSubmitMessage("Đã hoàn thành lịch tiêm.")
       setVaccinationConfirmed(true)
       setAppointment({ ...appointment, status: "Completed" })
-      message.success("Xác nhận tiêm chủng thành công!")
+      message.success("Đã hoàn thành lịch tiêm.")
       setTimeout(() => {
         navigate(user?.position === "Doctor" ? "/doctor/appointments" : "/staff/appointments")
       }, 1200)
@@ -364,7 +369,7 @@ export default function DoctorConfirmVaccination() {
             <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
             </svg>
-            <span className="font-semibold">Tiêm chủng đã được xác nhận thành công!</span>
+            <span className="font-semibold">Đã hoàn thành lịch tiêm.</span>
           </div>
         )}
 
@@ -467,7 +472,7 @@ export default function DoctorConfirmVaccination() {
                 )}
               </div>
               <div>
-                <label className="block text-gray-600 mb-2">Số liều:</label>
+                <label className="block text-gray-600 mb-2">Mũi số:</label>
                 <input
                   type="number"
                   className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none"
@@ -488,7 +493,7 @@ export default function DoctorConfirmVaccination() {
                 />
               </div>
               <div>
-                <label className="block text-gray-600 mb-2">Ghi chú sau tiêm:</label>
+                <label className="block text-gray-600 mb-2">Ghi chú sau tiêm: <span className="text-red-500">*</span></label>
                 <textarea
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none"
                   value={postVaccinationNotes}
@@ -533,7 +538,7 @@ export default function DoctorConfirmVaccination() {
             </AntButton>
           )}
           {submitMessage && !vaccinationConfirmed && (
-            <span className={`ml-4 font-medium ${submitMessage.includes("thành công") ? "text-emerald-600" : "text-rose-500"}`}>
+            <span className={`ml-4 font-medium ${submitMessage.includes("thành công") || submitMessage.includes("hoàn thành") ? "text-emerald-600" : "text-rose-500"}`}>
               {submitMessage}
             </span>
           )}

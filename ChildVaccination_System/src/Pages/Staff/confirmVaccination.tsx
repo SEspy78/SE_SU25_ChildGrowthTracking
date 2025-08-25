@@ -17,28 +17,39 @@ export default function ConfirmVaccination() {
   const [submitting, setSubmitting] = useState(false);
   const user = getUserInfo();
 
-  useEffect(() => {
-    const fetchAppointment = async () => {
-      try {
-        setLoading(true);
-        if (!id) {
-          setError("Không có ID lịch hẹn trong URL.");
-          setAppointment(null);
-          return;
-        }
-        const res = await appointmentApi.getAppointmentById(Number(id));
-        const appointmentData: Appointment = res.appointments?.[0] || res;
-        setAppointment(appointmentData);
-      } catch {
-        setError("Không thể tải thông tin lịch hẹn.");
+  const fetchAppointment = async () => {
+    try {
+      setLoading(true);
+      if (!id) {
+        setError("Không có ID lịch hẹn trong URL.");
         setAppointment(null);
-        message.error("Không thể tải thông tin lịch hẹn.");
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
+      const res = await appointmentApi.getAppointmentById(Number(id));
+      const appointmentData: Appointment = res.appointments?.[0] || res;
+      setAppointment(appointmentData);
+    } catch {
+      setError("Không thể tải thông tin lịch hẹn.");
+      setAppointment(null);
+      message.error("Không thể tải thông tin lịch hẹn.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchAppointment();
   }, [id]);
+
+  // Auto-refresh every 10 seconds for Staff when appointment is Paid
+  useEffect(() => {
+    if (appointment?.status === "Paid" && user?.position === "Staff") {
+      const interval = setInterval(() => {
+        fetchAppointment();
+      }, 10000); // 10 seconds
+      return () => clearInterval(interval); // Cleanup on unmount or condition change
+    }
+  }, [appointment?.status, user?.position]);
 
   const calculateAge = (birthDate: string): string => {
     if (!birthDate) return "Không có";

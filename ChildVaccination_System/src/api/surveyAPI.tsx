@@ -84,6 +84,12 @@ export type AnswerResponse = {
   };
 };
 
+
+export type response=  {
+   message: string;
+   success: boolean;
+}
+
 export const surveyAPI = {
   getSurveybyId: async (surveyId: number): Promise<surveyResponse> => {
     return await axiosClient.get(`api/Survey/${surveyId}/questions`);
@@ -107,7 +113,7 @@ export const surveyAPI = {
   submitSurveyAnswer: async (
     appointmentId: number,
     answer: AnswerPayload[]
-  ): Promise<any> => {
+  ): Promise<response> => {
     return await axiosClient.post(`api/Survey/${appointmentId}/submit`, answer);
   },
 
