@@ -331,9 +331,8 @@ const OrderManagementStyled: React.FC = () => {
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Tất cả trạng thái</option>
-              <option value="Completed">Hoàn thành</option>
+              <option value="Paid">Hoàn thành</option>
               <option value="Pending">Đang xử lý</option>
-              <option value="Cancelled">Đã hủy</option>
             </select>
             
             <select
@@ -444,8 +443,8 @@ const OrderManagementStyled: React.FC = () => {
                                 ? 'bg-red-100 text-red-800'
                                 : 'bg-blue-100 text-blue-800'
                             }`}>
-                              {order.status === 'Completed' ? 'Hoàn thành' : 
-                               order.status === 'Cancelled' ? 'Đã hủy' : 'Đang xử lý'}
+                              {order.status === 'Paid' ? 'Hoàn thành' : 
+                               order.status === 'Pending' ? 'Đang xử lý' : 'Đã hủy'}
                             </span>
                           </td>
                           <td className="px-6 py-4">
