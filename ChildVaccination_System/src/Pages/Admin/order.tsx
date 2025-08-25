@@ -293,15 +293,6 @@ const OrderManagementStyled: React.FC = () => {
             </div>
           </div>
         </div>
-        
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <div className="w-6 h-6 bg-red-600 rounded-full"></div>
-            </div>
-            
-          </div>
-        </div>
       </div>
 
       {/* Search and Filter */}
