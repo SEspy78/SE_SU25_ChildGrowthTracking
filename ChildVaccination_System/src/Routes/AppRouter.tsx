@@ -144,6 +144,7 @@ import CreateManager from "@/Pages/Admin/createAccount";
 import AdminDashboard from "@/Pages/Admin/adminDashboard";
 import DoctorAppointment from "@/Pages/Doctor/doctorAppointmentDetail";
 import PaymentComplete from "@/Pages/Staff/paymentComplete";
+import VaccineListPage from "@/Pages/Staff/vaccineList";
 const App: React.FC = () => {
   return (
     <Router>
@@ -168,6 +169,7 @@ const App: React.FC = () => {
       <Route path="appointments/:id/step-3" element={<Payment />} />
       <Route path="appointments/:id/payment-complete" element={<PaymentComplete />} />
       <Route path="appointments/:id/step-4" element={<ConfirmVaccination />} />
+      <Route path="facility-vaccines" element={<VaccineListPage />} />
     </Route>
 
     {/* Doctor */}

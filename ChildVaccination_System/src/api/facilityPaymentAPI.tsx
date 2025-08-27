@@ -33,7 +33,7 @@ export type FinishPaymentResponse = {
 export const FacilityPaymentAccountApi = {
 
   payment: async (data: PayloadPayment): Promise<PaymentResponse> => {
-    return await axiosClient.post(`api/VaccinationFacilityPaymentAccount/payment-deloy`, data);
+    return await axiosClient.post(`api/VaccinationFacilityPaymentAccount/payment`, data);
   },
 
   finishPayment: async (orderCode:string): Promise<FinishPaymentResponse> => {

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import VaccinationSteps from "@/Components/VaccinationStep";
 import { Button } from "@/Components/ui/button";
-import type { Appointment } from "@/api/appointmentAPI";
+import { appointmentApi, type Appointment } from "@/api/appointmentAPI";
 import { childprofileApi, type VaccineProfile } from "@/api/childInfomationAPI";
 import { vaccineApi, type FacilityVaccine } from "@/api/vaccineApi";
 import { vaccinePackageApi, type VaccinePackage } from "@/api/vaccinePackageApi";
@@ -24,6 +24,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
   const [errorProfiles, setErrorProfiles] = useState<string>("");
   const [vaccineMap, setVaccineMap] = useState<Record<number, string>>({});
   const [diseaseMap, setDiseaseMap] = useState<Record<number, string>>({});
+  const [appointmentData, setAppointmentData] = useState<Appointment | null>(null);
 
   const handleConfirmByRole = () => {
     navigate(`/staff/appointments/${appointment.appointmentId}/step-2`);
@@ -65,14 +66,27 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
     }
   }, [diseaseMap]);
 
+  // Fetch appointment data using getAppointmentById
+  useEffect(() => {
+    const fetchAppointment = async () => {
+      try {
+        const response = await appointmentApi.getAppointmentById(appointment.appointmentId);
+        setAppointmentData(response);
+      } catch {
+        setErrorPackage("Không thể tải thông tin lịch hẹn.");
+      }
+    };
+    fetchAppointment();
+  }, [appointment.appointmentId]);
+
   // Fetch vaccine package if order exists
   useEffect(() => {
-    if (appointment.order?.packageId) {
+    if (appointmentData?.order?.packageId) {
       const fetchVaccinePackage = async () => {
         setLoadingPackage(true);
         setErrorPackage("");
         try {
-          const response = await vaccinePackageApi.getById(appointment.order!.packageId);
+          const response = await vaccinePackageApi.getById(appointmentData.order!.packageId);
           setVaccinePackage(response);
         } catch {
           setErrorPackage("Không thể tải thông tin gói vắc xin.");
@@ -82,7 +96,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
       };
       fetchVaccinePackage();
     }
-  }, [appointment.order]);
+  }, [appointmentData?.order]);
 
   // Fetch vaccine profiles
   useEffect(() => {
@@ -118,15 +132,21 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
 
   // Vaccine display logic
   let vaccineDisplay = "Không có vắc xin";
-  if (appointment.order && vaccinePackage?.name) {
+  if (appointmentData?.order && vaccinePackage?.name) {
     vaccineDisplay = vaccinePackage.name;
-  } else if (Array.isArray(appointment.facilityVaccines) && appointment.facilityVaccines.length > 0) {
-    vaccineDisplay = appointment.facilityVaccines
+  } else if (Array.isArray(appointmentData?.facilityVaccines) && appointmentData.facilityVaccines.length > 0) {
+    vaccineDisplay = appointmentData.facilityVaccines
       .map((fv: FacilityVaccine) => fv.vaccine?.name || `ID: ${fv.vaccineId}`)
       .join(", ");
   }
 
-  // Calculate total doses
+  // Vaccines to inject display
+  const vaccinesToInjectDisplay = appointmentData?.vaccinesToInject?.length
+    ? appointmentData.vaccinesToInject
+        .map((vaccine) => `${vaccine.vaccineName} (Liều ${vaccine.doseNumber}, ${vaccine.diseaseName})`)
+        .join(", ")
+    : "Không có vắc xin cần tiêm";
+
   const totalDoses = vaccineProfiles.length;
 
   return (
@@ -144,7 +164,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
           <VaccinationSteps currentStep={0} />
         </div>
 
-        {appointment.status === "Cancelled" && (
+        {appointmentData?.status === "Cancelled" && (
           <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center">
             <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -160,7 +180,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
           {loadingPackage ? (
             <div className="flex justify-center items-center py-4 bg-gray-50 rounded-lg">
               <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-indigo-600 mr-2"></div>
-              <span className="text-gray-600">Đang tải thông tin gói vắc xin...</span>
+              <span className="text-gray-600">Đang tải thông tin gói vẮc xin...</span>
             </div>
           ) : errorPackage ? (
             <div className="bg-rose-50 text-rose-600 p-4 rounded-lg text-center">{errorPackage}</div>
@@ -207,13 +227,19 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
                   <span className="font-medium text-gray-600 w-32">Thời gian tiêm:</span>
                   <span className="text-gray-800">{appointment.appointmentTime}</span>
                 </div>
+                {appointmentData?.order && (
+                  <div className="flex items-center">
+                    <span className="font-medium text-gray-600 w-32">Gói vắc xin:</span>
+                    <span className="text-gray-800">{vaccinePackage?.name || "Đang tải..."}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
           <div className="mt-4 pt-4 border-t">
-            <div className="flex items-center">
-              <span className="font-medium text-gray-600 w-32">Vắc xin:</span>
-              <span className="text-gray-800">{vaccineDisplay}</span>
+            <div className="flex items-center mt-2">
+              <span className="font-medium text-gray-600 w-32">Vắc xin :</span>
+              <span className="text-gray-800">{vaccinesToInjectDisplay}</span>
             </div>
             <div className="flex items-center mt-2">
               <span className="font-medium text-gray-600 w-32">Ghi chú:</span>

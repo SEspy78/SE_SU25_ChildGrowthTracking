@@ -7,10 +7,14 @@ import { getUserInfo } from "@/lib/storage";
 import { Button } from "@/Components/ui/button";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 
+type ExtendedAppointment = Appointment & {
+  vaccinesToInject?: { vaccineName: string; doseNumber: number; diseaseName: string }[];
+};
+
 export default function ConfirmVaccination() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
-  const [appointment, setAppointment] = useState<Appointment | null>(null);
+  const [appointment, setAppointment] = useState<ExtendedAppointment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -26,7 +30,7 @@ export default function ConfirmVaccination() {
         return;
       }
       const res = await appointmentApi.getAppointmentById(Number(id));
-      const appointmentData: Appointment = res.appointments?.[0] || res;
+      const appointmentData: ExtendedAppointment = (res as any).data || res;
       setAppointment(appointmentData);
     } catch {
       setError("Không thể tải thông tin lịch hẹn.");
@@ -41,13 +45,12 @@ export default function ConfirmVaccination() {
     fetchAppointment();
   }, [id]);
 
-  // Auto-refresh every 10 seconds for Staff when appointment is Paid
   useEffect(() => {
     if (appointment?.status === "Paid" && user?.position === "Staff") {
       const interval = setInterval(() => {
         fetchAppointment();
       }, 10000); // 10 seconds
-      return () => clearInterval(interval); // Cleanup on unmount or condition change
+      return () => clearInterval(interval);
     }
   }, [appointment?.status, user?.position]);
 
@@ -95,7 +98,7 @@ export default function ConfirmVaccination() {
         note: "",
       });
       setShowCompleteModal(true);
-      setAppointment((prev) => prev ? { ...prev, status: "Completed" } : null);
+      setAppointment((prev) => (prev ? { ...prev, status: "Completed" } : null));
     } catch {
       message.error("Không thể xác nhận hoàn tất tiêm chủng.");
     } finally {
@@ -103,22 +106,35 @@ export default function ConfirmVaccination() {
     }
   };
 
-  if (loading) return (
-    <div className="p-6 bg-gray-50 rounded-lg max-w-4xl mx-auto flex justify-center items-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-indigo-600 mr-2"></div>
-      <span className="text-gray-600">Đang tải thông tin...</span>
-    </div>
-  );
-  if (error) return (
-    <div className="p-6 bg-rose-50 text-rose-600 rounded-lg max-w-4xl mx-auto text-center">
-      {error}
-    </div>
-  );
-  if (!appointment) return (
-    <div className="p-6 bg-gray-50 text-gray-600 rounded-lg max-w-4xl mx-auto text-center">
-      Không có dữ liệu lịch hẹn.
-    </div>
-  );
+  // Vaccines to inject display
+  const vaccinesToInjectDisplay = appointment?.vaccinesToInject?.length
+    ? appointment.vaccinesToInject
+        .map((vaccine) => `${vaccine.vaccineName} (Liều ${vaccine.doseNumber}, ${vaccine.diseaseName})`)
+        .join(", ")
+    : "Không có vắc xin cần tiêm";
+
+  if (loading) {
+    return (
+      <div className="p-6 bg-gray-50 rounded-lg max-w-4xl mx-auto flex justify-center items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-indigo-600 mr-2"></div>
+        <span className="text-gray-600">Đang tải thông tin...</span>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="p-6 bg-rose-50 text-rose-600 rounded-lg max-w-4xl mx-auto text-center">
+        {error}
+      </div>
+    );
+  }
+  if (!appointment) {
+    return (
+      <div className="p-6 bg-gray-50 text-gray-600 rounded-lg max-w-4xl mx-auto text-center">
+        Không có dữ liệu lịch hẹn.
+      </div>
+    );
+  }
 
   const child = appointment.child;
   const isCompletedStatus = appointment.status === "Completed";
@@ -172,16 +188,40 @@ export default function ConfirmVaccination() {
 
         {isApprovalOrPending && (
           <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center">
-            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <svg
+              className="w-6 h-6 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
             </svg>
-            <span className="font-semibold">Vui lòng hoàn thành khảo sát trước khi tiêm và thanh toán để tiếp tục.</span>
+            <span className="font-semibold">
+              Vui lòng hoàn thành khảo sát trước khi tiêm và thanh toán để tiếp tục.
+            </span>
           </div>
         )}
         {!isCompletedStatus && isPaidStatus && (
           <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center justify-center">
-            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <svg
+              className="w-6 h-6 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
             </svg>
             <span className="font-semibold">Đang chờ bác sĩ thực hiện tiêm chủng...</span>
           </div>
@@ -189,12 +229,16 @@ export default function ConfirmVaccination() {
         {isCompletedStatus && (
           <div className="mb-8 p-4 bg-emerald-100 text-emerald-800 rounded-lg flex items-center justify-center">
             <CheckCircleIcon className="w-6 h-6 mr-2" />
-            <span className="font-semibold">Đã tiêm xong! Bệnh nhân đã hoàn thành quá trình tiêm chủng.</span>
+            <span className="font-semibold">
+              Đã tiêm xong! Bệnh nhân đã hoàn thành quá trình tiêm chủng.
+            </span>
           </div>
         )}
 
         <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-indigo-600">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Thông tin bệnh nhân</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
+            Thông tin cuộc hẹn
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
               <div className="flex items-center">
@@ -216,14 +260,20 @@ export default function ConfirmVaccination() {
               <div className="flex items-center">
                 <span className="font-medium text-gray-600 w-32">Ngày tiêm chủng:</span>
                 <span className="text-gray-800">
-                  {appointment.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString("vi-VN") : "-"}
+                  {appointment.appointmentDate
+                    ? new Date(appointment.appointmentDate).toLocaleDateString("vi-VN")
+                    : "-"}
                 </span>
               </div>
             </div>
             <div className="space-y-3">
               <div className="flex items-center">
-                <span className="font-medium text-gray-600 w-32">Vắc xin:</span>
+                <span className="font-medium text-gray-600 w-32">Gói vắc xin:</span>
                 <span className="text-gray-800">{vaccineDisplay}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="font-medium text-gray-600 w-32">Vắc xin cần tiêm:</span>
+                <span className="text-gray-800">{vaccinesToInjectDisplay}</span>
               </div>
               <div className="flex items-center">
                 <span className="font-medium text-gray-600 w-32">Nhóm máu:</span>
@@ -240,13 +290,26 @@ export default function ConfirmVaccination() {
         {isCompletedStatus && (
           <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-yellow-400">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2 flex items-center">
-              <svg className="w-6 h-6 mr-2 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              <svg
+                className="w-6 h-6 mr-2 text-yellow-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
               </svg>
               Ghi chú sau tiêm
             </h3>
             <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-              <p className="text-gray-800 whitespace-pre-wrap">{appointment.note || "Không có ghi chú sau tiêm."}</p>
+              <p className="text-gray-800 whitespace-pre-wrap">
+                {appointment.note || "Không có ghi chú sau tiêm."}
+              </p>
             </div>
           </div>
         )}

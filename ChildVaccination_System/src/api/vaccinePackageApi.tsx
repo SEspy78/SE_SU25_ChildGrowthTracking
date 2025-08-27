@@ -92,6 +92,9 @@ export const vaccinePackageApi = {
 
   addVaccineToPackage: async (packageId: number, payload: addRequest): Promise<any> => {
     return await axiosClient.put(`api/VaccinePackages/${packageId}/vaccines/add`, payload);
-  }
+  },
 
+  updateVaccineQuantity: async (packageId: number, facilityVaccineId: number, quantity: number): Promise<any> => {
+    return await axiosClient.put(`api/VaccinePackages/${packageId}/vaccines/${facilityVaccineId}/quantity`, { quantity });
+  }
 }

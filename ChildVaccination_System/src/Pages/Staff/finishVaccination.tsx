@@ -30,7 +30,7 @@ export default function CompletedVaccinationInfo({ appointmentId }: CompletedVac
         }
         const appointmentRes = await appointmentApi.getAppointmentById(effectiveId)
         console.log("Appointment Response:", appointmentRes)
-        const appointmentData: Appointment = appointmentRes.appointments?.[0] || appointmentRes
+        const appointmentData: Appointment = appointmentRes || appointmentRes
         console.log("Appointment Data:", appointmentData)
         setAppointment(appointmentData)
       } catch (err) {

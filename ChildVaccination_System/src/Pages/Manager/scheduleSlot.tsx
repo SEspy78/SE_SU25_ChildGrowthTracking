@@ -580,8 +580,8 @@ const ScheduleSlotPage: React.FC = () => {
                   <th className="p-4 text-left font-semibold">Bắt đầu</th>
                   <th className="p-4 text-left font-semibold">Kết thúc</th>
                   <th className="p-4 text-left font-semibold">Sức chứa</th>
-                  <th className="p-4 text-left font-semibold">Đã đặt</th>
-                  <th className="p-4 text-left font-semibold">Còn lại</th>
+                  {/* <th className="p-4 text-left font-semibold">Đã đặt</th> */}
+                  {/* <th className="p-4 text-left font-semibold">Còn lại</th>*/}
                   <th className="p-4 text-left font-semibold">Nghỉ trưa</th>
                   <th className="p-4 text-left font-semibold">Trạng thái</th>
                 </tr>
@@ -605,8 +605,8 @@ const ScheduleSlotPage: React.FC = () => {
                       <td className="p-4 text-gray-800">{slot.startTime}</td>
                       <td className="p-4 text-gray-800">{slot.endTime}</td>
                       <td className="p-4 text-gray-800">{slot.maxCapacity}</td>
-                      <td className="p-4 text-gray-800">{slot.bookedCount}</td>
-                      <td className="p-4 text-gray-800">{slot.availableCapacity}</td>
+                      {/* <td className="p-4 text-gray-800">{slot.bookedCount}</td>
+                      <td className="p-4 text-gray-800">{slot.availableCapacity}</td> */}
                       <td className="p-4 text-gray-800">{slot.lunchBreakStart} - {slot.lunchBreakEnd}</td>
                       <td className="p-4">
                         <span

@@ -3,10 +3,11 @@ import { getUserInfo } from "@/lib/storage";
 import VaccinationSteps from "@/Components/VaccinationStep";
 import { Button } from "@/Components/ui/button";
 import { useEffect, useState } from "react";
-import { appointmentApi, type Appointment, type FacilityScheduleResponse } from "@/api/appointmentAPI";
+import { appointmentApi, orderApi, type Appointment, type FacilityScheduleResponse } from "@/api/appointmentAPI";
 import { surveyAPI, type Survey, type Question, type QuestionResponse } from "@/api/surveyAPI";
 import { childprofileApi, type VaccineProfile } from "@/api/childInfomationAPI";
-import { Collapse, Select, message, Input, Checkbox, Modal, DatePicker } from "antd";
+import { facilityVaccineApi, type FacilityVaccine } from "@/api/vaccineApi";
+import { Collapse, Select, message, Input, Checkbox, Modal, DatePicker, Table } from "antd";
 import { CaretRightOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 
@@ -39,6 +40,7 @@ export default function HealthSurvey() {
   const [submitMessage, setSubmitMessage] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showCancelSuccessModal, setShowCancelSuccessModal] = useState(false);
+  const [showAdjustSuccessModal, setShowAdjustSuccessModal] = useState(false);
   const [isAnswersVisible, setIsAnswersVisible] = useState(false);
   const [healthInfo, setHealthInfo] = useState<{
     temperatureC: number | null;
@@ -61,12 +63,16 @@ export default function HealthSurvey() {
   const [showCancelReasonModal, setShowCancelReasonModal] = useState(false);
   const [showRebookModal, setShowRebookModal] = useState(false);
   const [showConfirmSubmitModal, setShowConfirmSubmitModal] = useState(false);
+  const [showAdjustPackageModal, setShowAdjustPackageModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
   const [schedules, setSchedules] = useState<FacilityScheduleResponse | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [note, setNote] = useState("");
   const [childVaccineProfileId, setChildVaccineProfileId] = useState<number | null>(null);
+  const [availableVaccines, setAvailableVaccines] = useState<FacilityVaccine[]>([]);
+  const [tempQuantities, setTempQuantities] = useState<Record<number, number>>({});
+  const [tempVaccineSelections, setTempVaccineSelections] = useState<Record<number, number>>({});
   const user = getUserInfo();
 
   const showSurveySelect = appointment && user?.position === "Doctor" && appointment.status === "Pending";
@@ -158,6 +164,36 @@ export default function HealthSurvey() {
       fetchSchedules();
     }
   }, [selectedDate, user?.facilityId]);
+
+  // Fetch available vaccines when adjust package modal is opened
+  useEffect(() => {
+    if (showAdjustPackageModal && user?.facilityId) {
+      const fetchVaccines = async () => {
+        try {
+          const res = await facilityVaccineApi.getAll(user.facilityId);
+          setAvailableVaccines(res.data || []);
+        } catch {
+          message.error("Không thể tải danh sách vắc xin.");
+          setAvailableVaccines([]);
+        }
+      };
+      fetchVaccines();
+    }
+  }, [showAdjustPackageModal, user?.facilityId]);
+
+  // Initialize temporary quantities and vaccine selections
+  useEffect(() => {
+    if (showAdjustPackageModal && appointment?.order?.orderDetails) {
+      const initialQuantities: Record<number, number> = {};
+      const initialSelections: Record<number, number> = {};
+      appointment.order.orderDetails.forEach((detail) => {
+        initialQuantities[detail.orderDetailId] = detail.remainingQuantity;
+        initialSelections[detail.orderDetailId] = detail.facilityVaccine.facilityVaccineId;
+      });
+      setTempQuantities(initialQuantities);
+      setTempVaccineSelections(initialSelections);
+    }
+  }, [showAdjustPackageModal, appointment?.order?.orderDetails]);
 
   // Auto-refresh every 10 seconds for Staff when appointment is Pending
   useEffect(() => {
@@ -368,6 +404,119 @@ export default function HealthSurvey() {
     setShowConfirmSubmitModal(true);
   };
 
+  const handleUpdateOrder = async () => {
+    if (!appointment?.order?.orderId) {
+      message.error("Không tìm thấy thông tin đơn hàng.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const updatedOrderDetails = appointment.order.orderDetails.map((detail) => ({
+        diseaseId: detail.diseaseId,
+        facilityVaccineId: tempVaccineSelections[detail.orderDetailId] || detail.facilityVaccine.facilityVaccineId,
+        quantity: tempQuantities[detail.orderDetailId] || detail.remainingQuantity,
+      }));
+      const payload = { selectedVaccines: updatedOrderDetails };
+      await orderApi.updateOrder(appointment.order.orderId, payload);
+      const res = await appointmentApi.getAppointmentById(Number(id));
+      const appointmentData = (res as any).data || res;
+      setAppointment(appointmentData);
+      if (user?.facilityId) {
+        const vaccineRes = await facilityVaccineApi.getAll(user.facilityId);
+        setAvailableVaccines(vaccineRes.data || []);
+      }
+      // Reset temporary quantities and selections with updated data
+      const initialQuantities: Record<number, number> = {};
+      const initialSelections: Record<number, number> = {};
+      appointmentData.order.orderDetails.forEach((detail: any) => {
+        initialQuantities[detail.orderDetailId] = detail.remainingQuantity;
+        initialSelections[detail.orderDetailId] = detail.facilityVaccine.facilityVaccineId;
+      });
+      setTempQuantities(initialQuantities);
+      setTempVaccineSelections(initialSelections);
+      // Show success modal
+      setShowAdjustSuccessModal(true);
+      // Auto-close success modal after 1.5 seconds
+      setTimeout(() => {
+        setShowAdjustSuccessModal(false);
+      }, 1500);
+    } catch (error) {
+      console.error("Error updating order:", error);
+      message.error("Lỗi khi cập nhật gói vắc xin.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleQuantityChange = (orderDetailId: number, delta: number) => {
+    setTempQuantities((prev) => {
+      const newQuantity = (prev[orderDetailId] || 0) + delta;
+      return { ...prev, [orderDetailId]: Math.max(0, newQuantity) };
+    });
+  };
+
+  const handleVaccineChange = (orderDetailId: number, facilityVaccineId: number) => {
+    setTempVaccineSelections((prev) => ({
+      ...prev,
+      [orderDetailId]: facilityVaccineId,
+    }));
+  };
+
+  const vaccineColumns = [
+    {
+      title: "Tên bệnh",
+      dataIndex: ["disease", "name"],
+      key: "diseaseName",
+      render: (text: string) => <span className="text-gray-800">{text}</span>,
+    },
+    {
+      title: "Tên vắc xin",
+      dataIndex: ["facilityVaccine", "vaccine", "name"],
+      key: "vaccineName",
+      render: (_: any, record: any) => (
+        <Select
+          value={tempVaccineSelections[record.orderDetailId] || record.facilityVaccine.facilityVaccineId}
+          onChange={(value) => handleVaccineChange(record.orderDetailId, value)}
+          className="w-full"
+          placeholder="Chọn vắc xin"
+        >
+          {availableVaccines
+            .filter((vaccine) => vaccine.vaccine.diseases.some((d: any) => d.diseaseId === record.disease.diseaseId))
+            .map((vaccine) => (
+              <Option key={vaccine.facilityVaccineId} value={vaccine.facilityVaccineId}>
+                {vaccine.vaccine.name}
+              </Option>
+            ))}
+        </Select>
+      ),
+    },
+    {
+      title: "Số lượng",
+      dataIndex: "remainingQuantity",
+      key: "remainingQuantity",
+      render: (_: any, record: any) => (
+        <div className="flex items-center space-x-2">
+          <Button
+            type="button"
+            onClick={() => handleQuantityChange(record.orderDetailId, -1)}
+            disabled={tempQuantities[record.orderDetailId] <= 0}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-full"
+          >
+            -
+          </Button>
+          <span className="text-gray-800">{tempQuantities[record.orderDetailId]}</span>
+          <Button
+            type="button"
+            onClick={() => handleQuantityChange(record.orderDetailId, 1)}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-full"
+          >
+            +
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   if (loading) {
     return (
       <div className="flex flex-col items-center py-8">
@@ -443,6 +592,71 @@ export default function HealthSurvey() {
           centered
         >
           <p className="text-gray-700">Bạn có muốn gửi khảo sát sức khỏe này không?</p>
+        </Modal>
+
+        <Modal
+          title="Điều chỉnh gói vắc xin"
+          open={showAdjustPackageModal}
+          onCancel={() => setShowAdjustPackageModal(false)}
+          footer={[
+            <Button
+              key="close"
+              onClick={() => setShowAdjustPackageModal(false)}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+            >
+              Đóng
+            </Button>,
+            <Button
+              key="save"
+              onClick={handleUpdateOrder}
+              disabled={submitting}
+              className={`bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors ${
+                submitting ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              {submitting ? "Đang lưu..." : "Lưu"}
+            </Button>,
+          ]}
+          centered
+          width={800}
+        >
+          <div className="space-y-4">
+            <p className="text-gray-700">Danh sách vắc xin trong gói:</p>
+            {appointment.order && appointment.order.orderDetails.length > 0 ? (
+              <Table
+                columns={vaccineColumns}
+                dataSource={appointment.order.orderDetails}
+                rowKey="orderDetailId"
+                pagination={false}
+                className="border rounded-lg"
+                locale={{
+                  emptyText: (
+                    <div className="text-gray-500 py-4">Không có vắc xin trong gói.</div>
+                  ),
+                }}
+              />
+            ) : (
+              <div className="text-gray-500 py-4">Không có vắc xin trong gói.</div>
+            )}
+          </div>
+        </Modal>
+
+        <Modal
+          title="Thành công"
+          open={showAdjustSuccessModal}
+          onCancel={() => setShowAdjustSuccessModal(false)}
+          footer={[
+            <Button
+              key="ok"
+              onClick={() => setShowAdjustSuccessModal(false)}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+            >
+              OK
+            </Button>,
+          ]}
+          centered
+        >
+          <p className="text-gray-700">Cập nhật gói vắc xin thành công!</p>
         </Modal>
 
         {appointment.status === "Cancelled" && (
@@ -627,7 +841,6 @@ export default function HealthSurvey() {
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Nhập ghi chú"
-                required
                 rows={3}
               />
             </div>
@@ -654,26 +867,40 @@ export default function HealthSurvey() {
           </div>
         )}
 
-        {user?.position === "Doctor" && showSurveySelect && (
+        {(user?.position === "Doctor" || (user?.position === "Doctor" && appointment.order && appointment.status === "Pending")) && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
-              Chọn bộ câu hỏi thăm khám trước tiêm chủng
-            </h3>
-            <Select
-              placeholder="-- Chọn bộ câu hỏi --"
-              className="w-full"
-              onChange={(value) => {
-                const survey = surveys.find((s) => s.surveyId === value);
-                setSelectedSurvey(survey || null);
-              }}
-              value={selectedSurvey?.surveyId}
-            >
-              {surveys.map((survey) => (
-                <Option key={survey.surveyId} value={survey.surveyId}>
-                  {survey.title}
-                </Option>
-              ))}
-            </Select>
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Chọn bộ câu hỏi thăm khám trước tiêm chủng
+              </h3>
+              {user?.position === "Doctor" && appointment.order && appointment.status === "Pending" && (
+                <Button
+                  type="button"
+                  onClick={() => setShowAdjustPackageModal(true)}
+                  disabled={submitting}
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2 rounded-full transition-colors"
+                >
+                  Điều chỉnh gói vắc xin
+                </Button>
+              )}
+            </div>
+            {user?.position === "Doctor" && showSurveySelect && (
+              <Select
+                placeholder="-- Chọn bộ câu hỏi --"
+                className="w-full"
+                onChange={(value) => {
+                  const survey = surveys.find((s) => s.surveyId === value);
+                  setSelectedSurvey(survey || null);
+                }}
+                value={selectedSurvey?.surveyId}
+              >
+                {surveys.map((survey) => (
+                  <Option key={survey.surveyId} value={survey.surveyId}>
+                    {survey.title}
+                  </Option>
+                ))}
+              </Select>
+            )}
           </div>
         )}
 

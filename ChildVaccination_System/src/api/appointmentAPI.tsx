@@ -23,6 +23,16 @@ export type Appointment = {
   orderId: number | null;
   order: Order | null;
   facilityVaccines: FacilityVaccine[];
+  vaccinesToInject: {
+    vaccineId: number;
+    vaccineName: string;
+    diseaseName: string;
+    doseNumber: string;
+    notes: string;
+    manufacturer: string;
+    sideEffects: string;
+    contraindications: string;
+  }[];
   appointmentDate: string;
   appointmentTime: string;
   slotTime: string;
@@ -62,11 +72,23 @@ export type Order = {
   orderDetails: OrderDetail[];
 };
 
+export type Disease = {
+  diseaseId: number;
+  name: string;
+  description: string;
+  symptoms: string;
+  treatment: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type OrderDetail = {
   orderDetailId: number;
   orderId: number;
   facilityVaccineId: number;
+  facilityVaccine: FacilityVaccine;
   diseaseId: number;
+  disease: Disease;
   remainingQuantity: number;
   price: number;
   createdAt: string;
@@ -172,21 +194,26 @@ export type AvailableSlot = {
   bookingPercentage: number;
 };
 
-
-export type cancelResponse= {
+export type cancelResponse = {
   success: boolean;
   message: string;
   data?: any;
-}
+};
 
-
+export type UpdateOrderPayload = {
+  selectedVaccines: {
+    diseaseId: number;
+    facilityVaccineId: number;
+    quantity: number;
+  }[];
+};
 
 export const appointmentApi = {
   getAllAppointments: async (pageIndex: number = 1, pageSize: number = 10): Promise<AppointmentResponse> => {
     return await axiosClient.get(`api/FacilityAppointment?&pageIndex=${pageIndex}&pageSize=${pageSize}`);
   },
-  getAppointmentById: async (facilityId: number): Promise<AppointmentResponse> => {
-    return await axiosClient.get(`api/FacilityAppointment/${facilityId}`);
+  getAppointmentById: async (appointmentId: number): Promise<Appointment> => {
+    return await axiosClient.get(`api/FacilityAppointment/${appointmentId}`);
   },
   updateAppointmentStatus: async (appointmentId: number, payload: updateStatusPayload): Promise<any> => {
     return await axiosClient.put(`api/FacilityAppointment/${appointmentId}/status`, payload);
@@ -217,5 +244,8 @@ export const orderApi = {
   },
   getOrderById: async (orderId: number): Promise<Order> => {
     return await axiosClient.get(`api/Order/${orderId}`);
+  },
+  updateOrder: async (orderId: number, payload: UpdateOrderPayload): Promise<Order> => {
+    return await axiosClient.put(`api/Order/${orderId}`, payload);
   }
 };
