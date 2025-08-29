@@ -6,7 +6,7 @@ import { getUserInfo } from "@/lib/storage"
 
 const steps = [
   "Confirm Schedule",
-  "Pre-vaccination health survey",
+  "Pre-vaccination health assessment",
   "Payment",
   "Vaccination",
 ]

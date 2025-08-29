@@ -5,9 +5,9 @@ import { appointmentApi, type AppointmentResponse, type Appointment } from "../.
 import Pagination from "@/Components/Pagination";
 
 const statusStyle: Record<string, string> = {
-  Paid: "bg-yellow-400 text-gray-900",
-  Completed: "bg-emerald-500 text-white",
-  Pending: "bg-gray-600 text-white",
+  Paid: "bg-yellow-100 text-yellow-800 border-yellow-300",
+  Completed: "bg-green-100 text-green-800 border-green-300",
+  Pending: "bg-gray-100 text-gray-800 border-gray-300",
 };
 
 export default function DoctorAppointment() {
@@ -70,7 +70,7 @@ export default function DoctorAppointment() {
     const months = Math.floor(diffDays / 30.42);
     const years = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-    const dayDiff = today.getDate() - birth.getDate();
+    const dayDiff = today.getDate() - birth.getDay();
     let adjustedYears = years;
     if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) adjustedYears--;
     if (diffDays <= 90) return `${weeks} tuần`;
@@ -79,105 +79,151 @@ export default function DoctorAppointment() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold text-indigo-900">Tất cả lịch hẹn</h2>
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-800">Tất cả lịch hẹn</h2>
           <button
             onClick={fetchData}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition"
+            className="mt-4 sm:mt-0 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 flex items-center"
           >
+            <svg
+              className="w-5 h-5 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              ></path>
+            </svg>
             Làm mới
           </button>
         </div>
 
-        {/* Search */}
-        <div className="mb-6">
-          <input
-            type="text"
-            placeholder="Tìm kiếm theo tên trẻ"
-            className="w-full max-w-md px-4 py-3 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 transition bg-white"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+        <div className="mb-8">
+          <div className="relative max-w-md">
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên trẻ"
+              className="w-full px-4 py-3 pl-10 border border-gray-200 rounded-full shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200 bg-white"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <svg
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              ></path>
+            </svg>
+          </div>
         </div>
 
-        {/* Loading / Error / Table */}
         {loading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600"></div>
-            <span className="ml-4 text-gray-700 text-lg">Đang tải...</span>
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
+            <span className="mt-4 text-lg text-gray-600 font-medium">Đang tải...</span>
           </div>
         ) : error ? (
-          <div className="bg-rose-100 text-rose-700 p-6 rounded-lg text-center">
-            {error}
+          <div className="bg-red-50 text-red-700 p-6 rounded-xl shadow-lg flex items-center justify-center space-x-3">
+            <svg
+              className="w-8 h-8"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 9v2m0 4h.01M12 17h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
+              ></path>
+            </svg>
+            <span className="text-lg font-semibold">{error}</span>
           </div>
         ) : (
           <>
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <table className="w-full table-auto border-collapse">
-                <thead className="bg-indigo-700 text-white">
-                  <tr>
-                    <th className="p-4 text-left font-semibold">Giờ</th>
-                    <th className="p-4 text-left font-semibold">Ngày</th>
-                    <th className="p-4 text-left font-semibold">Tên trẻ</th>
-                    <th className="p-4 text-left font-semibold">Tuổi</th>
-                    <th className="p-4 text-left font-semibold">Vắc xin/Gói</th>
-                    <th className="p-4 text-left font-semibold">Trạng thái</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAppointments.length === 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full table-auto border-collapse">
+                  <thead className="bg-blue-600 text-white">
                     <tr>
-                      <td colSpan={6} className="text-center py-8 text-gray-600">
-                        Không tìm thấy lịch hẹn
-                      </td>
+                      <th className="p-4 text-left font-semibold text-sm uppercase tracking-wider">Giờ</th>
+                      <th className="p-4 text-left font-semibold text-sm uppercase tracking-wider">Ngày</th>
+                      <th className="p-4 text-left font-semibold text-sm uppercase tracking-wider">Tên trẻ</th>
+                      <th className="p-4 text-left font-semibold text-sm uppercase tracking-wider">Tuổi</th>
+                      <th className="p-4 text-left font-semibold text-sm uppercase tracking-wider">Vắc xin/Gói</th>
+                      <th className="p-4 text-left font-semibold text-sm uppercase tracking-wider">Trạng thái</th>
                     </tr>
-                  ) : (
-                    filteredAppointments.map((item, index) => {
-                      let vaccineDisplay = "Không có vắc xin";
-                      if (item.order?.packageName) {
-                        vaccineDisplay = item.order.packageName;
-                      } else if (Array.isArray(item.facilityVaccines) && item.facilityVaccines.length > 0) {
-                        vaccineDisplay = item.facilityVaccines.map(fv => fv.vaccine?.name || `ID: ${fv.vaccineId}`).join(", ");
-                      }
+                  </thead>
+                  <tbody>
+                    {filteredAppointments.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="text-center py-8 text-gray-500 font-medium">
+                          Không tìm thấy lịch hẹn
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredAppointments.map((item, index) => {
+                        let vaccineDisplay = "Không có vắc xin";
+                        if (item.order?.packageName) {
+                          vaccineDisplay = item.order.packageName;
+                        } else if (Array.isArray(item.facilityVaccines) && item.facilityVaccines.length > 0) {
+                          vaccineDisplay = item.facilityVaccines.map(fv => fv.vaccine?.name || `ID: ${fv.vaccineId}`).join(", ");
+                        }
 
-                      let date = "";
-                      if (item.appointmentDate) {
-                        const d = new Date(item.appointmentDate);
-                        date = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
-                      }
+                        let date = "";
+                        if (item.appointmentDate) {
+                          const d = new Date(item.appointmentDate);
+                          date = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
+                        }
 
-                      return (
-                        <tr
-                          key={item.appointmentId}
-                          className={`border-b border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-indigo-100 cursor-pointer transition-colors duration-200`}
-                          onClick={() => handleNavigateByRoleAndStatus(item.appointmentId, item.status)}
-                        >
-                          <td className="p-4 text-gray-800">{item.appointmentTime}</td>
-                          <td className="p-4 text-gray-800">{date}</td>
-                          <td className="p-4 text-gray-800 font-medium">{item.child.fullName}</td>
-                          <td className="p-4 text-gray-800">{calculateAge(item.child.birthDate)}</td>
-                          <td className="p-4 text-gray-800">{vaccineDisplay}</td>
-                          <td className="p-4">
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium shadow-sm ${statusStyle[item.status] || 'bg-gray-600 text-white'}`}>
-                              {item.status}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                        return (
+                          <tr
+                            key={item.appointmentId}
+                            className={`border-b border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 cursor-pointer transition-colors duration-200`}
+                            onClick={() => handleNavigateByRoleAndStatus(item.appointmentId, item.status)}
+                          >
+                            <td className="p-4 text-gray-700">{item.appointmentTime}</td>
+                            <td className="p-4 text-gray-700">{date}</td>
+                            <td className="p-4 text-gray-800 font-medium">{item.child.fullName}</td>
+                            <td className="p-4 text-gray-700">{calculateAge(item.child.birthDate)}</td>
+                            <td className="p-4 text-gray-700">{vaccineDisplay}</td>
+                            <td className="p-4">
+                              <span className={`px-3 py-1 rounded-full text-sm font-medium border ${statusStyle[item.status] || 'bg-gray-100 text-gray-800 border-gray-300'}`}>
+                                {item.status}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <Pagination
-              pageIndex={pageIndex}
-              pageSize={pageSize}
-              setPageIndex={setPageIndex}
-              hasNextPage={hasNextPage}
-            />
+            <div className="mt-6">
+              <Pagination
+                pageIndex={pageIndex}
+                pageSize={pageSize}
+                setPageIndex={setPageIndex}
+                hasNextPage={hasNextPage}
+              />
+            </div>
           </>
         )}
       </div>

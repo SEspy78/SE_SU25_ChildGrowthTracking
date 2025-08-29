@@ -51,12 +51,10 @@ const VaccineListPage: React.FC = () => {
       const res: FacilityVaccineResponse = await facilityVaccineApi.getAll(user.facilityId);
       let filteredVaccines = res.data || [];
 
-      // Apply status filter
       if (statusFilter !== "all") {
         filteredVaccines = filteredVaccines.filter(v => v.status === statusFilter);
       }
 
-      // Apply search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         filteredVaccines = filteredVaccines.filter(
@@ -104,25 +102,25 @@ const VaccineListPage: React.FC = () => {
       title: "Tên vaccine",
       dataIndex: ["vaccine", "name"],
       key: "name",
-      render: (text: string) => <span className="font-medium text-gray-900">{text}</span>,
+      render: (text: string) => <span className="font-medium text-gray-800">{text}</span>,
     },
     {
       title: "Hãng SX",
       dataIndex: ["vaccine", "manufacturer"],
       key: "manufacturer",
-      render: (text: string) => <span className="text-gray-500">{text}</span>,
+      render: (text: string) => <span className="text-gray-600">{text}</span>,
     },
     {
       title: "Số lô",
       dataIndex: "batchNumber",
       key: "batchNumber",
-      render: (text: string) => <span className="text-gray-500">{text}</span>,
+      render: (text: string) => <span className="text-gray-600">{text}</span>,
     },
     {
       title: "SL còn",
       dataIndex: "availableQuantity",
       key: "availableQuantity",
-      render: (text: number) => <span className="text-gray-500">{text}</span>,
+      render: (text: number) => <span className="text-gray-600">{text}</span>,
     },
     {
       title: "Ngày nhập",
@@ -148,11 +146,11 @@ const VaccineListPage: React.FC = () => {
       key: "status",
       render: (status: string) => (
         <span
-          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-            status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+          className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${
+            status === "active" ? "bg-green-100 text-green-800 border border-green-200" : "bg-gray-100 text-gray-800 border border-gray-200"
           }`}
         >
-          {status === "active" ? "Active" : "Inactive"}
+          {status === "active" ? "Đang sử dụng" : "Ngừng sử dụng"}
         </span>
       ),
     },
@@ -160,15 +158,12 @@ const VaccineListPage: React.FC = () => {
       title: "Hành động",
       key: "action",
       render: (_: any, record: FacilityVaccine) => (
-        <div className="flex space-x-2">
-          <Button
-            type="link"
-            onClick={() => handleViewDetails(record.vaccine.vaccineId)}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Xem chi tiết
-          </Button>
-        </div>
+        <button
+          onClick={() => handleViewDetails(record.vaccine.vaccineId)}
+          className="text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200"
+        >
+          Xem chi tiết
+        </button>
       ),
     },
   ];
@@ -177,18 +172,10 @@ const VaccineListPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="animate-pulse space-y-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
-              <div className="space-y-2">
-                <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </div>
-          </div>
-          <div className="h-64 bg-gray-200 rounded-lg"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
+          <span className="text-lg text-gray-600 font-medium">Đang tải danh sách vaccine...</span>
         </div>
       </div>
     );
@@ -196,33 +183,32 @@ const VaccineListPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-          <AlertCircle className="w-6 h-6 text-red-600" />
-          <p className="text-red-600 font-medium">{error}</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-red-50 text-red-700 p-6 rounded-xl shadow-lg flex items-center space-x-3">
+          <AlertCircle className="w-8 h-8" />
+          <span className="text-lg font-semibold">{error}</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Notification Modal */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50 py-8 px-4 sm:px-6 lg:px-8">
       <Modal
-        title={notificationModal.type === "success" ? "Thành công" : "Lỗi"}
+        title={<span className="text-xl font-semibold text-gray-800">{notificationModal.type === "success" ? "Thành công" : "Lỗi"}</span>}
         open={notificationModal.show}
         onCancel={() => setNotificationModal({ show: false, message: "", type: "success" })}
         footer={[
-          <Button
+          <button
             key="ok"
-            type="primary"
             onClick={() => setNotificationModal({ show: false, message: "", type: "success" })}
-            className="rounded-lg"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
           >
             OK
-          </Button>,
+          </button>,
         ]}
         centered
+        className="rounded-xl"
       >
         <div className={`flex items-center gap-3 p-4 ${notificationModal.type === "success" ? "text-green-600" : "text-red-600"}`}>
           {notificationModal.type === "success" ? (
@@ -232,46 +218,39 @@ const VaccineListPage: React.FC = () => {
           ) : (
             <AlertCircle className="w-6 h-6" />
           )}
-          <p className="font-medium">{notificationModal.message}</p>
+          <p className="text-base font-medium">{notificationModal.message}</p>
         </div>
       </Modal>
 
-      {/* Header */}
-      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-2xl p-8 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
             <Syringe className="w-8 h-8 text-blue-600" />
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Danh sách vaccine tại cơ sở</h1>
-              <p className="text-gray-600 mt-1">Xem danh sách vaccine và thông tin chi tiết</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Danh sách vaccine tại cơ sở</h1>
+              <p className="text-gray-600 mt-1">Xem và quản lý danh sách vaccine hiện có</p>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Vaccine Table */}
-      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Danh sách vaccine ({totalCount})
-          </h3>
-        </div>
-        <div className="px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="text-sm text-gray-700">
+        <div className="border-t border-gray-200 pt-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div className="text-sm text-gray-600 font-medium">
               Tổng số vaccine: {totalCount}
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Input
-                placeholder="Tìm kiếm theo tên hoặc hãng sản xuất"
-                prefix={<Search className="w-4 h-4 text-gray-500" />}
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full sm:w-64"
-              />
+              <div className="relative w-full sm:w-64">
+                <Input
+                  placeholder="Tìm kiếm theo tên hoặc hãng sản xuất"
+                  prefix={<Search className="w-4 h-4 text-gray-400" />}
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full rounded-full border-gray-200 focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
+                />
+              </div>
               <Select
                 value={statusFilter}
                 onChange={(value) => {
@@ -282,27 +261,29 @@ const VaccineListPage: React.FC = () => {
               >
                 <Option value="all">Tất cả trạng thái</Option>
                 <Option value="active">Đang sử dụng</Option>
-                <Option value="inactive">Ngừng SD</Option>
+                <Option value="inactive">Ngừng sử dụng</Option>
               </Select>
             </div>
           </div>
-        </div>
-        <Table
-          dataSource={vaccines}
-          columns={columns}
-          rowKey="facilityVaccineId"
-          pagination={false}
-          className="overflow-x-auto"
-        />
-        {vaccines.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Không tìm thấy vaccine nào.</p>
+
+          <div className="overflow-x-auto">
+            <Table
+              dataSource={vaccines}
+              columns={columns}
+              rowKey="facilityVaccineId"
+              pagination={false}
+              className="min-w-full"
+              rowClassName={(record, index) => index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+            />
           </div>
-        )}
-        {totalCount > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
+          {vaccines.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg font-medium">Không tìm thấy vaccine nào.</p>
+            </div>
+          )}
+          {totalCount > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-6 pt-4 border-t border-gray-200">
+              <div className="text-sm text-gray-600 mb-4 sm:mb-0">
                 Hiển thị {(currentPage - 1) * pageSize + 1} đến{" "}
                 {Math.min(currentPage * pageSize, totalCount)} trong tổng số {totalCount} kết quả
               </div>
@@ -310,16 +291,16 @@ const VaccineListPage: React.FC = () => {
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg hover:bg-gray-100"
+                  className="p-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg hover:bg-gray-100 transition-colors duration-200"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      currentPage === page ? "bg-blue-600 text-white" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                      currentPage === page ? "bg-blue-600 text-white" : "text-gray-600 hover:text-gray-800 hover:bg-gray-100"
                     }`}
                   >
                     {page}
@@ -328,81 +309,77 @@ const VaccineListPage: React.FC = () => {
                 <button
                   onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg hover:bg-gray-100"
+                  className="p-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg hover:bg-gray-100 transition-colors duration-200"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Vaccine Details Modal */}
       <Modal
-        title="Chi tiết vaccine"
+        title={<span className="text-xl font-semibold text-gray-800">Chi tiết vaccine</span>}
         open={!!selectedVaccine}
         onCancel={() => setSelectedVaccine(null)}
         footer={null}
         centered
+        className="rounded-xl"
       >
         {detailLoading ? (
           <div className="flex items-center justify-center py-6">
-            <div className="animate-spin w-6 h-6 text-blue-600 mr-2">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-              </svg>
-            </div>
-            <span>Đang tải chi tiết vaccine...</span>
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-600 mr-3"></div>
+            <span className="text-gray-600">Đang tải chi tiết vaccine...</span>
           </div>
         ) : detailError ? (
-          <div className="text-red-600 text-center py-6">{detailError}</div>
+          <div className="text-red-600 text-center py-6 font-medium">{detailError}</div>
         ) : (
           selectedVaccine && (
-            <div className="space-y-4">
-              <div>
-                <span className="font-medium">Tên vaccine:</span>{" "}
-                {selectedVaccine.name}
+            <div className="space-y-4 text-gray-800">
+              <div className="flex items-center">
+                <span className="font-medium w-32">Tên vaccine:</span>
+                <span>{selectedVaccine.name}</span>
               </div>
-              <div>
-                <span className="font-medium">Hãng SX:</span>{" "}
-                {selectedVaccine.manufacturer}
+              <div className="flex items-center">
+                <span className="font-medium w-32">Hãng SX:</span>
+                <span>{selectedVaccine.manufacturer}</span>
               </div>
-              <div>
-                <span className="font-medium">Mô tả:</span>{" "}
-                {selectedVaccine.description}
+              <div className="flex items-start">
+                <span className="font-medium w-32">Mô tả:</span>
+                <span className="flex-1">{selectedVaccine.description}</span>
               </div>
-              <div>
-                <span className="font-medium">Nhóm tuổi:</span>{" "}
-                {selectedVaccine.ageGroup}
+              <div className="flex items-center">
+                <span className="font-medium w-32">Nhóm tuổi:</span>
+                <span>{selectedVaccine.ageGroup}</span>
               </div>
-              <div>
-                <span className="font-medium">Số mũi:</span>{" "}
-                {selectedVaccine.numberOfDoses}
+              <div className="flex items-center">
+                <span className="font-medium w-32">Số mũi:</span>
+                <span>{selectedVaccine.numberOfDoses}</span>
               </div>
-              <div>
-                <span className="font-medium">Khoảng cách tối thiểu giữa các mũi:</span>{" "}
-                {selectedVaccine.minIntervalBetweenDoses}
+              <div className="flex items-center">
+                <span className="font-medium w-32">Khoảng cách tối thiểu:</span>
+                <span>{selectedVaccine.minIntervalBetweenDoses}</span>
               </div>
-              <div>
-                <span className="font-medium">Tác dụng phụ:</span>{" "}
-                {selectedVaccine.sideEffects}
+              <div className="flex items-start">
+                <span className="font-medium w-32">Tác dụng phụ:</span>
+                <span className="flex-1">{selectedVaccine.sideEffects}</span>
               </div>
-              <div>
-                <span className="font-medium">Chống chỉ định:</span>{" "}
-                {selectedVaccine.contraindications}
+              <div className="flex items-start">
+                <span className="font-medium w-32">Chống chỉ định:</span>
+                <span className="flex-1">{selectedVaccine.contraindications}</span>
               </div>
-              <div>
-                <span className="font-medium">Trạng thái:</span>{" "}
-                {selectedVaccine.status === "Approved" ? "Approved" : "UnApproved"}
+              <div className="flex items-center">
+                <span className="font-medium w-32">Trạng thái:</span>
+                <span>{selectedVaccine.status === "Approved" ? "Đã duyệt" : "Chưa duyệt"}</span>
               </div>
-              <div>
-                <span className="font-medium">Ngày tạo:</span>{" "}
-                {new Date(selectedVaccine.createdAt).toLocaleDateString("vi-VN")}
+              <div className="flex items-center">
+                <span className="font-medium w-32">Ngày tạo:</span>
+                <span>{new Date(selectedVaccine.createdAt).toLocaleDateString("vi-VN")}</span>
               </div>
-              <div>
-                <span className="font-medium">Ngày cập nhật:</span>{" "}
-                {new Date(selectedVaccine.updatedAt).toLocaleDateString("vi-VN")}
+              <div className="flex items-center">
+                <span className="font-medium w-32">Ngày cập nhật:</span>
+                <span>{new Date(selectedVaccine.updatedAt).toLocaleDateString("vi-VN")}</span>
               </div>
             </div>
           )

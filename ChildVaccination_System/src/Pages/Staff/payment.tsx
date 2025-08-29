@@ -35,11 +35,11 @@ export default function Payment() {
       if (!id) {
         setError("Không có ID lịch hẹn trong URL.");
         setAppointment(null);
+        message.error("Không có ID lịch hẹn trong URL.");
         return;
       }
       const res = await appointmentApi.getAppointmentById(Number(id));
-      const appointmentData = (res as any).data || res;
-      setAppointment(appointmentData);
+      setAppointment(res);
     } catch {
       setError("Không thể tải thông tin thanh toán.");
       setAppointment(null);
@@ -53,7 +53,6 @@ export default function Payment() {
     fetchAppointment();
   }, [id]);
 
-  // Auto-refresh every 10 seconds for Doctor when appointment is Approval
   useEffect(() => {
     if (appointment?.status === "Approval" && user?.position === "Doctor") {
       const interval = setInterval(() => {
@@ -186,69 +185,80 @@ export default function Payment() {
     setSubmitMessage("");
   };
 
-  if (loading || loadingPackage) return (
-    <div className="p-8 text-gray-700 text-center flex justify-center items-center bg-gray-50 rounded-lg">
-      <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-indigo-600 mr-2"></div>
-      Đang tải thông tin...
-    </div>
-  );
-  if (error || errorPackage) return (
-    <div className="p-8 text-rose-600 text-center bg-rose-50 rounded-lg">
-      {error || errorPackage}
-    </div>
-  );
-  if (!appointment) return (
-    <div className="p-8 text-gray-600 text-center bg-gray-50 rounded-lg">
-      Không có dữ liệu lịch hẹn.
-    </div>
-  );
+  if (loading || loadingPackage) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+        <svg className="animate-spin h-10 w-10 text-teal-600 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span className="text-gray-600 text-lg font-medium">Đang tải thông tin...</span>
+        <div className="w-full max-w-xs bg-gray-200 rounded-full h-2 mt-3">
+          <div className="bg-teal-600 h-2 rounded-full animate-pulse" style={{ width: "50%" }}></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || errorPackage) {
+    return (
+      <div className="bg-red-50 text-red-600 p-6 rounded-xl shadow-lg flex items-center justify-center max-w-4xl mx-auto mt-8">
+        <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M12 17h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"></path>
+        </svg>
+        {error || errorPackage}
+      </div>
+    );
+  }
+
+  if (!appointment) {
+    return (
+      <div className="bg-gray-50 text-gray-600 p-6 rounded-xl shadow-lg flex items-center justify-center max-w-4xl mx-auto mt-8">
+        <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"></path>
+        </svg>
+        Không có dữ liệu lịch hẹn.
+      </div>
+    );
+  }
 
   const child = appointment.child;
-  const vaccineDisplay = appointment.order?.packageName || "Không có gói vắc xin";
+  const vaccineDisplay = appointment.order?.packageName
+    ? appointment.order.packageName
+    : appointment.vaccinesToInject?.length
+    ? `Vắc xin ${appointment.vaccinesToInject.map(v => v.vaccineName).join(", ")}`
+    : "Không có vắc xin";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
-      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-6">
-        <Button
-          type="button"
-          className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors mb-6"
-          onClick={handleBackByPosition}
-        >
-          Quay lại
-        </Button>
-        <h2 className="text-3xl font-bold text-indigo-900 mb-6">Quy trình tiêm chủng</h2>
-        <div className="mb-8">
+    <div className="min-h-screen bg-gray-100 p-6 md:p-8">
+      <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8">
+        {/* Header and Back Button */}
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Thanh toán</h2>
+          <Button
+            type="button"
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition duration-300"
+            onClick={handleBackByPosition}
+          >
+            Quay lại
+          </Button>
+        </div>
+
+        {/* Vaccination Steps */}
+        <div className="mb-10">
           <VaccinationSteps currentStep={2} />
         </div>
 
-        {appointment.status === "Cancelled" && (
-          <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center">
-            <svg
-              className="w-6 h-6 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span className="font-semibold">Lịch tiêm đã bị hủy</span>
-          </div>
-        )}
-
+        {/* Success/Error Modal */}
         <Modal
-          title={finishMessage.includes("thành công") ? "Thành công" : "Lỗi"}
+          title={<span className="text-xl font-semibold text-gray-800">{finishMessage.includes("thành công") ? "Thành công" : "Lỗi"}</span>}
           open={showFinishModal}
           onCancel={() => setShowFinishModal(false)}
           footer={null}
           centered
+          className="rounded-xl"
         >
-          <div className={`flex items-center gap-3 p-4 ${finishMessage.includes("thành công") ? "text-emerald-600" : "text-rose-600"}`}>
+          <div className={`flex items-center gap-3 p-4 ${finishMessage.includes("thành công") ? "text-teal-600 bg-teal-50" : "text-red-600 bg-red-50"} rounded-lg`}>
             {finishMessage.includes("thành công") ? (
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -258,32 +268,45 @@ export default function Payment() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
-            <p className="font-medium">{finishMessage}</p>
+            <p className="font-medium text-lg">{finishMessage}</p>
           </div>
         </Modal>
 
-        {isApprovalOrPendingStatus && !isAppointmentPaid && !isOrderPaid && appointment.status !== "Cancelled" && user?.position === "Doctor" && (
-          <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center">
-            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        {/* Cancelled Appointment Message */}
+        {appointment.status === "Cancelled" && (
+          <div className="mb-8 p-6 bg-red-50 text-red-600 rounded-xl shadow-lg flex items-center">
+            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span className="font-semibold">Vui lòng đợi nhân viên xác nhận thanh toán.</span>
+            <span className="font-semibold text-lg">Lịch tiêm đã bị hủy</span>
           </div>
         )}
 
+        {/* Doctor Waiting Message */}
+        {isApprovalOrPendingStatus && !isAppointmentPaid && !isOrderPaid && appointment.status !== "Cancelled" && user?.position === "Doctor" && (
+          <div className="mb-8 p-6 bg-yellow-50 text-yellow-700 rounded-xl shadow-lg flex items-center">
+            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-semibold text-lg">Vui lòng đợi nhân viên xác nhận thanh toán.</span>
+          </div>
+        )}
+
+        {/* Paid Status Message */}
         {(isAppointmentPaid || isOrderPaid) && (
-          <div className="mb-8 p-4 bg-emerald-100 text-emerald-800 rounded-lg flex items-center">
-            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <div className="mb-8 p-6 bg-teal-50 text-teal-700 rounded-xl shadow-lg flex items-center">
+            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <span className="font-semibold">Gói này đã được thanh toán!</span>
+            <span className="font-semibold text-lg">Gói này đã được thanh toán!</span>
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-indigo-600">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Chi tiết thanh toán</h3>
+        {/* Payment Details Section */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-teal-500">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Chi tiết thanh toán</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center">
                 <span className="font-medium text-gray-600 w-32">Tên bệnh nhân:</span>
                 <span className="text-gray-800">{child?.fullName || "-"}</span>
@@ -301,14 +324,14 @@ export default function Payment() {
                 <span className="text-gray-800">{appointment.memberPhone || "-"}</span>
               </div>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center">
-                <span className="font-medium text-gray-600 w-32">Tên gói vắc xin:</span>
+                <span className="font-medium text-gray-600 w-32">Sản phẩm:</span>
                 <span className="text-gray-800">{vaccineDisplay}</span>
               </div>
               <div className="flex items-center">
                 <span className="font-medium text-gray-600 w-32">Tổng chi phí:</span>
-                <span className="text-gray-800">
+                <span className="text-gray-800 font-semibold">
                   {typeof appointment.estimatedCost === "number"
                     ? appointment.estimatedCost.toLocaleString() + " VND"
                     : "-"}
@@ -318,48 +341,53 @@ export default function Payment() {
           </div>
         </div>
 
+        {/* Payment Method Section */}
         {showPaymentSection && (
           <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-teal-500">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Phương thức thanh toán</h3>
-            <div className="flex flex-col gap-3">
-              <label className="flex items-center gap-2">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Phương thức thanh toán</h3>
+            <div className="flex flex-col gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   name="paymentMethod"
                   value="cash"
                   checked={selectedPaymentMethod === "cash"}
                   onChange={handlePaymentMethodChange}
-                  className="h-4 w-4 text-teal-600 focus:ring-teal-500"
+                  className="h-5 w-5 text-teal-600 focus:ring-2 focus:ring-teal-500 border-gray-300"
                 />
-                <span className="text-gray-700">Tiền mặt</span>
+                <span className="text-gray-700 text-lg">Tiền mặt</span>
               </label>
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   name="paymentMethod"
                   value="bank"
                   checked={selectedPaymentMethod === "bank"}
                   onChange={handlePaymentMethodChange}
-                  className="h-4 w-4 text-teal-600 focus:ring-teal-500"
+                  className="h-5 w-5 text-teal-600 focus:ring-2 focus:ring-teal-500 border-gray-300"
                 />
-                <span className="text-gray-700">Chuyển khoản qua mã QR</span>
+                <span className="text-gray-700 text-lg">Chuyển khoản qua mã QR</span>
               </label>
             </div>
             {selectedPaymentMethod === "bank" && submitting && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-t-4 border-indigo-600 mr-2"></div>
-                <p className="text-gray-700">Đang chuyển hướng đến trang thanh toán...</p>
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center">
+                <svg className="animate-spin h-6 w-6 text-teal-600 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p className="text-gray-700 text-lg">Đang chuyển hướng đến trang thanh toán...</p>
               </div>
             )}
           </div>
         )}
 
+        {/* Action Buttons and Message */}
         <div className="flex justify-end space-x-4 mt-8 items-center">
           <AntButton
             type="default"
             onClick={() => window.history.back()}
             disabled={submitting}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition duration-300"
           >
             Trở lại
           </AntButton>
@@ -369,38 +397,26 @@ export default function Payment() {
               onClick={handleConfirmPayment}
               loading={submitting}
               disabled={submitting}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition duration-300"
             >
               {submitting ? "Đang xử lý..." : "Xác nhận thanh toán"}
             </AntButton>
           )}
-          {isAppointmentPaid && (
+          {(isAppointmentPaid || isOrderPaid) && (
             <AntButton
               type="primary"
               onClick={handleContinue}
               disabled={submitting}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition duration-300"
             >
               Tiếp tục
             </AntButton>
           )}
-          {isOrderPaid && (
-            <AntButton
-              type="primary"
-              onClick={handleConfirmPayment}
-              disabled={submitting}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
-            >
-              Tiếp tục
-            </AntButton>
-          )}
-          {/* {submitMessage && (
-            <span
-              className={`ml-4 font-medium ${submitMessage.includes("thành công") ? "text-emerald-600" : "text-rose-500"}`}
-            >Thanh toán đã được xác nhận thành công!
+          {submitMessage && (
+            <span className={`ml-4 font-medium ${submitMessage.includes("thành công") ? "text-teal-600" : "text-red-500"}`}>
               {submitMessage}
             </span>
-          )} */}
+          )}
         </div>
       </div>
     </div>

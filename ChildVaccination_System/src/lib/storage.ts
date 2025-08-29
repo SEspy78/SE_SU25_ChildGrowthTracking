@@ -11,6 +11,7 @@ export type UserInfo = {
   accountId: number;
   accountName: string;
   facilityId: number;
+  staffId: number;
   position: string;
   role: string;
   token: string;

@@ -33,8 +33,20 @@
     dateOfBirth: string; 
     };
 
-
-
+export type Child = {
+    childId: number;
+    accountId: number;
+    fullName: string;
+    birthDate: string;
+    bloodType:string;
+     gender: string;
+    allergiesNotes:string;
+    medicalHistory:string;
+    imageURL:string;
+    status:boolean;
+    createdAt: string;
+    updatedAt: string;
+};
 
 export type Member = {
   memberId: number;
@@ -64,6 +76,7 @@ export type MemberListResponse = {
         setItemWithExpiry("userInfo", {
         accountId: response.accountId,
         accountName: response.accountName,
+        staffId: response.staffId,
         role: response.role,
         token: response.token,
         position:response.position,
@@ -78,6 +91,10 @@ export type MemberListResponse = {
 
     getAllMember: async (): Promise<MemberListResponse> => {
         return await axiosClient.get("api/auth/members?pageIndex=1&pageSize=10");
+    },
+
+    getMemberChildren: async (accountId: number): Promise<Child[]> => {
+        return await axiosClient.get(`api/Children/admin/account/${accountId}`);
     },
 
     register: async (data: RegisterPayload) => {

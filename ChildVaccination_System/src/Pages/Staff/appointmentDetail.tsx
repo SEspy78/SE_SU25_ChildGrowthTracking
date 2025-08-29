@@ -3,7 +3,7 @@ import VaccinationSteps from "@/Components/VaccinationStep";
 import { Button } from "@/Components/ui/button";
 import { appointmentApi, type Appointment } from "@/api/appointmentAPI";
 import { childprofileApi, type VaccineProfile } from "@/api/childInfomationAPI";
-import { vaccineApi, type FacilityVaccine } from "@/api/vaccineApi";
+import { vaccineApi } from "@/api/vaccineApi";
 import { vaccinePackageApi, type VaccinePackage } from "@/api/vaccinePackageApi";
 import { diseaseApi } from "@/api/diseaseApi";
 import { useNavigate } from "react-router-dom";
@@ -130,124 +130,127 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
     }
   };
 
-  // Vaccine display logic
-  let vaccineDisplay = "Không có vắc xin";
-  if (appointmentData?.order && vaccinePackage?.name) {
-    vaccineDisplay = vaccinePackage.name;
-  } else if (Array.isArray(appointmentData?.facilityVaccines) && appointmentData.facilityVaccines.length > 0) {
-    vaccineDisplay = appointmentData.facilityVaccines
-      .map((fv: FacilityVaccine) => fv.vaccine?.name || `ID: ${fv.vaccineId}`)
-      .join(", ");
-  }
-
-  // Vaccines to inject display
   const vaccinesToInjectDisplay = appointmentData?.vaccinesToInject?.length
     ? appointmentData.vaccinesToInject
-        .map((vaccine) => `${vaccine.vaccineName} (Liều ${vaccine.doseNumber}, ${vaccine.diseaseName})`)
+        .map((v) => `${v.vaccineName} (Liều ${v.doseNumber})`)
         .join(", ")
     : "Không có vắc xin cần tiêm";
 
   const totalDoses = vaccineProfiles.length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
-      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-6">
-        <Button
-          type="button"
-          className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors mb-6"
-          onClick={handleBackByPosition}
-        >
-          Quay lại
-        </Button>
-        <h2 className="text-3xl font-bold text-indigo-900 mb-6">Quy trình tiêm chủng</h2>
-        <div className="mb-8">
+    <div className="min-h-screen bg-gray-100 p-6 md:p-8">
+      <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8">
+        {/* Header and Back Button */}
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Chi tiết lịch hẹn</h2>
+          <Button
+            type="button"
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition duration-300"
+            onClick={handleBackByPosition}
+          >
+            Quay lại
+          </Button>
+        </div>
+
+        {/* Vaccination Steps */}
+        <div className="mb-10">
           <VaccinationSteps currentStep={0} />
         </div>
 
+        {/* Cancelled Appointment Notice */}
         {appointmentData?.status === "Cancelled" && (
-          <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center">
-            <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <div className="mb-8 p-4 bg-red-50 text-red-700 rounded-lg flex items-center">
+            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span className="font-semibold">Lịch tiêm đã bị hủy</span>
+            <span className="font-semibold text-lg">Lịch tiêm đã bị hủy</span>
           </div>
         )}
 
+        {/* Appointment Information */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-indigo-600">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">
             Thông tin cuộc hẹn
           </h3>
           {loadingPackage ? (
-            <div className="flex justify-center items-center py-4 bg-gray-50 rounded-lg">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-indigo-600 mr-2"></div>
-              <span className="text-gray-600">Đang tải thông tin gói vẮc xin...</span>
+            <div className="flex items-center justify-center py-6 bg-gray-50 rounded-lg">
+              <svg className="animate-spin h-8 w-8 text-indigo-600 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span className="text-gray-600 text-lg">Đang tải thông tin...</span>
             </div>
           ) : errorPackage ? (
-            <div className="bg-rose-50 text-rose-600 p-4 rounded-lg text-center">{errorPackage}</div>
+            <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M12 17h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"></path>
+              </svg>
+              {errorPackage}
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-center">
-                  <span className="font-medium text-gray-600 w-32">Tên bé:</span>
-                  <span className="text-gray-800 font-medium">
-                    {child.fullName} ({calculateAge(child.birthDate)})
-                  </span>
+                  <span className="font-medium text-gray-600 w-36">Tên bé:</span>
+                  <span className="text-gray-800 font-semibold">{child.fullName} ({calculateAge(child.birthDate)})</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="font-medium text-gray-600 w-32">Giới tính:</span>
+                  <span className="font-medium text-gray-600 w-36">GiỮ tính:</span>
                   <span className="text-gray-800">{child.gender.trim()}</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="font-medium text-gray-600 w-32">Tên phụ huynh:</span>
+                  <span className="font-medium text-gray-600 w-36">Tên phụ huynh:</span>
                   <span className="text-gray-800">{appointment.memberName}</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="font-medium text-gray-600 w-32">Số liên lạc:</span>
+                  <span className="font-medium text-gray-600 w-36">Số liên lạc:</span>
                   <span className="text-gray-800">{appointment.memberPhone}</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="font-medium text-gray-600 w-32">Email:</span>
+                  <span className="font-medium text-gray-600 w-36">Email:</span>
                   <span className="text-gray-800">{appointment.memberEmail.trim()}</span>
                 </div>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-center">
-                  <span className="font-medium text-gray-600 w-32">Nhóm máu:</span>
+                  <span className="font-medium text-gray-600 w-36">Nhóm máu:</span>
                   <span className="text-gray-800">{child.bloodType || "Không có"}</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="font-medium text-gray-600 w-32">Tiền sử dị ứng:</span>
+                  <span className="font-medium text-gray-600 w-36">Tiền sử dị ứng:</span>
                   <span className="text-gray-800">{child.allergiesNotes || "Không có"}</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="font-medium text-gray-600 w-32">Tiền sử bệnh lý:</span>
+                  <span className="font-medium text-gray-600 w-36">Tiền sử bệnh lý:</span>
                   <span className="text-gray-800">{child.medicalHistory || "Không có"}</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="font-medium text-gray-600 w-32">Thời gian tiêm:</span>
+                  <span className="font-medium text-gray-600 w-36">Thời gian tiêm:</span>
                   <span className="text-gray-800">{appointment.appointmentTime}</span>
                 </div>
                 {appointmentData?.order && (
                   <div className="flex items-center">
-                    <span className="font-medium text-gray-600 w-32">Gói vắc xin:</span>
-                    <span className="text-gray-800">{vaccinePackage?.name || "Đang tải..."}</span>
+                    <span className="font-medium text-gray-600 w-36">Gói vắc xin:</span>
+                    <span className="text-gray-800 font-semibold">{vaccinePackage?.name || "Đang tải..."}</span>
                   </div>
                 )}
               </div>
             </div>
           )}
-          <div className="mt-4 pt-4 border-t">
-            <div className="flex items-center mt-2">
-              <span className="font-medium text-gray-600 w-32">Vắc xin :</span>
+          <div className="mt-6 pt-4 border-t border-gray-200">
+            <div className="flex items-center mt-3">
+              <span className="font-medium text-gray-600 w-36">Vắc xin cần tiêm:</span>
               <span className="text-gray-800">{vaccinesToInjectDisplay}</span>
             </div>
-            <div className="flex items-center mt-2">
-              <span className="font-medium text-gray-600 w-32">Ghi chú:</span>
+            <div className="flex items-center mt-3">
+              <span className="font-medium text-gray-600 w-36">Ghi chú:</span>
               <span className="text-gray-800">{appointment.note || "Không có"}</span>
             </div>
           </div>
         </div>
 
+        {/* Vaccination History */}
         <Collapse
           activeKey={isHistoryVisible ? ["1"] : []}
           className="mb-8 bg-white rounded-xl shadow-md border-l-4 border-teal-500"
@@ -259,7 +262,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
           <Collapse.Panel
             header={
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800 mb-0">
+                <h3 className="text-xl font-semibold text-gray-800 mb-0">
                   Lịch sử tiêm chủng
                 </h3>
               </div>
@@ -268,23 +271,26 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
             className="p-6"
           >
             {loadingProfiles ? (
-              <div className="flex flex-col items-center py-4 bg-gray-50 rounded-lg">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-indigo-600 mr-2"></div>
-                <span className="text-gray-600">Đang tải lịch sử tiêm chủng...</span>
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                  <div className="bg-indigo-600 h-2 rounded-full animate-pulse" style={{ width: '50%' }}></div>
+              <div className="flex flex-col items-center py-6 bg-gray-50 rounded-lg">
+                <svg className="animate-spin h-8 w-8 text-indigo-600 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className="text-gray-600 text-lg">Đang tải thông tin...</span>
+                <div className="w-full max-w-xs bg-gray-200 rounded-full h-2 mt-3">
+                  <div className="bg-indigo-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
                 </div>
               </div>
             ) : errorProfiles ? (
-              <div className="bg-rose-50 text-rose-600 p-4 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M12 17h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"></path>
                 </svg>
                 {errorProfiles}
               </div>
             ) : vaccineProfiles.length === 0 ? (
               <div className="bg-gray-50 text-gray-600 p-4 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"></path>
                 </svg>
                 Không có lịch sử tiêm chủng.
@@ -292,7 +298,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
             ) : (
               <div className="space-y-4">
                 <div className="bg-teal-50 rounded-lg p-4 flex items-center justify-between">
-                  <span className="text-teal-700 font-semibold">Tổng cộng: {totalDoses} liều</span>
+                  <span className="text-teal-700 font-semibold text-lg">Tổng cộng: {totalDoses} liều</span>
                   <span className="text-sm text-gray-500">Cập nhật đến {new Date().toLocaleDateString("vi-VN")}</span>
                 </div>
                 {vaccineProfiles.map((vp) => (
@@ -308,10 +314,11 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
           </Collapse.Panel>
         </Collapse>
 
-        <div className="flex justify-end space-x-4 mt-8">
+        {/* Action Buttons */}
+        <div className="flex justify-end mt-5 space-x-4">
           <Button
             type="button"
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition duration-300"
             onClick={handleBackByPosition}
           >
             Trở lại
@@ -319,7 +326,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
           {user?.position === "Doctor" ? (
             <Button
               type="button"
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition duration-300"
               onClick={handleContinueDoctor}
             >
               Tiếp tục
@@ -327,7 +334,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
           ) : (
             <Button
               type="button"
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition duration-300"
               onClick={handleConfirmByRole}
             >
               Tiếp tục
@@ -372,15 +379,15 @@ const VaccineProfileCard: React.FC<VaccineProfileCardProps> = ({ vp, getVaccineN
   }, [vp.vaccineId, vp.diseaseId, getVaccineName, getDiseaseName]);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow duration-300">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center">
             <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 3.996a11.955 11.955 0 01-8.618 3.986A12.02 12.02 0 003 12c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
             </svg>
             <span className="font-medium text-gray-600">Bệnh:</span>
-            <span className="ml-2 text-gray-800">{diseaseName}</span>
+            <span className="ml-2 text-gray-800 font-semibold">{diseaseName}</span>
           </div>
           <div className="flex items-center">
             <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -390,7 +397,7 @@ const VaccineProfileCard: React.FC<VaccineProfileCardProps> = ({ vp, getVaccineN
             <span className="ml-2 text-gray-800 font-semibold">{vaccineName}</span>
           </div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex items-center">
             <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>

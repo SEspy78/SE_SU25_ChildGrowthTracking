@@ -165,7 +165,6 @@ export default function HealthSurvey() {
     }
   }, [selectedDate, user?.facilityId]);
 
-  // Fetch available vaccines when adjust package modal is opened
   useEffect(() => {
     if (showAdjustPackageModal && user?.facilityId) {
       const fetchVaccines = async () => {
@@ -181,7 +180,6 @@ export default function HealthSurvey() {
     }
   }, [showAdjustPackageModal, user?.facilityId]);
 
-  // Initialize temporary quantities and vaccine selections
   useEffect(() => {
     if (showAdjustPackageModal && appointment?.order?.orderDetails) {
       const initialQuantities: Record<number, number> = {};
@@ -195,7 +193,6 @@ export default function HealthSurvey() {
     }
   }, [showAdjustPackageModal, appointment?.order?.orderDetails]);
 
-  // Auto-refresh every 10 seconds for Staff when appointment is Pending
   useEffect(() => {
     if (appointment?.status === "Pending" && user?.position === "Staff") {
       const interval = setInterval(() => {
@@ -425,7 +422,6 @@ export default function HealthSurvey() {
         const vaccineRes = await facilityVaccineApi.getAll(user.facilityId);
         setAvailableVaccines(vaccineRes.data || []);
       }
-      // Reset temporary quantities and selections with updated data
       const initialQuantities: Record<number, number> = {};
       const initialSelections: Record<number, number> = {};
       appointmentData.order.orderDetails.forEach((detail: any) => {
@@ -434,9 +430,7 @@ export default function HealthSurvey() {
       });
       setTempQuantities(initialQuantities);
       setTempVaccineSelections(initialSelections);
-      // Show success modal
       setShowAdjustSuccessModal(true);
-      // Auto-close success modal after 1.5 seconds
       setTimeout(() => {
         setShowAdjustSuccessModal(false);
       }, 1500);
@@ -467,7 +461,7 @@ export default function HealthSurvey() {
       title: "Tên bệnh",
       dataIndex: ["disease", "name"],
       key: "diseaseName",
-      render: (text: string) => <span className="text-gray-800">{text}</span>,
+      render: (text: string) => <span className="text-gray-700 font-medium">{text}</span>,
     },
     {
       title: "Tên vắc xin",
@@ -495,23 +489,21 @@ export default function HealthSurvey() {
       dataIndex: "remainingQuantity",
       key: "remainingQuantity",
       render: (_: any, record: any) => (
-        <div className="flex items-center space-x-2">
-          <Button
-            type="button"
+        <div className="flex items-center space-x-3">
+          <button
             onClick={() => handleQuantityChange(record.orderDetailId, -1)}
             disabled={tempQuantities[record.orderDetailId] <= 0}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-full"
+            className="w-8 h-8 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
           >
             -
-          </Button>
-          <span className="text-gray-800">{tempQuantities[record.orderDetailId]}</span>
-          <Button
-            type="button"
+          </button>
+          <span className="text-gray-700 font-medium">{tempQuantities[record.orderDetailId]}</span>
+          <button
             onClick={() => handleQuantityChange(record.orderDetailId, 1)}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-full"
+            className="w-8 h-8 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full flex items-center justify-center transition-colors"
           >
             +
-          </Button>
+          </button>
         </div>
       ),
     },
@@ -519,30 +511,35 @@ export default function HealthSurvey() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-blue-500"></div>
-        <span className="mt-2 text-gray-600">Đang tải...</span>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
+          <span className="text-lg text-gray-600 font-medium">Đang tải dữ liệu...</span>
+        </div>
       </div>
     );
   }
+
   if (!appointment) {
     return (
-      <div className="bg-red-100 text-red-700 p-4 rounded-lg flex items-center justify-center">
-        <svg
-          className="w-6 h-6 mr-2"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M12 9v2m0 4h.01M12 17h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
-          ></path>
-        </svg>
-        Không tìm thấy cuộc hẹn.
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-red-100 text-red-700 p-6 rounded-xl shadow-lg flex items-center space-x-3">
+          <svg
+            className="w-8 h-8"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 9v2m0 4h.01M12 17h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
+            ></path>
+          </svg>
+          <span className="text-lg font-semibold">Không tìm thấy cuộc hẹn</span>
+        </div>
       </div>
     );
   }
@@ -550,119 +547,120 @@ export default function HealthSurvey() {
   const child = appointment.child;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
-      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-6">
-        <div className="flex justify-between items-center mb-6">
-          <Button
-            type="button"
-            className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-full transition-colors"
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto bg-white shadow-2xl rounded-2xl p-8">
+        <div className="flex justify-between items-center mb-8">
+          <button
             onClick={handleBackByPosition}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-full font-medium transition-colors duration-200"
           >
             Quay lại
-          </Button>
+          </button>
+          <h2 className="text-3xl font-bold text-gray-800">Thăm khám trước khi tiêm</h2>
+          <div className="w-24"></div> {/* Placeholder for alignment */}
         </div>
-        <h2 className="text-3xl font-bold text-indigo-900 mb-6">Quy trình tiêm chủng</h2>
-        <div className="mb-8">
+        <div className="mb-10">
           <VaccinationSteps currentStep={1} />
         </div>
 
         <Modal
-          title="Xác nhận gửi khảo sát sức khỏe"
+          title={<span className="text-xl font-semibold text-gray-800">Xác nhận gửi khảo sát</span>}
           open={showConfirmSubmitModal}
           onCancel={() => setShowConfirmSubmitModal(false)}
           footer={[
-            <Button
+            <button
               key="no"
               onClick={() => setShowConfirmSubmitModal(false)}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Không
-            </Button>,
-            <Button
+            </button>,
+            <button
               key="submit"
               onClick={() => {
                 setShowConfirmSubmitModal(false);
                 handleSubmit();
               }}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Gửi
-            </Button>,
+            </button>,
           ]}
           centered
+          className="rounded-xl"
         >
-          <p className="text-gray-700">Bạn có muốn gửi khảo sát sức khỏe này không?</p>
+          <p className="text-gray-600">Bạn có muốn gửi khảo sát sức khỏe này không?</p>
         </Modal>
 
         <Modal
-          title="Điều chỉnh gói vắc xin"
+          title={<span className="text-xl font-semibold text-gray-800">Điều chỉnh gói vắc xin</span>}
           open={showAdjustPackageModal}
           onCancel={() => setShowAdjustPackageModal(false)}
           footer={[
-            <Button
+            <button
               key="close"
               onClick={() => setShowAdjustPackageModal(false)}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Đóng
-            </Button>,
-            <Button
+            </button>,
+            <button
               key="save"
               onClick={handleUpdateOrder}
               disabled={submitting}
-              className={`bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors ${
-                submitting ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {submitting ? "Đang lưu..." : "Lưu"}
-            </Button>,
+            </button>,
           ]}
           centered
-          width={800}
+          width={900}
+          className="rounded-xl"
         >
-          <div className="space-y-4">
-            <p className="text-gray-700">Danh sách vắc xin trong gói:</p>
+          <div className="space-y-6">
+            <p className="text-gray-600 font-medium">Danh sách vắc xin trong gói:</p>
             {appointment.order && appointment.order.orderDetails.length > 0 ? (
               <Table
                 columns={vaccineColumns}
                 dataSource={appointment.order.orderDetails}
                 rowKey="orderDetailId"
                 pagination={false}
-                className="border rounded-lg"
+                className="border rounded-xl bg-white shadow-sm"
                 locale={{
                   emptyText: (
-                    <div className="text-gray-500 py-4">Không có vắc xin trong gói.</div>
+                    <div className="text-gray-500 py-6 text-center">Không có vắc xin trong gói.</div>
                   ),
                 }}
               />
             ) : (
-              <div className="text-gray-500 py-4">Không có vắc xin trong gói.</div>
+              <div className="text-gray-500 py-6 text-center">Không có vắc xin trong gói.</div>
             )}
           </div>
         </Modal>
 
         <Modal
-          title="Thành công"
+          title={<span className="text-xl font-semibold text-gray-800">Thành công</span>}
           open={showAdjustSuccessModal}
           onCancel={() => setShowAdjustSuccessModal(false)}
           footer={[
-            <Button
+            <button
               key="ok"
               onClick={() => setShowAdjustSuccessModal(false)}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               OK
-            </Button>,
+            </button>,
           ]}
           centered
+          className="rounded-xl"
         >
-          <p className="text-gray-700">Cập nhật gói vắc xin thành công!</p>
+          <p className="text-gray-600">Cập nhật gói vắc xin thành công!</p>
         </Modal>
 
         {appointment.status === "Cancelled" && (
-          <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center">
+          <div className="mb-8 p-6 bg-red-50 text-red-700 rounded-xl flex items-center space-x-3 shadow-sm">
             <svg
-              className="w-6 h-6 mr-2"
+              className="w-8 h-8"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -675,146 +673,148 @@ export default function HealthSurvey() {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <span className="font-semibold">Lịch tiêm đã bị hủy</span>
+            <span className="text-lg font-semibold">Lịch tiêm đã bị hủy</span>
           </div>
         )}
 
         <Modal
-          title="Thành công"
+          title={<span className="text-xl font-semibold text-gray-800">Thành công</span>}
           open={showSuccessModal}
           onCancel={() => setShowSuccessModal(false)}
           footer={null}
           centered
+          className="rounded-xl"
         >
-          <p className="text-gray-700">Đã hoàn thành khảo sát sức khỏe.</p>
+          <p className="text-gray-600">Đã hoàn thành khảo sát sức khỏe.</p>
         </Modal>
 
         <Modal
-          title="Thành công"
+          title={<span className="text-xl font-semibold text-gray-800">Thành công</span>}
           open={showCancelSuccessModal}
           onCancel={() => {
             setShowCancelSuccessModal(false);
             navigate("/staff/appointments");
           }}
           footer={[
-            <Button
+            <button
               key="ok"
               onClick={() => {
                 setShowCancelSuccessModal(false);
                 navigate("/staff/appointments");
               }}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               OK
-            </Button>,
+            </button>,
           ]}
           centered
+          className="rounded-xl"
         >
-          <p className="text-gray-700">Hủy lịch hẹn thành công!</p>
+          <p className="text-gray-600">Hủy lịch hẹn thành công!</p>
         </Modal>
 
         <Modal
-          title="Xác nhận hủy lịch hẹn"
+          title={<span className="text-xl font-semibold text-gray-800">Xác nhận hủy lịch hẹn</span>}
           open={showCancelConfirmModal}
           onCancel={() => setShowCancelConfirmModal(false)}
           footer={[
-            <Button
+            <button
               key="no"
               onClick={() => {
                 setShowCancelConfirmModal(false);
                 setShowCancelReasonModal(true);
               }}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Không
-            </Button>,
-            <Button
+            </button>,
+            <button
               key="yes"
               onClick={() => {
                 setShowCancelConfirmModal(false);
                 setShowRebookModal(true);
               }}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Có
-            </Button>,
+            </button>,
           ]}
           centered
+          className="rounded-xl"
         >
-          <p className="text-gray-700">Bạn có muốn đặt lại lịch mới không?</p>
+          <p className="text-gray-600">Bạn có muốn đặt lại lịch mới không?</p>
         </Modal>
 
         <Modal
-          title="Lý do hủy lịch hẹn"
+          title={<span className="text-xl font-semibold text-gray-800">Lý do hủy lịch hẹn</span>}
           open={showCancelReasonModal}
           onCancel={() => setShowCancelReasonModal(false)}
           footer={[
-            <Button
+            <button
               key="cancel"
               onClick={() => setShowCancelReasonModal(false)}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Hủy
-            </Button>,
-            <Button
+            </button>,
+            <button
               key="submit"
               onClick={handleCancel}
               disabled={submitting}
-              className={`bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors ${
-                submitting ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {submitting ? "Đang xử lý..." : "Xác nhận hủy"}
-            </Button>,
+            </button>,
           ]}
           centered
+          className="rounded-xl"
         >
           <div className="space-y-4">
             <div>
               <label className="block text-gray-700 font-medium mb-2">Lý do hủy</label>
-              <Input.TextArea
+              <TextArea
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 placeholder="Nhập lý do hủy lịch hẹn (không bắt buộc)"
-                rows={3}
+                rows={4}
+                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
               />
             </div>
           </div>
         </Modal>
 
         <Modal
-          title="Đặt lại lịch hẹn"
+          title={<span className="text-xl font-semibold text-gray-800">Đặt lại lịch hẹn</span>}
           open={showRebookModal}
           onCancel={() => setShowRebookModal(false)}
           footer={[
-            <Button
+            <button
               key="cancel"
               onClick={() => setShowRebookModal(false)}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Hủy
-            </Button>,
-            <Button
+            </button>,
+            <button
               key="submit"
               onClick={handleRebook}
               disabled={submitting || !selectedSlotId}
-              className={`bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors ${
-                submitting || !selectedSlotId ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 ${submitting || !selectedSlotId ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {submitting ? "Đang xử lý..." : "Xác nhận đặt lại"}
-            </Button>,
+            </button>,
           ]}
           centered
+          className="rounded-xl"
         >
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
               <label className="block text-gray-700 font-medium mb-2">Chọn ngày</label>
               <DatePicker
                 value={selectedDate}
                 onChange={(date) => setSelectedDate(date)}
                 format="YYYY-MM-DD"
-                className="w-full"
+                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                 disabledDate={(current) => current && current < dayjs().startOf("day")}
               />
             </div>
@@ -837,20 +837,21 @@ export default function HealthSurvey() {
             )}
             <div>
               <label className="block text-gray-700 font-medium mb-2">Ghi chú</label>
-              <Input.TextArea
+              <TextArea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Nhập ghi chú"
-                rows={3}
+                rows={4}
+                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
               />
             </div>
           </div>
         </Modal>
 
         {user?.position === "Staff" && appointment.status === "Pending" && (
-          <div className="mb-8 p-4 bg-yellow-100 text-yellow-700 rounded-lg flex items-center">
+          <div className="mb-8 p-6 bg-yellow-50 text-yellow-700 rounded-xl flex items-center space-x-3 shadow-sm">
             <svg
-              className="w-6 h-6 mr-2"
+              className="w-8 h-8"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -863,25 +864,24 @@ export default function HealthSurvey() {
                 d="M12 9v2m0 4h.01M12 17h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
               ></path>
             </svg>
-            <span className="font-semibold">Đang đợi bác sĩ làm thăm khám</span>
+            <span className="text-lg font-semibold">Đang đợi bác sĩ làm thăm khám</span>
           </div>
         )}
 
         {(user?.position === "Doctor" || (user?.position === "Doctor" && appointment.order && appointment.status === "Pending")) && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h3 className="text-lg font-semibold text-gray-800">
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+            <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
+              <h3 className="text-xl font-semibold text-gray-800">
                 Chọn bộ câu hỏi thăm khám trước tiêm chủng
               </h3>
               {user?.position === "Doctor" && appointment.order && appointment.status === "Pending" && (
-                <Button
-                  type="button"
+                <button
                   onClick={() => setShowAdjustPackageModal(true)}
                   disabled={submitting}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2 rounded-full transition-colors"
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
                 >
                   Điều chỉnh gói vắc xin
-                </Button>
+                </button>
               )}
             </div>
             {user?.position === "Doctor" && showSurveySelect && (
@@ -905,25 +905,25 @@ export default function HealthSurvey() {
         )}
 
         {user?.position === "Doctor" && showSurveySelect && selectedSurvey && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h3 className="text-lg font-semibold text-blue-700 mb-4 border-b pb-2">
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+            <h3 className="text-xl font-semibold text-blue-700 mb-6 border-b border-gray-200 pb-4">
               Câu hỏi thăm khám trước khi tiêm chủng: {selectedSurvey.title}
             </h3>
             {loadingQuestions ? (
-              <div className="flex flex-col items-center py-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-blue-500"></div>
-                <span className="mt-2 text-gray-600">Đang tải câu hỏi...</span>
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div className="flex flex-col items-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
+                <span className="mt-4 text-lg text-gray-600 font-medium">Đang tải câu hỏi...</span>
+                <div className="w-full max-w-md bg-gray-200 rounded-full h-2 mt-4">
                   <div
-                    className="bg-blue-500 h-2 rounded-full animate-pulse"
-                    style={{ width: "50%" }}
+                    className="bg-blue-600 h-2 rounded-full animate-pulse"
+                    style={{ width: "60%" }}
                   ></div>
                 </div>
               </div>
             ) : surveyQuestions.length === 0 ? (
-              <div className="bg-gray-50 text-gray-600 p-4 rounded-lg flex items-center justify-center">
+              <div className="bg-gray-50 text-gray-600 p-6 rounded-xl flex items-center justify-center space-x-3 shadow-sm">
                 <svg
-                  className="w-6 h-6 mr-2"
+                  className="w-8 h-8"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -936,20 +936,20 @@ export default function HealthSurvey() {
                     d="M13 16h-1v-4h-1m1-4h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
                   ></path>
                 </svg>
-                Không có câu hỏi nào cho bộ câu hỏi này.
+                <span className="text-lg font-medium">Không có câu hỏi nào cho bộ câu hỏi này.</span>
               </div>
             ) : (
               <>
-                <h4 className="text-md font-semibold text-gray-800 mb-4">Câu hỏi thăm khám sức khỏe</h4>
-                <ul className="space-y-4 mb-8">
+                <h4 className="text-lg font-semibold text-gray-800 mb-6">Câu hỏi thăm khám sức khỏe</h4>
+                <ul className="space-y-6 mb-10">
                   {surveyQuestions.map((q: Question) => (
                     <li
                       key={q.questionId}
-                      className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200"
+                      className="bg-gray-50 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
                     >
-                      <div className="flex items-center">
+                      <div className="flex items-center mb-4">
                         <svg
-                          className="w-5 h-5 mr-2 text-blue-600"
+                          className="w-6 h-6 mr-3 text-blue-600"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -962,40 +962,41 @@ export default function HealthSurvey() {
                             d="M8 10h.01M12 10h.01M16 10h.01M9 16H5v-2a2 2 0 012-2h10a2 2 0 012 2v2h-4m-6 0h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
                           ></path>
                         </svg>
-                        <span className="font-medium text-gray-800">{q.questionText}</span>
+                        <span className="text-lg font-medium text-gray-800">{q.questionText}</span>
                         {q.isRequired && <span className="text-red-500 ml-2">*</span>}
                       </div>
-                      <div className="mt-3">
+                      <div className="mt-4">
                         {q.questionType === "Text" ? (
                           <textarea
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none transition-colors duration-200"
                             value={answers[q.questionId] || ""}
                             onChange={(e) => handleChangeAnswer(q.questionId, e.target.value)}
                             rows={4}
+                            placeholder="Nhập câu trả lời..."
                           />
                         ) : q.questionType === "YesNo" ? (
-                          <div className="flex gap-6">
-                            <label className="flex items-center gap-2">
+                          <div className="flex gap-8">
+                            <label className="flex items-center gap-3 cursor-pointer">
                               <input
                                 type="radio"
                                 name={`q_${q.questionId}`}
                                 value="yes"
                                 checked={answers[q.questionId] === "yes"}
                                 onChange={() => handleChangeAnswer(q.questionId, "yes")}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
                               />
-                              <span className="text-gray-700">Có</span>
+                              <span className="text-gray-700 font-medium">Có</span>
                             </label>
-                            <label className="flex items-center gap-2">
+                            <label className="flex items-center gap-3 cursor-pointer">
                               <input
                                 type="radio"
                                 name={`q_${q.questionId}`}
                                 value="no"
                                 checked={answers[q.questionId] === "no"}
                                 onChange={() => handleChangeAnswer(q.questionId, "no")}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300"
                               />
-                              <span className="text-gray-700">Không</span>
+                              <span className="text-gray-700 font-medium">Không</span>
                             </label>
                           </div>
                         ) : null}
@@ -1004,14 +1005,14 @@ export default function HealthSurvey() {
                   ))}
                 </ul>
 
-                <h4 className="text-md font-semibold text-gray-800 mb-4">Thông tin sức khỏe</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
+                <h4 className="text-lg font-semibold text-gray-800 mb-6">Thông tin sức khỏe</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
                     <div>
-                      <label className="block text-gray-700 font-medium mb-1">
+                      <label className="block text-gray-700 font-medium mb-2">
                         Nhiệt độ cơ thể (°C)
                       </label>
-                      <Input
+                      <input
                         type="number"
                         step="0.1"
                         value={healthInfo.temperatureC ?? ""}
@@ -1019,62 +1020,62 @@ export default function HealthSurvey() {
                           handleHealthInfoChange("temperatureC", parseFloat(e.target.value) || null)
                         }
                         placeholder="Nhập nhiệt độ cơ thể (tùy chọn)"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
                       />
-                      <p className="text-sm text-gray-500 mt-1">Nhiệt độ cơ thể bình thường từ 35.0°C đến 40.0°C</p>
+                      <p className="text-sm text-gray-500 mt-2">Bình thường: 35.0°C - 40.0°C</p>
                     </div>
                     <div>
-                      <label className="block text-gray-700 font-medium mb-1">
+                      <label className="block text-gray-700 font-medium mb-2">
                         Nhịp tim (bpm)
                       </label>
-                      <Input
+                      <input
                         type="number"
                         value={healthInfo.heartRateBpm ?? ""}
                         onChange={(e) =>
                           handleHealthInfoChange("heartRateBpm", parseInt(e.target.value) || null)
                         }
                         placeholder="Nhập nhịp tim (tùy chọn)"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
                       />
-                      <p className="text-sm text-gray-500 mt-1">Nhịp tim bình thường từ 60 đến 160 bpm</p>
+                      <p className="text-sm text-gray-500 mt-2">Bình thường: 60 - 160 bpm</p>
                     </div>
                     <div>
-                      <label className="block text-gray-700 font-medium mb-1">
+                      <label className="block text-gray-700 font-medium mb-2">
                         Huyết áp tâm thu (mmHg)
                       </label>
-                      <Input
+                      <input
                         type="number"
                         value={healthInfo.systolicBpmmHg ?? ""}
                         onChange={(e) =>
                           handleHealthInfoChange("systolicBpmmHg", parseInt(e.target.value) || null)
                         }
                         placeholder="Nhập huyết áp tâm thu (tùy chọn)"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
                       />
-                      <p className="text-sm text-gray-500 mt-1">Huyết áp tâm thu bình thường từ 70 đến 120 mmHg</p>
+                      <p className="text-sm text-gray-500 mt-2">Bình thường: 70 - 120 mmHg</p>
                     </div>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-6">
                     <div>
-                      <label className="block text-gray-700 font-medium mb-1">
+                      <label className="block text-gray-700 font-medium mb-2">
                         Huyết áp tâm trương (mmHg)
                       </label>
-                      <Input
+                      <input
                         type="number"
                         value={healthInfo.diastolicBpmmHg ?? ""}
                         onChange={(e) =>
                           handleHealthInfoChange("diastolicBpmmHg", parseInt(e.target.value) || null)
                         }
                         placeholder="Nhập huyết áp tâm trương (tùy chọn)"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
                       />
-                      <p className="text-sm text-gray-500 mt-1">Huyết áp tâm trương bình thường từ 40 đến 80 mmHg</p>
+                      <p className="text-sm text-gray-500 mt-2">Bình thường: 40 - 80 mmHg</p>
                     </div>
                     <div>
-                      <label className="block text-gray-700 font-medium mb-1">
+                      <label className="block text-gray-700 font-medium mb-2">
                         Độ bão hòa oxy (%)
                       </label>
-                      <Input
+                      <input
                         type="number"
                         step="0.1"
                         value={healthInfo.oxygenSatPercent ?? ""}
@@ -1082,30 +1083,30 @@ export default function HealthSurvey() {
                           handleHealthInfoChange("oxygenSatPercent", parseFloat(e.target.value) || null)
                         }
                         placeholder="Nhập độ bão hòa oxy (tùy chọn)"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
                       />
-                      <p className="text-sm text-gray-500 mt-1">Độ bão hòa oxy bình thường từ 90% đến 100%</p>
+                      <p className="text-sm text-gray-500 mt-2">Bình thường: 90% - 100%</p>
                     </div>
                     <div>
-                      <label className="block text-gray-700 font-medium mb-1">Ghi chú quyết định</label>
+                      <label className="block text-gray-700 font-medium mb-2">Ghi chú quyết định</label>
                       <TextArea
                         value={healthInfo.decisionNote}
                         onChange={(e) => handleHealthInfoChange("decisionNote", e.target.value)}
                         placeholder="Nhập ghi chú quyết định (tùy chọn)"
-                        rows={3}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        rows={4}
+                        className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none transition-colors duration-200"
                       />
                     </div>
                     <div>
-                      <label className="flex items-center">
+                      <label className="flex items-center gap-3 cursor-pointer">
                         <Checkbox
                           checked={healthInfo.consentObtained}
                           onChange={(e) => handleHealthInfoChange("consentObtained", e.target.checked)}
-                          className="text-gray-700"
+                          className="text-blue-600"
                           required
                         />
-                        <span className="ml-2">Đã nhận được sự đồng ý</span>
-                        <span className="text-red-500 ml-1">*</span>
+                        <span className="text-gray-700 font-medium">Đã nhận được sự đồng ý</span>
+                        <span className="text-red-500">*</span>
                       </label>
                     </div>
                   </div>
@@ -1130,49 +1131,49 @@ export default function HealthSurvey() {
             <Collapse.Panel
               header={
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-blue-700 mb-0">
+                  <h3 className="text-xl font-semibold text-blue-700 mb-0">
                     Câu trả lời thăm khám sức khỏe
                   </h3>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500 font-medium">
                     {surveyAnswers.questions.length} câu trả lời
                   </span>
                 </div>
               }
               key="1"
-              className="p-6"
+              className="p-8"
             >
-              <div className="space-y-4">
-                <div className="bg-blue-50 rounded-lg p-4 flex items-center justify-between">
-                  <span className="text-blue-700 font-semibold">
+              <div className="space-y-6">
+                <div className="bg-blue-50 rounded-xl p-6 flex items-center justify-between shadow-sm">
+                  <span className="text-blue-700 font-semibold text-lg">
                     Tổng cộng: {surveyAnswers.questions.length} câu trả lời
                   </span>
                   <span className="text-sm text-gray-500">
-                    Cập nhật đến {new Date(surveyAnswers.submittedAt).toLocaleDateString("vi-VN")}
+                    Cập nhật: {new Date(surveyAnswers.submittedAt).toLocaleDateString("vi-VN")}
                   </span>
                 </div>
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <h4 className="text-md font-semibold text-gray-800 mb-2">Thông tin sức khỏe</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p><strong>Nhiệt độ cơ thể:</strong> {surveyAnswers.temperatureC || "0"}°C</p>
-                      <p><strong>Nhịp tim:</strong> {surveyAnswers.heartRateBpm || "0"} bpm</p>
-                      <p><strong>Huyết áp:</strong> {surveyAnswers.systolicBpmmHg || "0"}/{surveyAnswers.diastolicBpmmHg || "0"} mmHg</p>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Thông tin sức khỏe</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <p><strong className="text-gray-700">Nhiệt độ cơ thể:</strong> {surveyAnswers.temperatureC || "0"}°C</p>
+                      <p><strong className="text-gray-700">Nhịp tim:</strong> {surveyAnswers.heartRateBpm || "0"} bpm</p>
+                      <p><strong className="text-gray-700">Huyết áp:</strong> {surveyAnswers.systolicBpmmHg || "0"}/{surveyAnswers.diastolicBpmmHg || "0"} mmHg</p>
                     </div>
-                    <div>
-                      <p><strong>Độ bão hòa oxy:</strong> {surveyAnswers.oxygenSatPercent || "0"}%</p>
-                      <p><strong>Ghi chú quyết định:</strong> {surveyAnswers.decisionNote || "Không có"}</p>
-                      <p><strong>Đồng ý:</strong> {surveyAnswers.consentObtained ? "Có" : "Không"}</p>
+                    <div className="space-y-3">
+                      <p><strong className="text-gray-700">Độ bão hòa oxy:</strong> {surveyAnswers.oxygenSatPercent || "0"}%</p>
+                      <p><strong className="text-gray-700">Ghi chú quyết định:</strong> {surveyAnswers.decisionNote || "Không có"}</p>
+                      <p><strong className="text-gray-700">Đồng ý:</strong> {surveyAnswers.consentObtained ? "Có" : "Không"}</p>
                     </div>
                   </div>
                 </div>
                 {surveyAnswers.questions.map((ans: QuestionResponse, idx: number) => (
                   <div
                     key={idx}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200"
+                    className="bg-gray-50 rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200"
                   >
-                    <div className="flex items-center">
+                    <div className="flex items-center mb-3">
                       <svg
-                        className="w-5 h-5 mr-2 text-blue-600"
+                        className="w-6 h-6 mr-3 text-blue-600"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -1185,12 +1186,10 @@ export default function HealthSurvey() {
                           d="M8 10h.01M12 10h.01M16 10h.01M9 16H5v-2a2 2 0 012-2h10a2 2 0 012 2v2h-4m-6 0h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
                         ></path>
                       </svg>
-                      <span className="font-medium text-gray-800">{ans.questionText}</span>
+                      <span className="text-lg font-medium text-gray-800">{ans.questionText}</span>
                     </div>
                     <div className="mt-2">
-                      <span className="text-blue-700 font-medium">
-                        Trả lời: {ans.answerText}
-                      </span>
+                      <span className="text-blue-700 font-medium">Trả lời: {ans.answerText}</span>
                     </div>
                   </div>
                 ))}
@@ -1200,9 +1199,9 @@ export default function HealthSurvey() {
         )}
 
         {!showSurveySelect && (!surveyAnswers || surveyAnswers.questions.length === 0) && (
-          <div className="bg-gray-50 text-gray-600 p-4 rounded-lg flex items-center justify-center">
+          <div className="bg-gray-50 text-gray-600 p-6 rounded-xl flex items-center justify-center space-x-3 shadow-sm">
             <svg
-              className="w-6 h-6 mr-2"
+              className="w-8 h-8"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1215,63 +1214,56 @@ export default function HealthSurvey() {
                 d="M13 16h-1v-4h-1m1-4h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
               ></path>
             </svg>
-            Không có câu trả lời.
+            <span className="text-lg font-medium">Không có câu trả lời.</span>
           </div>
         )}
 
-        <div className="flex justify-end space-x-4 mt-8 items-center">
-          <Button
-            type="button"
+        <div className="flex justify-end space-x-4 mt-10 items-center">
+          <button
             onClick={handleBack}
-            className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-full transition-colors"
+            className={`bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-full font-medium transition-colors duration-200 ${submitting || appointment.status === "Cancelled" ? "opacity-50 cursor-not-allowed" : ""}`}
             disabled={submitting || appointment.status === "Cancelled"}
           >
             Trở lại
-          </Button>
+          </button>
           {user?.position === "Staff" && appointment.status === "Approval" && (
-            <Button
-              type="button"
+            <button
               onClick={handleCancelConfirm}
               disabled={submitting}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full transition-colors"
+              className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Hủy lịch hẹn
-            </Button>
+            </button>
           )}
           {user?.position === "Doctor" && showSurveySelect && (
-            <Button
-              type="button"
+            <button
               onClick={handleConfirmSubmit}
-              className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-colors ${
-                submitting ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
               disabled={submitting}
             >
               {submitting ? "Đang lưu..." : "Gửi"}
-            </Button>
+            </button>
           )}
           {user?.position === "Staff" && appointment.status !== "Pending" && appointment.status !== "Cancelled" && (
-            <Button
-              type="button"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-colors"
+            <button
               onClick={() => navigate(`/staff/appointments/${id}/step-3`)}
               disabled={submitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Tiếp tục
-            </Button>
+            </button>
           )}
           {user?.position === "Doctor" && !showSurveySelect && appointment.status !== "Cancelled" && (
-            <Button
-              type="button"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition-colors"
+            <button
               onClick={() => navigate(`/doctor/appointments/${id}/step-3`)}
               disabled={submitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Tiếp tục
-            </Button>
+            </button>
           )}
           {submitMessage && (
-            <span className={`ml-4 font-medium ${submitMessage.includes("thành công") || submitMessage.includes("hoàn thành") ? "text-emerald-600" : "text-rose-500"}`}>
+            <span className={`ml-4 font-medium ${submitMessage.includes("thành công") || submitMessage.includes("hoàn thành") ? "text-green-600" : "text-red-500"}`}>
               {submitMessage}
             </span>
           )}

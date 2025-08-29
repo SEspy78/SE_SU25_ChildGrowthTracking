@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import VaccinationSteps from "@/Components/VaccinationStep";
-import { Button as AntButton, message, DatePicker, Modal, Tooltip } from "antd";
-import { appointmentApi, type Appointment, type finishVaccinationPayload, orderApi } from "@/api/appointmentAPI";
+import { Button as AntButton, message, DatePicker, Modal } from "antd";
+import { appointmentApi, type Appointment, type finishVaccinationPayload } from "@/api/appointmentAPI";
 import { vaccinePackageApi, type VaccinePackage } from "@/api/vaccinePackageApi";
-import { facilityVaccineApi, type FacilityVaccine } from "@/api/vaccineApi";
 import { getUserInfo } from "@/lib/storage";
 import { Button } from "@/Components/ui/button";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import dayjs from "dayjs";
 
 type ExtendedAppointment = Appointment & {
-  vaccinesToInject?: { vaccineName: string; doseNumber: string; diseaseName: string }[];
+  vaccinesToInject?: { facilityVaccineId: number; vaccineName: string; doseNumber: string; diseaseName: string }[];
 };
 
 export default function DoctorConfirmVaccination() {
@@ -19,15 +18,10 @@ export default function DoctorConfirmVaccination() {
   const navigate = useNavigate();
   const [appointment, setAppointment] = useState<ExtendedAppointment | null>(null);
   const [vaccinePackage, setVaccinePackage] = useState<VaccinePackage | null>(null);
-  const [facilityVaccines, setFacilityVaccines] = useState<FacilityVaccine[]>([]);
-  const [vaccineQuantities, setVaccineQuantities] = useState<Map<number, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [loadingPackage, setLoadingPackage] = useState(true);
-  const [loadingFacilityVaccines, setLoadingFacilityVaccines] = useState(true);
   const [error, setError] = useState("");
   const [errorPackage, setErrorPackage] = useState("");
-  const [errorFacilityVaccines, setErrorFacilityVaccines] = useState("");
-  const [vaccineStatusMessage, setVaccineStatusMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
   const [postVaccinationNotes, setPostVaccinationNotes] = useState("");
@@ -43,88 +37,19 @@ export default function DoctorConfirmVaccination() {
     const fetchAppointment = async () => {
       try {
         setLoading(true);
-        setLoadingFacilityVaccines(true);
         if (!id) {
           setError("Không có ID lịch hẹn trong URL.");
           setAppointment(null);
           return;
         }
         const appointmentRes = await appointmentApi.getAppointmentById(Number(id));
-        console.log("Appointment Response:", appointmentRes);
         const appointmentData: ExtendedAppointment = appointmentRes || appointmentRes;
-        console.log("Appointment Data:", appointmentData);
-        console.log("Order:", appointmentData.order);
-        console.log("Facility Vaccines:", appointmentData.facilityVaccines);
         setAppointment(appointmentData);
 
-        let facilityVaccineIds: number[] = [];
-        if (appointmentData.order && Array.isArray(appointmentData.order.orderDetails) && appointmentData.order.orderDetails.length > 0) {
-          console.log("Order Details:", appointmentData.order.orderDetails);
-          facilityVaccineIds = appointmentData.order.orderDetails
-            .filter(detail => detail && typeof detail.facilityVaccineId === "number" && detail.facilityVaccineId > 0)
-            .map(detail => detail.facilityVaccineId);
-          console.log("Facility Vaccine IDs from Order Details:", facilityVaccineIds);
-        } else if (Array.isArray(appointmentData.facilityVaccines) && appointmentData.facilityVaccines.length > 0) {
-          console.log("Facility Vaccines:", appointmentData.facilityVaccines);
-          facilityVaccineIds = appointmentData.facilityVaccines
-            .filter(fv => fv && typeof fv.facilityVaccineId === "number" && fv.facilityVaccineId > 0)
-            .map(fv => fv.facilityVaccineId);
-          console.log("Facility Vaccine IDs from Facility Vaccines:", facilityVaccineIds);
-        }
-        console.log("Final Facility Vaccine IDs:", facilityVaccineIds);
-
-        if (facilityVaccineIds.length > 0) {
-          const vaccinePromises = facilityVaccineIds.map(id => facilityVaccineApi.getById(id));
-          const vaccineResults = await Promise.allSettled(vaccinePromises);
-          let vaccines: FacilityVaccine[] = [];
-          vaccineResults.forEach((result, index) => {
-            if (result.status === "fulfilled") {
-              const vaccine = result.value;
-              if (vaccine && typeof vaccine.facilityVaccineId === "number" && vaccine.vaccine) {
-                vaccines.push(vaccine);
-              } else {
-                console.warn(`Invalid FacilityVaccine data for ID ${facilityVaccineIds[index]}:`, vaccine);
-              }
-            } else {
-              console.error(`Failed to fetch facility vaccine ${facilityVaccineIds[index]}:`, result.reason);
-            }
-          });
-          console.log("Fetched Vaccines:", vaccines);
-
-          const quantities = new Map<number, number>();
-          if (appointmentData.order?.orderId) {
-            try {
-              const order = await orderApi.getOrderById(appointmentData.order.orderId);
-              console.log("Fetched Order:", order);
-              console.log("Order Details:", order.orderDetails);
-              vaccines.forEach(vaccine => {
-                const orderDetail = order.orderDetails.find(detail => detail.facilityVaccineId === vaccine.facilityVaccineId);
-                const remainingQuantity = orderDetail?.remainingQuantity ?? 1;
-                console.log(`Vaccine ID ${vaccine.facilityVaccineId} Remaining Quantity:`, remainingQuantity);
-                quantities.set(vaccine.facilityVaccineId, remainingQuantity);
-              });
-            } catch (err) {
-              console.error("Error fetching order for remaining quantity:", err);
-              vaccines.forEach(vaccine => quantities.set(vaccine.facilityVaccineId, 1));
-            }
-          } else {
-            vaccines.forEach(vaccine => quantities.set(vaccine.facilityVaccineId, 1));
-          }
-
-          console.log("Vaccine Quantities:", quantities);
-          setFacilityVaccines(vaccines);
-          setVaccineQuantities(quantities);
-
-          const firstAvailableVaccine = vaccines.find(vaccine => (quantities.get(vaccine.facilityVaccineId) ?? 1) > 0);
-          if (firstAvailableVaccine) {
-            setFacilityVaccineId(firstAvailableVaccine.facilityVaccineId);
-            await handleVaccineSelect(firstAvailableVaccine.facilityVaccineId);
-          } else {
-            setVaccineStatusMessage("Tất cả vắc xin đã được tiêm hết.");
-          }
-        } else {
-          setFacilityVaccines([]);
-          setErrorFacilityVaccines("Không có vắc xin nào được liên kết với lịch hẹn.");
+        if (appointmentData.vaccinesToInject?.length) {
+          const firstVaccine = appointmentData.vaccinesToInject[0];
+          setFacilityVaccineId(firstVaccine.facilityVaccineId);
+          setDoseNum(Number(firstVaccine.doseNumber));
         }
       } catch (err) {
         console.error("Error fetching appointment:", err);
@@ -133,7 +58,6 @@ export default function DoctorConfirmVaccination() {
         message.error("Không thể tải thông tin lịch hẹn.");
       } finally {
         setLoading(false);
-        setLoadingFacilityVaccines(false);
       }
     };
     fetchAppointment();
@@ -187,59 +111,15 @@ export default function DoctorConfirmVaccination() {
     navigate(`${basePath}/appointments/${id}/step-3`);
   };
 
-  const handleDoseNumChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value === "" || Number(value) < 1) {
-      setDoseNum(1);
-    } else {
-      setDoseNum(Number(value));
-    }
-  };
-
-  const handleVaccineSelect = async (facilityVaccineId: number) => {
-    const remainingQuantity = vaccineQuantities.get(facilityVaccineId) ?? 1;
-    if (remainingQuantity === 0) {
-      message.error("Vắc xin này đã được tiêm hết, vui lòng chọn vắc xin khác.");
-      return;
-    }
-
-    setFacilityVaccineId(facilityVaccineId);
-    console.log("Selected Facility Vaccine ID:", facilityVaccineId);
-
-    try {
-      const facilityVaccine = await facilityVaccineApi.getById(facilityVaccineId);
-      const numberOfDoses = facilityVaccine.vaccine?.numberOfDoses || 1;
-
-      if (appointment?.order?.orderId) {
-        const order = await orderApi.getOrderById(appointment.order.orderId);
-        console.log("Fetched Order:", order);
-        const orderDetail = order.orderDetails.find(detail => detail.facilityVaccineId === facilityVaccineId);
-        const remainingQuantity = orderDetail?.remainingQuantity ?? 1;
-        console.log("Remaining Quantity:", remainingQuantity);
-
-        const calculatedDoseNum = Math.max(1, numberOfDoses - remainingQuantity + 1);
-        console.log("Calculated Dose Number:", calculatedDoseNum);
-        setDoseNum(calculatedDoseNum);
-      } else {
-        setDoseNum(1);
-        console.warn("No order found for appointment, defaulting doseNum to 1");
-      }
-    } catch (err) {
-      console.error("Error calculating dose number:", err);
-      setDoseNum(1);
-      message.error("Không thể tính toán số liều mặc định.");
-    }
+  const handleVaccineSelect = (vaccineId: number, doseNumber: string) => {
+    setFacilityVaccineId(vaccineId);
+    setDoseNum(Number(doseNumber));
   };
 
   const handleConfirmVaccination = async () => {
     if (!id || !appointment || !facilityVaccineId || !expectedDateForNextDose || doseNum < 1) {
       setSubmitMessage("Vui lòng nhập đầy đủ thông tin hợp lệ.");
       message.error("Vui lòng nhập đầy đủ thông tin hợp lệ.");
-      return;
-    }
-    if ((vaccineQuantities.get(facilityVaccineId) ?? 1) === 0) {
-      setSubmitMessage("Vắc xin đã chọn đã được tiêm hết.");
-      message.error("Vắc xin đã chọn đã được tiêm hết.");
       return;
     }
     if (!postVaccinationNotes.trim()) {
@@ -257,7 +137,6 @@ export default function DoctorConfirmVaccination() {
         doseNumber: doseNum,
         expectedDateForNextDose,
       };
-      console.log("Vaccination Payload:", payload);
       await appointmentApi.completeVaccination(payload);
       setSubmitMessage("Đã hoàn thành lịch tiêm.");
       setVaccinationConfirmed(true);
@@ -306,32 +185,65 @@ export default function DoctorConfirmVaccination() {
     navigate(`${basePath}/appointments`);
   };
 
-  // Vaccines to inject display
   const vaccinesToInjectDisplay = appointment?.vaccinesToInject?.length
     ? appointment.vaccinesToInject
         .map((vaccine) => `${vaccine.vaccineName} (Liều ${vaccine.doseNumber}, ${vaccine.diseaseName})`)
         .join(", ")
     : "Không có vắc xin cần tiêm";
 
-  if (loading || loadingPackage || loadingFacilityVaccines) {
+  if (loading || loadingPackage) {
     return (
-      <div className="p-6 bg-gray-50 rounded-lg max-w-4xl mx-auto flex justify-center items-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-indigo-600 mr-2"></div>
-        <span className="text-gray-600">Đang tải thông tin...</span>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
+          <span className="text-lg text-gray-600 font-medium">Đang tải thông tin...</span>
+        </div>
       </div>
     );
   }
-  if (error || errorPackage || errorFacilityVaccines) {
+  if (error || errorPackage) {
     return (
-      <div className="p-6 bg-rose-50 text-rose-600 rounded-lg max-w-4xl mx-auto text-center">
-        {error || errorPackage || errorFacilityVaccines}
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-red-100 text-red-700 p-6 rounded-xl shadow-lg flex items-center space-x-3">
+          <svg
+            className="w-8 h-8"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 9v2m0 4h.01M12 17h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
+            ></path>
+          </svg>
+          <span className="text-lg font-semibold">{error || errorPackage}</span>
+        </div>
       </div>
     );
   }
   if (!appointment) {
     return (
-      <div className="p-6 bg-gray-50 text-gray-600 rounded-lg max-w-4xl mx-auto text-center">
-        Không có dữ liệu lịch hẹn.
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-gray-100 text-gray-600 p-6 rounded-xl shadow-lg flex items-center space-x-3">
+          <svg
+            className="w-8 h-8"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M13 16h-1v-4h-1m1-4h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
+            ></path>
+          </svg>
+          <span className="text-lg font-semibold">Không có dữ liệu lịch hẹn.</span>
+        </div>
       </div>
     );
   }
@@ -341,58 +253,58 @@ export default function DoctorConfirmVaccination() {
   const isPaidStatus = appointment.status === "Paid";
   const isApprovalOrPending = appointment.status === "Approval" || appointment.status === "Pending";
   const isCancelledStatus = appointment.status === "Cancelled";
-  const hasAvailableVaccines = facilityVaccines.some(fv => (vaccineQuantities.get(fv.facilityVaccineId) ?? 1) > 0);
-  const vaccineDisplay = appointment.order?.packageName || "Không có gói vắc xin";
-  const selectedFacilityVaccine = facilityVaccines.find(fv => fv.facilityVaccineId === facilityVaccineId);
+  const hasAvailableVaccines = appointment.vaccinesToInject?.length > 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
-      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-6">
-        <Button
-          type="button"
-          className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors mb-6"
-          onClick={handleComplete}
-        >
-          Quay lại
-        </Button>
-        <h2 className="text-3xl font-bold text-indigo-900 mb-6">Quy trình tiêm chủng</h2>
-        <div className="mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto bg-white shadow-2xl rounded-2xl p-8">
+        <div className="flex justify-between items-center mb-8">
+          <button
+            onClick={handleComplete}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-full font-medium transition-colors duration-200"
+          >
+            Quay lại
+          </button>
+          <h2 className="text-3xl font-bold text-gray-800">Tiêm chủng</h2>
+          <div className="w-24"></div>
+        </div>
+        <div className="mb-10">
           <VaccinationSteps currentStep={isCompletedStatus ? 5 : 3} />
         </div>
 
         <Modal
-          title="Thành công"
+          title={<span className="text-xl font-semibold text-gray-800">Thành công</span>}
           open={vaccinationConfirmed}
           onCancel={() => setVaccinationConfirmed(false)}
           footer={[
-            <AntButton
+            <button
               key="close"
               onClick={() => setVaccinationConfirmed(false)}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Đóng
-            </AntButton>,
-            <AntButton
+            </button>,
+            <button
               key="continue"
-              type="primary"
               onClick={() => {
                 setVaccinationConfirmed(false);
                 handleComplete();
               }}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Tiếp tục
-            </AntButton>,
+            </button>,
           ]}
           centered
+          className="rounded-xl"
         >
-          <p className="text-gray-700">Đã hoàn tất lịch tiêm chủng!</p>
+          <p className="text-gray-600">Đã hoàn tất lịch tiêm chủng!</p>
         </Modal>
 
         {isApprovalOrPending && (
-          <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center">
+          <div className="mb-8 p-6 bg-red-50 text-red-700 rounded-xl flex items-center space-x-3 shadow-sm">
             <svg
-              className="w-6 h-6 mr-2"
+              className="w-8 h-8"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -405,15 +317,15 @@ export default function DoctorConfirmVaccination() {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               ></path>
             </svg>
-            <span className="font-semibold">
+            <span className="text-lg font-semibold">
               Vui lòng hoàn thành khảo sát trước khi tiêm và thanh toán để tiếp tục.
             </span>
           </div>
         )}
         {!isCompletedStatus && isPaidStatus && !vaccinationConfirmed && !isCancelledStatus && (
-          <div className="mb-8 p-4 bg-rose-100 text-rose-700 rounded-lg flex items-center justify-center">
+          <div className="mb-8 p-6 bg-yellow-50 text-yellow-700 rounded-xl flex items-center space-x-3 shadow-sm">
             <svg
-              className="w-6 h-6 mr-2"
+              className="w-8 h-8"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -426,22 +338,22 @@ export default function DoctorConfirmVaccination() {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               ></path>
             </svg>
-            <span className="font-semibold">Đang chờ bác sĩ thực hiện tiêm chủng...</span>
+            <span className="text-lg font-semibold">Đang chờ bác sĩ thực hiện tiêm chủng...</span>
           </div>
         )}
         {(isCompletedStatus || vaccinationConfirmed) && (
-          <div className="mb-8 p-4 bg-emerald-100 text-emerald-800 rounded-lg flex items-center justify-center">
-            <CheckCircleIcon className="w-6 h-6 mr-2" />
-            <span className="font-semibold">
+          <div className="mb-8 p-6 bg-green-50 text-green-700 rounded-xl flex items-center space-x-3 shadow-sm">
+            <CheckCircleIcon className="w-8 h-8" />
+            <span className="text-lg font-semibold">
               Đã tiêm xong! Bệnh nhân đã hoàn thành quá trình tiêm chủng.
             </span>
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-indigo-600">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Thông tin cuộc hẹn</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border-l-4 border-blue-600">
+          <h3 className="text-xl font-semibold text-gray-800 mb-6 border-b border-gray-200 pb-4">Thông tin cuộc hẹn</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
               <div className="flex items-center">
                 <span className="font-medium text-gray-600 w-32">Tên bệnh nhân:</span>
                 <span className="text-gray-800">{child?.fullName || "-"}</span>
@@ -467,10 +379,10 @@ export default function DoctorConfirmVaccination() {
                 </span>
               </div>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center">
                 <span className="font-medium text-gray-600 w-32">Gói vắc xin:</span>
-                <span className="text-gray-800">{vaccineDisplay}</span>
+                <span className="text-gray-800">{appointment.order?.packageName || "Không có gói vắc xin"}</span>
               </div>
               <div className="flex items-center">
                 <span className="font-medium text-gray-600 w-32">Vắc xin cần tiêm:</span>
@@ -489,10 +401,10 @@ export default function DoctorConfirmVaccination() {
         </div>
 
         {isCompletedStatus && (
-          <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-yellow-400">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2 flex items-center">
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border-l-4 border-yellow-500">
+            <h3 className="text-xl font-semibold text-gray-800 mb-6 border-b border-gray-200 pb-4 flex items-center">
               <svg
-                className="w-6 h-6 mr-2 text-yellow-500"
+                className="w-6 h-6 mr-3 text-yellow-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -507,7 +419,7 @@ export default function DoctorConfirmVaccination() {
               </svg>
               Ghi chú sau tiêm
             </h3>
-            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
               <p className="text-gray-800 whitespace-pre-wrap">
                 {appointment.note || "Không có ghi chú sau tiêm."}
               </p>
@@ -516,69 +428,46 @@ export default function DoctorConfirmVaccination() {
         )}
 
         {!isCompletedStatus && !vaccinationConfirmed && !isCancelledStatus && isPaidStatus && (
-          <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-teal-500">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Chi tiết tiêm chủng</h3>
-            {vaccineStatusMessage && (
-              <div className="mb-4 p-4 bg-yellow-100 text-yellow-700 rounded-lg">
-                {vaccineStatusMessage}
-              </div>
-            )}
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border-l-4 border-blue-500">
+            <h3 className="text-xl font-semibold text-gray-800 mb-6 border-b border-gray-200 pb-4">Chi tiết tiêm chủng</h3>
             <div className="space-y-6">
               <div>
-                <label className="block text-gray-600 mb-2">Vắc xin:</label>
-                {facilityVaccines.length > 0 ? (
+                <label className="block text-gray-700 font-medium mb-2">Vắc xin:</label>
+                {appointment.vaccinesToInject?.length > 0 ? (
                   <div className="flex flex-wrap gap-4">
-                    {facilityVaccines.map(fv => (
-                      <Tooltip
-                        key={fv.facilityVaccineId}
-                        title={(vaccineQuantities.get(fv.facilityVaccineId) ?? 1) === 0 ? "Vắc xin này đã được tiêm hết" : ""}
+                    {appointment.vaccinesToInject.map(vaccine => (
+                      <button
+                        key={vaccine.facilityVaccineId}
+                        type="button"
+                        onClick={() => handleVaccineSelect(vaccine.facilityVaccineId, vaccine.doseNumber)}
+                        disabled={submitting}
+                        className={`px-5 py-2 border rounded-lg font-medium transition-colors duration-200 ${
+                          facilityVaccineId === vaccine.facilityVaccineId
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-gray-800 border-gray-300 hover:bg-blue-100 hover:border-blue-500"
+                        }`}
                       >
-                        <button
-                          type="button"
-                          onClick={() => handleVaccineSelect(fv.facilityVaccineId)}
-                          disabled={submitting || (vaccineQuantities.get(fv.facilityVaccineId) ?? 1) === 0}
-                          className={`px-4 py-2 border rounded-lg transition-colors ${
-                            facilityVaccineId === fv.facilityVaccineId
-                              ? "bg-teal-600 text-white border-teal-600"
-                              : (vaccineQuantities.get(fv.facilityVaccineId) ?? 1) === 0
-                              ? "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"
-                              : "bg-white text-gray-800 border-gray-300 hover:bg-teal-100 hover:border-teal-500"
-                          }`}
-                        >
-                          {fv.vaccine?.name ? `${fv.vaccine.name}` : `ID: ${fv.facilityVaccineId}`}
-                        </button>
-                      </Tooltip>
+                        {`${vaccine.vaccineName} (${vaccine.diseaseName})`}
+                      </button>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-600">Không có vắc xin nào được liên kết với lịch hẹn.</p>
-                )}
-                {selectedFacilityVaccine && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                    <p><strong>Mô tả:</strong> {selectedFacilityVaccine.vaccine?.description || "Không có"}</p>
-                    <p><strong>Nhà sản xuất:</strong> {selectedFacilityVaccine.vaccine?.manufacturer || "Không có"}</p>
-                    <p><strong>Loại:</strong> {selectedFacilityVaccine.vaccine?.category || "Không có"}</p>
-                    <p><strong>Nhóm tuổi:</strong> {selectedFacilityVaccine.vaccine?.ageGroup || "Không có"}</p>
-                    <p><strong>Tác dụng phụ:</strong> {selectedFacilityVaccine.vaccine?.sideEffects || "Không có"}</p>
-                    <p><strong>Chống chỉ định:</strong> {selectedFacilityVaccine.vaccine?.contraindications || "Không có"}</p>
-                  </div>
+                  <p className="text-gray-600">Không có vắc xin nào cần tiêm.</p>
                 )}
               </div>
               <div>
-                <label className="block text-gray-600 mb-2">Mũi số:</label>
+                <label className="block text-gray-700 font-medium mb-2">Mũi số:</label>
                 <input
                   type="number"
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                  className="w-full p-4 border border-gray-200 rounded-lg bg-gray-100 cursor-not-allowed text-gray-600"
                   value={doseNum}
-                  onChange={handleDoseNumChange}
-                  min="1"
-                  disabled={submitting}
+                  disabled
                 />
               </div>
               <div>
-                <label className="block text-gray-600 mb-2">Ngày dự kiến liều tiếp theo:</label>
+                <label className="block text-gray-700 font-medium mb-2">Ngày dự kiến liều tiếp theo:</label>
                 <DatePicker
-                  className="w-full"
+                  className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                   value={expectedDateForNextDose ? dayjs(expectedDateForNextDose) : null}
                   onChange={(date) => setExpectedDateForNextDose(date ? date.format("YYYY-MM-DD") : "")}
                   format="DD/MM/YYYY"
@@ -586,11 +475,11 @@ export default function DoctorConfirmVaccination() {
                 />
               </div>
               <div>
-                <label className="block text-gray-600 mb-2">
+                <label className="block text-gray-700 font-medium mb-2">
                   Ghi chú sau tiêm: <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                  className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none transition-colors duration-200"
                   value={postVaccinationNotes}
                   onChange={(e) => setPostVaccinationNotes(e.target.value)}
                   rows={4}
@@ -602,41 +491,44 @@ export default function DoctorConfirmVaccination() {
           </div>
         )}
 
-        <div className="flex justify-end space-x-4 mt-8 items-center">
-          <AntButton
-            type="default"
+        <div className="flex justify-end space-x-4 mt-10 items-center">
+          <button
             onClick={handleBackByPosition}
             disabled={submitting}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition-colors"
+            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-full font-medium transition-colors duration-200"
           >
             Trở lại
-          </AntButton>
+          </button>
           {!isCompletedStatus && !vaccinationConfirmed && !isCancelledStatus && isPaidStatus && (
-            <AntButton
-              type="primary"
-              onClick={handleConfirmVaccination}
-              loading={submitting}
-              disabled={submitting || !hasAvailableVaccines || !facilityVaccineId || !expectedDateForNextDose || doseNum < 1}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
-            >
-              {submitting ? "Đang xử lý..." : "Xác nhận tiêm chủng"}
-            </AntButton>
+            <>
+              <button
+                onClick={() => setIsCancelModalVisible(true)}
+                disabled={submitting}
+                className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
+              >
+                Hủy lịch hẹn
+              </button>
+              <button
+                onClick={handleConfirmVaccination}
+                disabled={submitting || !hasAvailableVaccines || !facilityVaccineId || !expectedDateForNextDose || doseNum < 1}
+                className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 ${submitting || !hasAvailableVaccines || !facilityVaccineId || !expectedDateForNextDose || doseNum < 1 ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                {submitting ? "Đang xử lý..." : "Xác nhận tiêm chủng"}
+              </button>
+            </>
           )}
           {(isCompletedStatus || vaccinationConfirmed || isCancelledStatus || (!isPaidStatus && !isCompletedStatus && !isCancelledStatus)) && (
-            <AntButton
-              type="primary"
+            <button
               onClick={handleComplete}
               disabled={submitting}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Hoàn thành
-            </AntButton>
+            </button>
           )}
           {submitMessage && !vaccinationConfirmed && (
             <span
-              className={`ml-4 font-medium ${
-                submitMessage.includes("thành công") || submitMessage.includes("hoàn thành") ? "text-emerald-600" : "text-rose-500"
-              }`}
+              className={`ml-4 font-medium ${submitMessage.includes("thành công") || submitMessage.includes("hoàn thành") ? "text-green-600" : "text-red-500"}`}
             >
               {submitMessage}
             </span>
@@ -644,7 +536,7 @@ export default function DoctorConfirmVaccination() {
         </div>
 
         <Modal
-          title="Hủy lịch hẹn"
+          title={<span className="text-xl font-semibold text-gray-800">Hủy lịch hẹn</span>}
           open={isCancelModalVisible}
           onOk={handleCancelAppointment}
           onCancel={() => {
@@ -653,13 +545,17 @@ export default function DoctorConfirmVaccination() {
           }}
           okText="Xác nhận hủy"
           cancelText="Đóng"
-          okButtonProps={{ disabled: submitting || !cancelReason.trim(), className: "bg-rose-500 hover:bg-rose-600" }}
-          cancelButtonProps={{ disabled: submitting }}
+          okButtonProps={{ disabled: submitting || !cancelReason.trim(), className: "bg-red-500 hover:bg-red-600" }}
+          cancelButtonProps={{ disabled: submitting, className: "bg-gray-200 hover:bg-gray-300" }}
+          centered
+          className="rounded-xl"
         >
-          <div className="mb-4">
-            <label className="block text-gray-600 mb-2">Lý do hủy lịch hẹn:</label>
+          <div className="space-y-4">
+            <label className="block text-gray-700 font-medium mb-2">
+              Lý do hủy lịch hẹn: <span className="text-red-500">*</span>
+            </label>
             <textarea
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:outline-none"
+              className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none resize-none transition-colors duration-200"
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
               rows={4}

@@ -13,7 +13,7 @@ export default function StaffLayout() {
     { label: "Lịch hôm nay", route: "/staff/appointments", key: "schedule" },
     { label: "Vắc xin cơ sở", route: "/staff/facility-vaccines", key: "facility-vaccines" },
     { label: "Gói vắc xin cơ sở", route: "/staff/vaccine-packages", key: "vaccine-packages" },
-    { label: "Quản lý tài khoản", route: "/staff/account-management", key: "account-management" },
+    { label: "Quản lý tài khoản", route: "/staff/profile", key: "account-management" },
   ];
 
   // Update active state based on current route

@@ -9,6 +9,17 @@ export type AppointmentResponse = {
   todayCount: number;
 };
 
+export type VaccinesToInject= { 
+  facilityVaccineId: number;
+  vaccineName: string;
+  diseaseName: string;
+  doseNumber: string;
+  notes: string;
+  manufacturer: string;
+  sideEffects: string;
+  contraindications: string;
+}
+
 export type Appointment = {
   appointmentId: number;
   status: string;
@@ -23,16 +34,7 @@ export type Appointment = {
   orderId: number | null;
   order: Order | null;
   facilityVaccines: FacilityVaccine[];
-  vaccinesToInject: {
-    vaccineId: number;
-    vaccineName: string;
-    diseaseName: string;
-    doseNumber: string;
-    notes: string;
-    manufacturer: string;
-    sideEffects: string;
-    contraindications: string;
-  }[];
+  vaccinesToInject: VaccinesToInject[]
   appointmentDate: string;
   appointmentTime: string;
   slotTime: string;
@@ -211,6 +213,13 @@ export type UpdateOrderPayload = {
 export const appointmentApi = {
   getAllAppointments: async (pageIndex: number = 1, pageSize: number = 10): Promise<AppointmentResponse> => {
     return await axiosClient.get(`api/FacilityAppointment?&pageIndex=${pageIndex}&pageSize=${pageSize}`);
+  },
+    getAppointmentByDate: async (date: string, pageIndex: number = 1, pageSize: number = 10): Promise<AppointmentResponse> => {
+      return await axiosClient.get(`api/FacilityAppointment/date?date=${date}&pageIndex=${pageIndex}&pageSize=${pageSize}`);
+    },
+
+  getAppointmentByWeek: async (startOfWeek: string, pageIndex: number = 1, pageSize: number = 10): Promise<AppointmentResponse> => {
+    return await axiosClient.get(`api/FacilityAppointment/week?startOfWeek=${startOfWeek}&pageIndex=${pageIndex}&pageSize=${pageSize}`);
   },
   getAppointmentById: async (appointmentId: number): Promise<Appointment> => {
     return await axiosClient.get(`api/FacilityAppointment/${appointmentId}`);
