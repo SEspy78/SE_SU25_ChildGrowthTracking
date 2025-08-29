@@ -302,10 +302,17 @@ const VaccinePackageManagement: React.FC = () => {
   };
 
   const handleUpdateVaccineQuantity = async (packageId: number, facilityVaccineId: number, quantity: number) => {
+    // Optimistically update the vaccineEditStates
     setVaccineEditStates((prev) => ({
       ...prev,
-      [facilityVaccineId]: { ...prev[facilityVaccineId], loading: true, error: null },
+      [facilityVaccineId]: {
+        ...prev[facilityVaccineId],
+        quantity: quantity,
+        loading: true,
+        error: null,
+      },
     }));
+
     try {
       await vaccinePackageApi.updateVaccineQuantity(packageId, facilityVaccineId, quantity);
       const userInfo = getUserInfo();
@@ -315,14 +322,23 @@ const VaccinePackageManagement: React.FC = () => {
       }
       setVaccineEditStates((prev) => ({
         ...prev,
-        [facilityVaccineId]: { ...prev[facilityVaccineId], loading: false },
+        [facilityVaccineId]: {
+          ...prev[facilityVaccineId],
+          loading: false,
+        },
       }));
       setToast({ show: true, message: "Cập nhật số lượng vaccine thành công", type: "success" });
       setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } catch (err: any) {
+      // Revert the optimistic update on error
       setVaccineEditStates((prev) => ({
         ...prev,
-        [facilityVaccineId]: { ...prev[facilityVaccineId], loading: false, error: err.message || "Cập nhật số lượng vaccine thất bại" },
+        [facilityVaccineId]: {
+          ...prev[facilityVaccineId],
+          quantity: prev[facilityVaccineId].quantity, // Revert to previous quantity
+          loading: false,
+          error: err.message || "Cập nhật số lượng vaccine thất bại",
+        },
       }));
       setToast({ show: true, message: err.message || "Cập nhật số lượng vaccine thất bại", type: "error" });
       setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);

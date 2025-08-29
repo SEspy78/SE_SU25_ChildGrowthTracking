@@ -24,7 +24,7 @@ const FacilityDashboard: React.FC = () => {
       setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
       return;
     }
-    if (loading) return; // Tránh gọi API trùng lặp khi đang tải
+    if (loading) return; 
     setLoading(true);
     try {
       const res = await DashBoardAPI.facilityDashboard(userInfo.facilityId);
@@ -32,7 +32,6 @@ const FacilityDashboard: React.FC = () => {
       // So sánh dữ liệu mới và cũ để tránh cập nhật không cần thiết
       if (JSON.stringify(res) !== JSON.stringify(dashboardData)) {
         setDashboardData(res);
-        setToast({ show: true, message: "Cập nhật dữ liệu dashboard thành công", type: "success" });
         setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
       }
     } catch (err: any) {
