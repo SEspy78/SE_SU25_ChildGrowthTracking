@@ -8,15 +8,13 @@ export default function StaffLayout() {
   const location = useLocation();
   const [active, setActive] = useState("schedule");
 
-  // Define sidebar items with their corresponding routes
   const sidebarItems = [
     { label: "Lịch hôm nay", route: "/staff/appointments", key: "schedule" },
     { label: "Vắc xin cơ sở", route: "/staff/facility-vaccines", key: "facility-vaccines" },
-    { label: "Gói vắc xin cơ sở", route: "/staff/vaccine-packages", key: "vaccine-packages" },
+    { label: "Gói vắc xin cơ sở", route: "/staff/facility-vaccinePackage", key: "vaccine-packages" },
     { label: "Quản lý tài khoản", route: "/staff/profile", key: "account-management" },
   ];
 
-  // Update active state based on current route
   useEffect(() => {
     const currentItem = sidebarItems.find((item) => item.route === location.pathname);
     if (currentItem) {

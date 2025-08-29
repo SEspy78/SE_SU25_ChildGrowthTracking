@@ -76,6 +76,16 @@ export interface addRequest {
 }
 
 
+
+export type updatePackageRequest = {
+  facilityId: number;
+  name: string;
+  description: string;
+  duration: number;
+  status: string;
+}
+
+
 export const vaccinePackageApi = {
   getAll: async (facilityId: number): Promise<VaccinePackageResponse> => {
     return await axiosClient.get(`api/VaccinePackages?facilityId=${facilityId}`);
@@ -94,7 +104,16 @@ export const vaccinePackageApi = {
     return await axiosClient.put(`api/VaccinePackages/${packageId}/vaccines/add`, payload);
   },
 
-  updateVaccineQuantity: async (packageId: number, facilityVaccineId: number, quantity: number): Promise<any> => {
-    return await axiosClient.put(`api/VaccinePackages/${packageId}/vaccines/${facilityVaccineId}/quantity`, { quantity });
+  updateVaccineQuantity: async (packageId: number, vaccineId: number, quantity: number): Promise<any> => {
+    return await axiosClient.put(`api/VaccinePackages/${packageId}/vaccines/${vaccineId}`, { quantity });
+  },
+
+  updateVaccinePackage: async (packageId: number, payload: updatePackageRequest): Promise<any> => {
+    return await axiosClient.put(`api/VaccinePackages/${packageId}`, payload);
+  },
+
+  removeVaccineFromPackage : async (packageId: number, vaccineId: number): Promise<any> => {
+    return await axiosClient.delete(`api/VaccinePackages/${packageId}/vaccines/${vaccineId}`);
   }
+
 }

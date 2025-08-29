@@ -2,7 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getUserInfo } from "@/lib/storage";
 import VaccinationSteps from "@/Components/VaccinationStep";
 import { Button } from "@/Components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { appointmentApi, orderApi, type Appointment, type FacilityScheduleResponse } from "@/api/appointmentAPI";
 import { surveyAPI, type Survey, type Question, type QuestionResponse } from "@/api/surveyAPI";
 import { childprofileApi, type VaccineProfile } from "@/api/childInfomationAPI";
@@ -73,9 +73,25 @@ export default function HealthSurvey() {
   const [availableVaccines, setAvailableVaccines] = useState<FacilityVaccine[]>([]);
   const [tempQuantities, setTempQuantities] = useState<Record<number, number>>({});
   const [tempVaccineSelections, setTempVaccineSelections] = useState<Record<number, number>>({});
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" }>({
+    show: false,
+    message: "",
+    type: "success",
+  });
   const user = getUserInfo();
 
   const showSurveySelect = appointment && user?.position === "Doctor" && appointment.status === "Pending";
+
+  // Calculate total package price based on selected vaccines and quantities
+  const totalPrice = useMemo(() => {
+    if (!appointment?.order?.orderDetails || !availableVaccines.length) return 0;
+    return appointment.order.orderDetails.reduce((total, detail) => {
+      const selectedVaccineId = tempVaccineSelections[detail.orderDetailId] || detail.facilityVaccine.facilityVaccineId;
+      const vaccine = availableVaccines.find(v => v.facilityVaccineId === selectedVaccineId);
+      const quantity = tempQuantities[detail.orderDetailId] ?? detail.remainingQuantity;
+      return total + (vaccine?.price || 0) * quantity;
+    }, 0);
+  }, [appointment?.order?.orderDetails, tempQuantities, tempVaccineSelections, availableVaccines]);
 
   useEffect(() => {
     const fetchAppointment = async () => {
@@ -285,6 +301,8 @@ export default function HealthSurvey() {
   const handleCancel = async () => {
     if (!id) {
       message.error("Không có ID lịch hẹn.");
+      setToast({ show: true, message: "Không có ID lịch hẹn.", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
       return;
     }
     setSubmitting(true);
@@ -295,8 +313,12 @@ export default function HealthSurvey() {
       });
       setShowCancelReasonModal(false);
       setShowCancelSuccessModal(true);
+      setToast({ show: true, message: "Hủy lịch hẹn thành công", type: "success" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } catch {
       message.error("Không thể hủy lịch hẹn.");
+      setToast({ show: true, message: "Không thể hủy lịch hẹn", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } finally {
       setSubmitting(false);
     }
@@ -305,6 +327,8 @@ export default function HealthSurvey() {
   const handleRebook = async () => {
     if (!id || !selectedSlotId || !childVaccineProfileId) {
       message.error("Vui lòng chọn ngày và slot.");
+      setToast({ show: true, message: "Vui lòng chọn ngày và slot", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
       return;
     }
     setSubmitting(true);
@@ -317,11 +341,14 @@ export default function HealthSurvey() {
         note: note || "",
       };
       await appointmentApi.cancelAndReBook(payload);
-      message.success("Đã hủy và đặt lại lịch thành công!");
       setShowRebookModal(false);
       navigate("/staff/appointments");
+      setToast({ show: true, message: "Đã hủy và đặt lại lịch thành công", type: "success" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } catch {
       message.error("Không thể hủy và đặt lại lịch.");
+      setToast({ show: true, message: "Không thể hủy và đặt lại lịch", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } finally {
       setSubmitting(false);
     }
@@ -342,6 +369,8 @@ export default function HealthSurvey() {
     if (!appointment || !selectedSurvey) {
       setSubmitMessage("Vui lòng chọn khảo sát trước khi gửi.");
       message.error("Vui lòng chọn khảo sát trước khi gửi.");
+      setToast({ show: true, message: "Vui lòng chọn khảo sát trước khi gửi", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
       return;
     }
     if (!validateHealthInfo()) {
@@ -369,19 +398,24 @@ export default function HealthSurvey() {
           note: "",
         });
         setSubmitMessage("Đã hoàn thành khảo sát sức khỏe.");
-        message.success("Đã hoàn thành khảo sát sức khỏe.");
         setShowSuccessModal(true);
+        setToast({ show: true, message: "Đã hoàn thành khảo sát sức khỏe", type: "success" });
         setTimeout(() => {
           setShowSuccessModal(false);
           navigate(`/doctor/appointments/${id}/step-3`);
-        }, 1200);
+          setToast({ show: false, message: "", type: "success" });
+        }, 2500);
       } else {
         setSubmitMessage(response.message);
         message.error(response.message);
+        setToast({ show: true, message: response.message, type: "error" });
+        setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
       }
     } catch {
       setSubmitMessage("Lỗi khi lưu câu trả lời khảo sát.");
       message.error("Lỗi khi lưu câu trả lời khảo sát.");
+      setToast({ show: true, message: "Lỗi khi lưu câu trả lời khảo sát", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } finally {
       setSubmitting(false);
     }
@@ -391,11 +425,15 @@ export default function HealthSurvey() {
     if (!appointment || !selectedSurvey) {
       setSubmitMessage("Vui lòng chọn khảo sát trước khi gửi.");
       message.error("Vui lòng chọn khảo sát trước khi gửi.");
+      setToast({ show: true, message: "Vui lòng chọn khảo sát trước khi gửi", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
       return;
     }
     if (!isInputComplete()) {
       setSubmitMessage("Vui lòng điền đầy đủ thông tin bắt buộc.");
       message.error("Vui lòng điền đầy đủ thông tin bắt buộc.");
+      setToast({ show: true, message: "Vui lòng điền đầy đủ thông tin bắt buộc", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
       return;
     }
     setShowConfirmSubmitModal(true);
@@ -404,6 +442,8 @@ export default function HealthSurvey() {
   const handleUpdateOrder = async () => {
     if (!appointment?.order?.orderId) {
       message.error("Không tìm thấy thông tin đơn hàng.");
+      setToast({ show: true, message: "Không tìm thấy thông tin đơn hàng", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
       return;
     }
     setSubmitting(true);
@@ -411,7 +451,7 @@ export default function HealthSurvey() {
       const updatedOrderDetails = appointment.order.orderDetails.map((detail) => ({
         diseaseId: detail.diseaseId,
         facilityVaccineId: tempVaccineSelections[detail.orderDetailId] || detail.facilityVaccine.facilityVaccineId,
-        quantity: tempQuantities[detail.orderDetailId] || detail.remainingQuantity,
+        quantity: tempQuantities[detail.orderDetailId] ?? detail.remainingQuantity,
       }));
       const payload = { selectedVaccines: updatedOrderDetails };
       await orderApi.updateOrder(appointment.order.orderId, payload);
@@ -431,12 +471,16 @@ export default function HealthSurvey() {
       setTempQuantities(initialQuantities);
       setTempVaccineSelections(initialSelections);
       setShowAdjustSuccessModal(true);
+      setToast({ show: true, message: "Cập nhật gói vắc xin thành công", type: "success" });
       setTimeout(() => {
         setShowAdjustSuccessModal(false);
-      }, 1500);
+        setToast({ show: false, message: "", type: "success" });
+      }, 2500);
     } catch (error) {
       console.error("Error updating order:", error);
       message.error("Lỗi khi cập nhật gói vắc xin.");
+      setToast({ show: true, message: "Lỗi khi cập nhật gói vắc xin", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } finally {
       setSubmitting(false);
     }
@@ -444,8 +488,8 @@ export default function HealthSurvey() {
 
   const handleQuantityChange = (orderDetailId: number, delta: number) => {
     setTempQuantities((prev) => {
-      const newQuantity = (prev[orderDetailId] || 0) + delta;
-      return { ...prev, [orderDetailId]: Math.max(0, newQuantity) };
+      const newQuantity = (prev[orderDetailId] ?? 0) + delta;
+      return { ...prev, [orderDetailId]: newQuantity < 0 ? 0 : newQuantity };
     });
   };
 
@@ -492,12 +536,12 @@ export default function HealthSurvey() {
         <div className="flex items-center space-x-3">
           <button
             onClick={() => handleQuantityChange(record.orderDetailId, -1)}
-            disabled={tempQuantities[record.orderDetailId] <= 0}
+            disabled={(tempQuantities[record.orderDetailId] ?? 0) <= 0}
             className="w-8 h-8 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
           >
             -
           </button>
-          <span className="text-gray-700 font-medium">{tempQuantities[record.orderDetailId]}</span>
+          <span className="text-gray-700 font-medium">{tempQuantities[record.orderDetailId] ?? 0}</span>
           <button
             onClick={() => handleQuantityChange(record.orderDetailId, 1)}
             className="w-8 h-8 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full flex items-center justify-center transition-colors"
@@ -506,6 +550,21 @@ export default function HealthSurvey() {
           </button>
         </div>
       ),
+    },
+    {
+      title: "Giá",
+      key: "price",
+      render: (_: any, record: any) => {
+        const selectedVaccineId = tempVaccineSelections[record.orderDetailId] || record.facilityVaccine.facilityVaccineId;
+        const vaccine = availableVaccines.find(v => v.facilityVaccineId === selectedVaccineId);
+        const quantity = tempQuantities[record.orderDetailId] ?? 0;
+        const price = vaccine ? (vaccine.price * quantity) : 0;
+        return (
+          <span className="text-gray-700 font-medium">
+            {price.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+          </span>
+        );
+      },
     },
   ];
 
@@ -548,6 +607,17 @@ export default function HealthSurvey() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50 py-8 px-4 sm:px-6 lg:px-8">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div
+          className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-lg text-white font-semibold transition-all duration-300 ease-in-out ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto bg-white shadow-2xl rounded-2xl p-8">
         <div className="flex justify-between items-center mb-8">
           <button
@@ -620,18 +690,26 @@ export default function HealthSurvey() {
           <div className="space-y-6">
             <p className="text-gray-600 font-medium">Danh sách vắc xin trong gói:</p>
             {appointment.order && appointment.order.orderDetails.length > 0 ? (
-              <Table
-                columns={vaccineColumns}
-                dataSource={appointment.order.orderDetails}
-                rowKey="orderDetailId"
-                pagination={false}
-                className="border rounded-xl bg-white shadow-sm"
-                locale={{
-                  emptyText: (
-                    <div className="text-gray-500 py-6 text-center">Không có vắc xin trong gói.</div>
-                  ),
-                }}
-              />
+              <>
+                <Table
+                  columns={vaccineColumns}
+                  dataSource={appointment.order.orderDetails}
+                  rowKey="orderDetailId"
+                  pagination={false}
+                  className="border rounded-xl bg-white shadow-sm"
+                  locale={{
+                    emptyText: (
+                      <div className="text-gray-500 py-6 text-center">Không có vắc xin trong gói.</div>
+                    ),
+                  }}
+                />
+                <div className="bg-blue-50 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                  <span className="text-blue-700 font-semibold text-lg">Tổng giá gói vắc xin:</span>
+                  <span className="text-blue-700 font-semibold text-lg">
+                    {totalPrice.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+                  </span>
+                </div>
+              </>
             ) : (
               <div className="text-gray-500 py-6 text-center">Không có vắc xin trong gói.</div>
             )}

@@ -120,4 +120,8 @@ export const surveyAPI = {
   getSurveyResponse: async (appointmentId: number): Promise<AnswerResponse> => {
     return await axiosClient.get(`api/Survey/${appointmentId}/responses`);
   },
+
+  deleteSurvey: async (surveyId: number): Promise<any> => {
+    return await axiosClient.delete(`api/Survey/${surveyId}`);
+  }
 };

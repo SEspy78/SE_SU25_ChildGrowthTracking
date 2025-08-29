@@ -10,10 +10,12 @@ export default function SurveyManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
+  const [selectedSurveyForDelete, setSelectedSurveyForDelete] = useState<Survey | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [newQuestion, setNewQuestion] = useState<createQuestionPayload>({
     questionText: "",
     questionType: "Text",
@@ -28,11 +30,16 @@ export default function SurveyManagement() {
   const [newSurvey, setNewSurvey] = useState<createSurveyPayload>({
     title: "",
     description: "",
-    startDate: new Date().toISOString().split("T")[0], // Auto-fill with today's date
+    startDate: new Date().toISOString().split("T")[0],
     endDate: "",
     status: "Active",
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" }>({
+    show: false,
+    message: "",
+    type: "success",
+  });
   const questionInputRef = useRef<InputRef>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const dropdownButtonRef = useRef<HTMLButtonElement>(null);
@@ -69,11 +76,15 @@ export default function SurveyManagement() {
         endDate: "",
         status: "Active",
       });
-      setSearchTerm(""); // Reset search term
+      setSearchTerm("");
       const res = await surveyAPI.getAllSurveys();
       setSurveys(res.data);
+      setToast({ show: true, message: "Tạo khảo sát thành công", type: "success" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } catch {
       setCreateError("Tạo khảo sát thất bại.");
+      setToast({ show: true, message: "Tạo khảo sát thất bại", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } finally {
       setCreating(false);
     }
@@ -109,10 +120,38 @@ export default function SurveyManagement() {
       setNewQuestion({ questionText: "", questionType: "Text", isRequired: false });
       setShowAddForm(false);
       questionInputRef.current?.focus();
+      setToast({ show: true, message: "Thêm câu hỏi thành công", type: "success" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } catch {
       setAddError("Thêm câu hỏi thất bại.");
+      setToast({ show: true, message: "Thêm câu hỏi thất bại", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleOpenDeleteModal = (survey: Survey) => {
+    setSelectedSurveyForDelete(survey);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteSurvey = async () => {
+    if (!selectedSurveyForDelete) return;
+    setLoading(true);
+    try {
+      await surveyAPI.deleteSurvey(selectedSurveyForDelete.surveyId);
+      const res = await surveyAPI.getAllSurveys();
+      setSurveys(res.data);
+      setShowDeleteModal(false);
+      setSelectedSurveyForDelete(null);
+      setToast({ show: true, message: `Xóa khảo sát "${selectedSurveyForDelete.title}" thành công`, type: "success" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+    } catch {
+      setToast({ show: true, message: `Xóa khảo sát "${selectedSurveyForDelete.title}" thất bại`, type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -213,7 +252,10 @@ export default function SurveyManagement() {
           >
             Xem
           </Button>
-          <Button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg">
+          <Button
+            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg"
+            onClick={() => handleOpenDeleteModal(survey)}
+          >
             Xóa
           </Button>
         </div>
@@ -256,6 +298,17 @@ export default function SurveyManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div
+          className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-lg text-white font-semibold transition-all duration-300 ease-in-out ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
           <h2 className="text-3xl font-bold text-gray-900">Quản lý bộ câu hỏi thăm khám sức khỏe</h2>
@@ -560,6 +613,39 @@ export default function SurveyManagement() {
               onClick={closePopup}
             >
               Đóng
+            </Button>
+          </div>
+        </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          title="Xác nhận xóa"
+          open={showDeleteModal}
+          onCancel={() => {
+            setShowDeleteModal(false);
+            setSelectedSurveyForDelete(null);
+          }}
+          footer={null}
+          centered
+        >
+          <p className="text-gray-600 mb-4">
+            Bạn có chắc chắn muốn xóa khảo sát <strong>{selectedSurveyForDelete?.title}</strong> không?
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button
+              className="bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg"
+              onClick={() => {
+                setShowDeleteModal(false);
+                setSelectedSurveyForDelete(null);
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white rounded-lg"
+              onClick={handleDeleteSurvey}
+            >
+              Xóa
             </Button>
           </div>
         </Modal>

@@ -4,6 +4,23 @@ import { getUserInfo } from "@/lib/storage";
 import { appointmentApi, type AppointmentResponse, type Appointment } from "../../api/appointmentAPI";
 import Pagination from "@/Components/Pagination";
 
+// Custom hook for debouncing
+const useDebounce = (value: string, delay: number): string => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 const statusStyle: Record<string, string> = {
   Paid: "bg-yellow-100 text-yellow-800 border-yellow-300",
   Completed: "bg-green-100 text-green-800 border-green-300",
@@ -16,35 +33,44 @@ export default function DoctorAppointment() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 500);
   const [pageIndex, setPageIndex] = useState<number>(1);
   const [pageSize] = useState<number>(10);
   const [hasNextPage, setHasNextPage] = useState<boolean>(false);
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" }>({
+    show: false,
+    message: "",
+    type: "success",
+  });
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const res: AppointmentResponse = await appointmentApi.getAllAppointments(pageIndex, pageSize);
+      const res: AppointmentResponse = await appointmentApi.getAllAppointments(pageIndex, pageSize, debouncedSearch);
       const filteredAppointments = (res.appointments || []).filter(
         (item) => item.status === "Paid" || item.status === "Completed" || item.status === "Pending"
       );
-      setAppointments(filteredAppointments);
+      setAppointments(filteredAppointments.sort((a, b) => b.appointmentId - a.appointmentId));
       setHasNextPage((res.appointments?.length || 0) === pageSize);
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } catch {
       setError("Không thể tải danh sách cuộc hẹn.");
       setAppointments([]);
       setHasNextPage(false);
+      setToast({ show: true, message: "Không thể tải danh sách cuộc hẹn", type: "error" });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } finally {
       setLoading(false);
     }
-  }, [pageIndex, pageSize]);
+  }, [pageIndex, pageSize, debouncedSearch]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const filteredAppointments = appointments
-    .filter(item => item.child.fullName.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => b.appointmentId - a.appointmentId);
+  useEffect(() => {
+    setPageIndex(1); // Reset to first page when search term changes
+  }, [debouncedSearch]);
 
   const handleNavigateByRoleAndStatus = (appointmentId: number, status: string) => {
     const user = getUserInfo();
@@ -80,6 +106,17 @@ export default function DoctorAppointment() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50 py-8 px-4 sm:px-6 lg:px-8">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div
+          className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-lg text-white font-semibold transition-all duration-300 ease-in-out ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
           <h2 className="text-3xl font-bold text-gray-800">Tất cả lịch hẹn</h2>
@@ -170,14 +207,14 @@ export default function DoctorAppointment() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredAppointments.length === 0 ? (
+                    {appointments.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="text-center py-8 text-gray-500 font-medium">
                           Không tìm thấy lịch hẹn
                         </td>
                       </tr>
                     ) : (
-                      filteredAppointments.map((item, index) => {
+                      appointments.map((item, index) => {
                         let vaccineDisplay = "Không có vắc xin";
                         if (item.order?.packageName) {
                           vaccineDisplay = item.order.packageName;

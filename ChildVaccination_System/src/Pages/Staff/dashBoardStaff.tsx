@@ -6,6 +6,23 @@ import Pagination from "@/Components/Pagination";
 import { DatePicker, Radio, Button, message } from "antd";
 import dayjs from "dayjs";
 
+// Custom hook for debouncing
+const useDebounce = (value: string, delay: number): string => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 const statusStyle: Record<string, string> = {
   Scheduled: "bg-indigo-500 text-white",
   Confirmed: "bg-teal-500 text-white",
@@ -22,6 +39,7 @@ export default function DashboardStaff() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebounce(search, 500);
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [completedCount, setCompletedCount] = useState<number>(0);
   const [pageIndex, setPageIndex] = useState<number>(1);
@@ -54,7 +72,7 @@ export default function DashboardStaff() {
           res = await appointmentApi.getAppointmentByWeek(formattedDate, pageIndex, pageSize);
         }
       } else {
-        res = await appointmentApi.getAllAppointments(pageIndex, pageSize);
+        res = await appointmentApi.getAllAppointments(pageIndex, pageSize, debouncedSearch);
       }
       setAppointments(res.appointments || []);
       setPendingCount(res.pendingCount || 0);
@@ -70,11 +88,16 @@ export default function DashboardStaff() {
     } finally {
       setLoading(false);
     }
-  }, [pageIndex, pageSize, isFilterApplied, selectedDate, filterMode, user?.accountId]);
+  }, [pageIndex, pageSize, isFilterApplied, selectedDate, filterMode, user?.accountId, debouncedSearch]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Reset pageIndex to 1 when search or filter changes
+  useEffect(() => {
+    setPageIndex(1);
+  }, [debouncedSearch, isFilterApplied, filterMode, selectedDate]);
 
   // Handle filter action
   const handleFilter = () => {
@@ -94,10 +117,6 @@ export default function DashboardStaff() {
     setPageIndex(1); // Reset to first page
     fetchData();
   };
-
-  const filteredAppointments = appointments
-    .filter(item => item.child.fullName.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => b.appointmentId - a.appointmentId);
 
   const handleNavigateByRoleAndStatus = (appointmentId: number, status: string) => {
     let stepIndex = 0;
@@ -235,14 +254,14 @@ export default function DashboardStaff() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredAppointments.length === 0 ? (
+                    {appointments.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="text-center py-12 text-gray-500 text-lg">
                           Không tìm thấy lịch hẹn
                         </td>
                       </tr>
                     ) : (
-                      filteredAppointments.map((item, index) => {
+                      appointments.map((item, index) => {
                         const vaccineDisplay = item.order?.packageName
                           ? item.order.packageName
                           : Array.isArray(item.vaccinesToInject) && item.vaccinesToInject.length > 0

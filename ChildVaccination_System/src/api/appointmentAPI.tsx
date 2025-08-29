@@ -211,8 +211,8 @@ export type UpdateOrderPayload = {
 };
 
 export const appointmentApi = {
-  getAllAppointments: async (pageIndex: number = 1, pageSize: number = 10): Promise<AppointmentResponse> => {
-    return await axiosClient.get(`api/FacilityAppointment?&pageIndex=${pageIndex}&pageSize=${pageSize}`);
+  getAllAppointments: async (pageIndex: number = 1, pageSize: number = 10, childName: string = ""): Promise<AppointmentResponse> => {
+    return await axiosClient.get(`api/FacilityAppointment?&pageIndex=${pageIndex}&pageSize=${pageSize}&childName=${childName}`);
   },
     getAppointmentByDate: async (date: string, pageIndex: number = 1, pageSize: number = 10): Promise<AppointmentResponse> => {
       return await axiosClient.get(`api/FacilityAppointment/date?date=${date}&pageIndex=${pageIndex}&pageSize=${pageSize}`);

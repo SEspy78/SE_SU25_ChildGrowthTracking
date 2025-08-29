@@ -39,46 +39,4 @@ const HeroSection: React.FC = () => (
 
 export default HeroSection;
 
-// export default function HeroSection() {
-//   return (
-//     <section className="bg-gradient-to-r from-blue-50 to-blue-100 py-16 px-6 md:px-20">
-//       <div className="max-w-6xl mx-auto flex flex-col-reverse md:flex-row items-center justify-between gap-10">
-        
-//         {/* PHẦN VĂN BẢN BÊN TRÁI */}
-//         <div className="md:w-1/2 text-center md:text-left">
-//           <h1 className="text-4xl md:text-5xl font-bold text-blue-800 leading-tight">
-//             Hệ thống quản lý cơ sở tiêm chủng
-//           </h1>
-//           <p className="mt-4 text-lg text-gray-700">
-//             Theo dõi lịch tiêm, quản lý mũi tiêm và hồ sơ sức khoẻ trẻ em một cách dễ dàng và chính xác.
-//           </p>
-//           <div className="mt-8 flex justify-center md:justify-start gap-4">
-//             <a
-//               href="/login"
-//               className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition"
-//             >
-//               Đăng nhập hệ thống
-//             </a>
-//             <a
-//               href="/about"
-//               className="text-blue-700 hover:underline font-medium py-3 px-6"
-//             >
-//               Tìm hiểu thêm
-//             </a>
-//           </div>
-//         </div>
-
-//         {/* PHẦN HÌNH ẢNH BÊN PHẢI */}
-//         <div className="md:w-1/2 flex justify-center">
-//           <img
-//             src={vaccineImage} 
-//             alt="Vaccine illustration"
-//             className="w-max h-auto "
-//           />
-//         </div>
-//       </div>
-//     </section>
-//   )
-// }
-
 
