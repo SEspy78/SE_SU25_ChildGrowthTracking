@@ -145,7 +145,7 @@ const AdminDashboard: React.FC = () => {
             color="text-purple-600"
           />
           <StatCard
-            title="Thành Viên Hoạt Động"
+            title="Thành Viên Đăng Ký"
             value={dashboardData.totalUserMemberships}
             icon={<Target className="h-6 w-6 text-orange-600" />}
             color="text-orange-600"
@@ -161,7 +161,7 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="space-y-6">
               <div>
-                <p className="text-sm text-gray-600 mb-2">Tổng Doanh Thu Từ Thành Viên</p>
+                <p className="text-sm text-gray-600 mb-2">Tổng Doanh Thu Từ Gói Thành Viên</p>
                 <p className="text-4xl font-bold text-green-600">
                   {dashboardData.totalRevenueFromMemberships.toLocaleString()} VND
                 </p>

@@ -9,14 +9,10 @@ import { Button } from "@/Components/ui/button";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import dayjs from "dayjs";
 
-type ExtendedAppointment = Appointment & {
-  vaccinesToInject?: { facilityVaccineId: number; vaccineName: string; doseNumber: string; diseaseName: string }[];
-};
-
 export default function DoctorConfirmVaccination() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
-  const [appointment, setAppointment] = useState<ExtendedAppointment | null>(null);
+  const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [vaccinePackage, setVaccinePackage] = useState<VaccinePackage | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingPackage, setLoadingPackage] = useState(true);
@@ -43,13 +39,16 @@ export default function DoctorConfirmVaccination() {
           return;
         }
         const appointmentRes = await appointmentApi.getAppointmentById(Number(id));
-        const appointmentData: ExtendedAppointment = appointmentRes || appointmentRes;
-        setAppointment(appointmentData);
+        setAppointment(appointmentRes);
 
-        if (appointmentData.vaccinesToInject?.length) {
-          const firstVaccine = appointmentData.vaccinesToInject[0];
+        if (appointmentRes.vaccinesToInject?.length) {
+          const firstVaccine = appointmentRes.vaccinesToInject[0];
           setFacilityVaccineId(firstVaccine.facilityVaccineId);
           setDoseNum(Number(firstVaccine.doseNumber));
+        } else if (appointmentRes.order && appointmentRes.facilityVaccines?.length) {
+          const firstVaccine = appointmentRes.facilityVaccines[0];
+          setFacilityVaccineId(firstVaccine.facilityVaccineId);
+          setDoseNum(1); // Default dose number for facilityVaccines
         }
       } catch (err) {
         console.error("Error fetching appointment:", err);
@@ -111,7 +110,7 @@ export default function DoctorConfirmVaccination() {
     navigate(`${basePath}/appointments/${id}/step-3`);
   };
 
-  const handleVaccineSelect = (vaccineId: number, doseNumber: string) => {
+  const handleVaccineSelect = (vaccineId: number, doseNumber: string | number = 1) => {
     setFacilityVaccineId(vaccineId);
     setDoseNum(Number(doseNumber));
   };
@@ -185,9 +184,23 @@ export default function DoctorConfirmVaccination() {
     navigate(`${basePath}/appointments`);
   };
 
+  const getDiseaseNameForFacilityVaccine = (facilityVaccineId: number): string => {
+    if (appointment?.order?.orderDetails) {
+      const orderDetail = appointment.order.orderDetails.find(
+        detail => detail.facilityVaccineId === facilityVaccineId
+      );
+      return orderDetail?.disease.name || "Không xác định";
+    }
+    return "Không xác định";
+  };
+
   const vaccinesToInjectDisplay = appointment?.vaccinesToInject?.length
     ? appointment.vaccinesToInject
         .map((vaccine) => `${vaccine.vaccineName} (Liều ${vaccine.doseNumber}, ${vaccine.diseaseName})`)
+        .join(", ")
+    : appointment && appointment.order && appointment.facilityVaccines?.length
+    ? appointment.facilityVaccines
+        .map((vaccine) => `${vaccine.vaccine.name} (Liều 1, ${getDiseaseNameForFacilityVaccine(vaccine.facilityVaccineId)})`)
         .join(", ")
     : "Không có vắc xin cần tiêm";
 
@@ -253,7 +266,9 @@ export default function DoctorConfirmVaccination() {
   const isPaidStatus = appointment.status === "Paid";
   const isApprovalOrPending = appointment.status === "Approval" || appointment.status === "Pending";
   const isCancelledStatus = appointment.status === "Cancelled";
-  const hasAvailableVaccines = appointment.vaccinesToInject?.length > 0;
+  const hasAvailableVaccines =
+    (appointment.vaccinesToInject?.length > 0) ||
+    (appointment.order && appointment.facilityVaccines?.length > 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -451,6 +466,24 @@ export default function DoctorConfirmVaccination() {
                       </button>
                     ))}
                   </div>
+                ) : appointment && appointment.order && appointment.facilityVaccines ? (
+                  <div className="flex flex-wrap gap-4">
+                    {appointment.facilityVaccines.map(vaccine => (
+                      <button
+                        key={vaccine.facilityVaccineId}
+                        type="button"
+                        onClick={() => handleVaccineSelect(vaccine.facilityVaccineId, 1)}
+                        disabled={submitting}
+                        className={`px-5 py-2 border rounded-lg font-medium transition-colors duration-200 ${
+                          facilityVaccineId === vaccine.facilityVaccineId
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-gray-800 border-gray-300 hover:bg-blue-100 hover:border-blue-500"
+                        }`}
+                      >
+                        {`${vaccine.vaccine.name} (${getDiseaseNameForFacilityVaccine(vaccine.facilityVaccineId)})`}
+                      </button>
+                    ))}
+                  </div>
                 ) : (
                   <p className="text-gray-600">Không có vắc xin nào cần tiêm.</p>
                 )}
@@ -487,7 +520,7 @@ export default function DoctorConfirmVaccination() {
                   disabled={submitting}
                 />
               </div>
-            </div>
+              </div>
           </div>
         )}
 

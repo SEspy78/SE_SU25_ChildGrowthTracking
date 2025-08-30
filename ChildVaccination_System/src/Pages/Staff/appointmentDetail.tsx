@@ -66,7 +66,6 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
     }
   }, [diseaseMap]);
 
-  // Fetch appointment data using getAppointmentById
   useEffect(() => {
     const fetchAppointment = async () => {
       try {
@@ -79,7 +78,6 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
     fetchAppointment();
   }, [appointment.appointmentId]);
 
-  // Fetch vaccine package if order exists
   useEffect(() => {
     if (appointmentData?.order?.packageId) {
       const fetchVaccinePackage = async () => {
@@ -98,19 +96,22 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
     }
   }, [appointmentData?.order]);
 
-  // Fetch vaccine profiles
   useEffect(() => {
     if (!child?.childId) return;
     setLoadingProfiles(true);
     setErrorProfiles("");
     childprofileApi
       .getChildVaccineProfile(child.childId)
-      .then(setVaccineProfiles)
+      .then((profiles) => {
+        console.log("Raw vaccine profiles:", profiles);
+        const filteredProfiles = profiles.filter((vp) => vp.status === "Completed");
+        console.log("Filtered vaccine profiles (Completed only):", filteredProfiles);
+        setVaccineProfiles(filteredProfiles);
+      })
       .catch(() => setErrorProfiles("Không thể tải lịch sử tiêm chủng."))
       .finally(() => setLoadingProfiles(false));
   }, [child?.childId]);
 
-  // Function to calculate age
   const calculateAge = (birthDate: string) => {
     if (!birthDate) return "Không có";
     const birth = new Date(birthDate);
@@ -141,7 +142,6 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
   return (
     <div className="min-h-screen bg-gray-100 p-6 md:p-8">
       <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8">
-        {/* Header and Back Button */}
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Chi tiết lịch hẹn</h2>
           <Button
@@ -153,12 +153,10 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
           </Button>
         </div>
 
-        {/* Vaccination Steps */}
         <div className="mb-10">
           <VaccinationSteps currentStep={0} />
         </div>
 
-        {/* Cancelled Appointment Notice */}
         {appointmentData?.status === "Cancelled" && (
           <div className="mb-8 p-4 bg-red-50 text-red-700 rounded-lg flex items-center">
             <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -168,7 +166,6 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
           </div>
         )}
 
-        {/* Appointment Information */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-indigo-600">
           <h3 className="text-xl font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">
             Thông tin cuộc hẹn
@@ -196,7 +193,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
                   <span className="text-gray-800 font-semibold">{child.fullName} ({calculateAge(child.birthDate)})</span>
                 </div>
                 <div className="flex items-center">
-                  <span className="font-medium text-gray-600 w-36">GiỮ tính:</span>
+                  <span className="font-medium text-gray-600 w-36">Giới tính:</span>
                   <span className="text-gray-800">{child.gender.trim()}</span>
                 </div>
                 <div className="flex items-center">
@@ -250,7 +247,6 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
           </div>
         </div>
 
-        {/* Vaccination History */}
         <Collapse
           activeKey={isHistoryVisible ? ["1"] : []}
           className="mb-8 bg-white rounded-xl shadow-md border-l-4 border-teal-500"
@@ -314,7 +310,6 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
           </Collapse.Panel>
         </Collapse>
 
-        {/* Action Buttons */}
         <div className="flex justify-end mt-5 space-x-4">
           <Button
             type="button"
@@ -355,7 +350,6 @@ interface VaccineProfileCardProps {
 const VaccineProfileCard: React.FC<VaccineProfileCardProps> = ({ vp, getVaccineName, getDiseaseName }) => {
   const [vaccineName, setVaccineName] = useState<string>(`ID: ${vp.vaccineId}`);
   const [diseaseName, setDiseaseName] = useState<string>(`Bệnh ID: ${vp.diseaseId}`);
-  const [numberOfDose, setNumberOfDose] = useState<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -365,14 +359,6 @@ const VaccineProfileCard: React.FC<VaccineProfileCardProps> = ({ vp, getVaccineN
     getDiseaseName(vp.diseaseId).then((name) => {
       if (mounted) setDiseaseName(name);
     });
-    vaccineApi
-      .getById(vp.vaccineId)
-      .then((v) => {
-        if (mounted) setNumberOfDose(v.numberOfDoses ?? null);
-      })
-      .catch(() => {
-        if (mounted) setNumberOfDose(null);
-      });
     return () => {
       mounted = false;
     };
@@ -400,13 +386,10 @@ const VaccineProfileCard: React.FC<VaccineProfileCardProps> = ({ vp, getVaccineN
         <div className="space-y-3">
           <div className="flex items-center">
             <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2"></path>
             </svg>
             <span className="font-medium text-gray-600">Liều:</span>
-            <span className="ml-2 text-gray-800">
-              {vp.doseNum}
-              {numberOfDose !== null ? `/${numberOfDose}` : ""}
-            </span>
+            <span className="ml-2 text-gray-800">{vp.doseNum}</span>
           </div>
           <div className="flex items-center">
             <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
