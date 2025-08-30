@@ -6,6 +6,7 @@ import { appointmentApi, type Appointment } from "@/api/appointmentAPI";
 import { getUserInfo } from "@/lib/storage";
 import { Button } from "@/Components/ui/button";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
+import { vaccinePackageApi, type VaccinePackage } from "@/api/vaccinePackageApi";
 
 type ExtendedAppointment = Appointment & {
   vaccinesToInject?: { vaccineName: string; doseNumber: number; diseaseName: string }[];
@@ -15,8 +16,11 @@ export default function ConfirmVaccination() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [appointment, setAppointment] = useState<ExtendedAppointment | null>(null);
+  const [vaccinePackage, setVaccinePackage] = useState<VaccinePackage | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingPackage, setLoadingPackage] = useState<boolean>(false);
   const [error, setError] = useState("");
+  const [errorPackage, setErrorPackage] = useState<string>("");
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const user = getUserInfo();
@@ -53,6 +57,27 @@ export default function ConfirmVaccination() {
       return () => clearInterval(interval);
     }
   }, [appointment?.status, user?.position]);
+
+  useEffect(() => {
+    if (appointment?.order?.packageId) {
+      const fetchVaccinePackage = async () => {
+        setLoadingPackage(true);
+        setErrorPackage("");
+        try {
+          const response = await vaccinePackageApi.getById(appointment!.order!.packageId);
+          setVaccinePackage(response);
+        } catch {
+          setErrorPackage("Không thể tải thông tin gói vắc xin.");
+        } finally {
+          setLoadingPackage(false);
+        }
+      };
+      fetchVaccinePackage();
+    } else {
+      setVaccinePackage(null);
+      setLoadingPackage(false);
+    }
+  }, [appointment?.order]);
 
   const calculateAge = (birthDate: string): string => {
     if (!birthDate) return "Không có";
@@ -108,11 +133,11 @@ export default function ConfirmVaccination() {
 
   const vaccinesToInjectDisplay = appointment?.vaccinesToInject?.length
     ? appointment.vaccinesToInject
-        .map((vaccine) => `${vaccine.vaccineName} (Liều ${vaccine.doseNumber}, ${vaccine.diseaseName})`)
+        .map((vaccine) => `${vaccine.vaccineName}`)
         .join(", ")
     : "Không có vắc xin cần tiêm";
 
-  if (loading) {
+  if (loading || loadingPackage) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center space-y-4">
@@ -122,7 +147,7 @@ export default function ConfirmVaccination() {
       </div>
     );
   }
-  if (error) {
+  if (error || errorPackage) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="bg-red-100 text-red-700 p-6 rounded-xl shadow-lg flex items-center space-x-3">
@@ -140,7 +165,7 @@ export default function ConfirmVaccination() {
               d="M12 9v2m0 4h.01M12 17h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
             ></path>
           </svg>
-          <span className="text-lg font-semibold">{error}</span>
+          <span className="text-lg font-semibold">{error || errorPackage}</span>
         </div>
       </div>
     );
@@ -173,7 +198,6 @@ export default function ConfirmVaccination() {
   const isCompletedStatus = appointment.status === "Completed";
   const isPaidStatus = appointment.status === "Paid";
   const isApprovalOrPending = appointment.status === "Approval" || appointment.status === "Pending";
-  const vaccineDisplay = appointment.order?.packageName || "Không có gói vắc xin";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -302,7 +326,11 @@ export default function ConfirmVaccination() {
             <div className="space-y-4">
               <div className="flex items-center">
                 <span className="font-medium text-gray-600 w-32">Gói vắc xin:</span>
-                <span className="text-gray-800">{vaccineDisplay}</span>
+                {appointment?.order?.packageId && vaccinePackage ? (
+                  <span className="text-gray-800">{vaccinePackage.name}</span>
+                ) : (
+                  <span className="text-gray-800">Không có gói vắc xin</span>
+                )}
               </div>
               <div className="flex items-center">
                 <span className="font-medium text-gray-600 w-32">Vắc xin cần tiêm:</span>

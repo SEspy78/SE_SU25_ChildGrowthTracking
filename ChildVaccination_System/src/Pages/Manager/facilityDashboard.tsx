@@ -227,7 +227,7 @@ const FacilityDashboard: React.FC = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-indigo-600">Tổng nhân viên</p>
-                  <p className="text-2xl font-bold text-indigo-900">{dashboardData?.staffCounts?.totalStaffs || 0}</p>
+                  <p className="text-2xl font-bold text-indigo-900">{(dashboardData?.staffCounts?.totalStaffs || 0) + (dashboardData?.staffCounts?.totalDoctors || 0) + (dashboardData?.staffCounts?.totalManagers || 0)}</p>
                 </div>
               </div>
             </Card>

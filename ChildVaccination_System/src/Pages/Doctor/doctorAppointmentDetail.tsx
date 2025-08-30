@@ -5,6 +5,7 @@ import { appointmentApi, type AppointmentResponse, type Appointment } from "../.
 import Pagination from "@/Components/Pagination";
 import { DatePicker, Radio, Button, message } from "antd";
 import dayjs from "dayjs";
+import { vaccinePackageApi, type VaccinePackage } from "../../api/vaccinePackageApi";
 
 // Custom hook for debouncing
 const useDebounce = (value: string, delay: number): string => {
@@ -36,7 +37,9 @@ const statusStyle: Record<string, string> = {
 export default function DoctorAppointment() {
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [vaccinePackages, setVaccinePackages] = useState<Record<number, VaccinePackage>>({});
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingPackages, setLoadingPackages] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebounce(search, 500);
@@ -100,6 +103,32 @@ export default function DoctorAppointment() {
     }
   }, [pageIndex, pageSize, debouncedSearch, isFilterApplied, selectedDate, filterMode, user?.accountId]);
 
+  const fetchVaccinePackages = useCallback(async (appointmentIdsWithOrders: number[]) => {
+    setLoadingPackages(true);
+    try {
+      const packagePromises = appointmentIdsWithOrders.map(async (appointmentId) => {
+        const appointment = appointments.find((a) => a.appointmentId === appointmentId);
+        if (appointment?.order?.packageId) {
+          const packageData = await vaccinePackageApi.getById(appointment.order.packageId);
+          return { appointmentId, packageData };
+        }
+        return null;
+      });
+      const results = await Promise.all(packagePromises);
+      const newPackages = results.reduce((acc, result) => {
+        if (result) {
+          acc[result.appointmentId] = result.packageData;
+        }
+        return acc;
+      }, {} as Record<number, VaccinePackage>);
+      setVaccinePackages((prev) => ({ ...prev, ...newPackages }));
+    } catch {
+      // Handle error silently or log it
+    } finally {
+      setLoadingPackages(false);
+    }
+  }, [appointments]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -107,6 +136,15 @@ export default function DoctorAppointment() {
   useEffect(() => {
     setPageIndex(1); // Reset to first page when search or filter changes
   }, [debouncedSearch, isFilterApplied, filterMode, selectedDate]);
+
+  useEffect(() => {
+    const appointmentIdsWithOrders = appointments
+      .filter((a) => a.order?.packageId)
+      .map((a) => a.appointmentId);
+    if (appointmentIdsWithOrders.length > 0) {
+      fetchVaccinePackages(appointmentIdsWithOrders);
+    }
+  }, [appointments, fetchVaccinePackages]);
 
   const handleFilter = () => {
     if (!selectedDate) {
@@ -272,7 +310,7 @@ export default function DoctorAppointment() {
           </div>
         </div>
 
-        {loading ? (
+        {loading || loadingPackages ? (
           <div className="flex flex-col items-center justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
             <span className="mt-4 text-lg text-gray-600 font-medium">Đang tải...</span>
@@ -320,10 +358,12 @@ export default function DoctorAppointment() {
                     ) : (
                       appointments.map((item, index) => {
                         let vaccineDisplay = "Không có vắc xin";
-                        if (item.order?.packageName) {
-                          vaccineDisplay = item.order.packageName;
-                        } else if (Array.isArray(item.facilityVaccines) && item.facilityVaccines.length > 0) {
-                          vaccineDisplay = item.facilityVaccines.map(fv => fv.vaccine?.name || `ID: ${fv.vaccineId}`).join(", ");
+                        if (!item.order) {
+                          vaccineDisplay = item.vaccinesToInject?.length
+                            ? item.vaccinesToInject.map(v => `Vắc xin ${v.vaccineName}`).join(", ")
+                            : "Không có vắc xin";
+                        } else if (item.order?.packageId && vaccinePackages[item.appointmentId]) {
+                          vaccineDisplay = vaccinePackages[item.appointmentId].name;
                         }
 
                         let date = "";

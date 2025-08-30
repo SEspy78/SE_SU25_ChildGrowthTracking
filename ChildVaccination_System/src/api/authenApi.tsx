@@ -76,6 +76,7 @@ export type MemberListResponse = {
         setItemWithExpiry("userInfo", {
         accountId: response.accountId,
         accountName: response.accountName,
+        fullName: response.fullName,
         staffId: response.staffId,
         role: response.role,
         token: response.token,

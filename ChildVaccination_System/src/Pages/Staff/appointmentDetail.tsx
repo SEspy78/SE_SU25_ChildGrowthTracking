@@ -84,7 +84,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
         setLoadingPackage(true);
         setErrorPackage("");
         try {
-          const response = await vaccinePackageApi.getById(appointmentData.order!.packageId);
+          const response = await vaccinePackageApi.getById(appointmentData!.order!.packageId);
           setVaccinePackage(response);
         } catch {
           setErrorPackage("Không thể tải thông tin gói vắc xin.");
@@ -93,6 +93,9 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
         }
       };
       fetchVaccinePackage();
+    } else {
+      setVaccinePackage(null);
+      setLoadingPackage(false);
     }
   }, [appointmentData?.order]);
 
@@ -133,7 +136,7 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
 
   const vaccinesToInjectDisplay = appointmentData?.vaccinesToInject?.length
     ? appointmentData.vaccinesToInject
-        .map((v) => `${v.vaccineName} (Liều ${v.doseNumber})`)
+        .map((v) => `${v.vaccineName}`)
         .join(", ")
     : "Không có vắc xin cần tiêm";
 
@@ -226,10 +229,10 @@ const AppointmentDetail: React.FC<{ appointment: Appointment }> = ({ appointment
                   <span className="font-medium text-gray-600 w-36">Thời gian tiêm:</span>
                   <span className="text-gray-800">{appointment.appointmentTime}</span>
                 </div>
-                {appointmentData?.order && (
+                {appointmentData?.order?.packageId && vaccinePackage && (
                   <div className="flex items-center">
                     <span className="font-medium text-gray-600 w-36">Gói vắc xin:</span>
-                    <span className="text-gray-800 font-semibold">{vaccinePackage?.name || "Đang tải..."}</span>
+                    <span className="text-gray-800 font-semibold">{vaccinePackage.name}</span>
                   </div>
                 )}
               </div>
@@ -386,7 +389,7 @@ const VaccineProfileCard: React.FC<VaccineProfileCardProps> = ({ vp, getVaccineN
         <div className="space-y-3">
           <div className="flex items-center">
             <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2"></path>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
             </svg>
             <span className="font-medium text-gray-600">Liều:</span>
             <span className="ml-2 text-gray-800">{vp.doseNum}</span>
@@ -410,5 +413,4 @@ const VaccineProfileCard: React.FC<VaccineProfileCardProps> = ({ vp, getVaccineN
     </div>
   );
 };
-
 export default AppointmentDetail;

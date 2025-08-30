@@ -171,13 +171,26 @@ export default function Payment() {
     }
   };
 
-  const handleContinue = () => {
-    if (!id) return;
-    if (user?.position === "Doctor") {
-      navigate(`/doctor/appointments/${id}/step-4`);
-    } else {
-      navigate(`/staff/appointments/${id}/step-4`);
+  const handleNext = async () => {
+    if (!id || !appointment || !appointment.order || appointment.order.status !== "Paid" || appointment.status !== "Approval") return;
+    setSubmitting(true);
+    try {
+      await appointmentApi.updateAppointmentStatus(Number(id), {
+        status: "Paid",
+        note: "Gói đã thanh toán",
+      });
+      setAppointment({ ...appointment, status: "Paid" });
+      navigate(user?.position === "Doctor" ? `/doctor/appointments/${id}/step-4` : `/staff/appointments/${id}/step-4`);
+    } catch {
+      // Silent failure, no message displayed
+    } finally {
+      setSubmitting(false);
     }
+  };
+
+  const handleContinue = () => {
+    if (!id || !isAppointmentPaid) return;
+    navigate(user?.position === "Doctor" ? `/doctor/appointments/${id}/step-4` : `/staff/appointments/${id}/step-4`);
   };
 
   const handlePaymentMethodChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -402,7 +415,18 @@ export default function Payment() {
               {submitting ? "Đang xử lý..." : "Xác nhận thanh toán"}
             </AntButton>
           )}
-          {(isAppointmentPaid || isOrderPaid) && (
+          {appointment?.order && appointment.order.status === "Paid" && appointment.status === "Approval" && (
+            <AntButton
+              type="primary"
+              onClick={handleNext}
+              loading={submitting}
+              disabled={submitting}
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition duration-300"
+            >
+              {submitting ? "Đang xử lý..." : "Tiếp theo"}
+            </AntButton>
+          )}
+          {isAppointmentPaid && (
             <AntButton
               type="primary"
               onClick={handleContinue}

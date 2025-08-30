@@ -10,6 +10,7 @@ export const setItemWithExpiry = (key: string, value: any, ttl: number) => {
 export type UserInfo = {
   accountId: number;
   accountName: string;
+  fullName: string;
   facilityId: number;
   staffId: number;
   position: string;

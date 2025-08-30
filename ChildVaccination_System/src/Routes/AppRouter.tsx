@@ -149,6 +149,7 @@ import StaffProfile from "@/Pages/Staff/staffProfileManagement";
 import VaccinePackageViewer from "@/Pages/Staff/packageVaccineList";
 import DashboardManager from "@/Pages/Manager/appointmentManagement";
 import AppointmentDetail from "@/Pages/Manager/appointmentDetailManager";
+import DoctorProfile from "@/Pages/Doctor/doctorProfile";
 const App: React.FC = () => {
   return (
     <Router>
@@ -193,6 +194,7 @@ const App: React.FC = () => {
       <Route path="appointments/:id/step-3" element={<Payment />} />
       <Route path="appointments/:id/step-4" element={<DoctorConfirmVaccination />} />
       <Route path="appointments/:id/finish" element={<CompletedVaccinationInfo />} />
+      <Route path="account" element={<DoctorProfile />} />
     </Route>
     {/* Doctor */}
 

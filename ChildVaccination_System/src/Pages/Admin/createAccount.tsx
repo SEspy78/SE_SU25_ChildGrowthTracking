@@ -135,216 +135,219 @@ const CreateFacility: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-md mx-auto bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+      <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
         <div className="flex items-center gap-3 mb-6">
           <UserPlus className="w-8 h-8 text-blue-600" />
           <h1 className="text-2xl font-bold text-gray-800">Tạo cơ sở và tài khoản quản lý</h1>
         </div>
 
-        <div className="space-y-4">
-          {/* Manager Information */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Thông tin quản lý</h3>
-            {/* Account Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tên tài khoản</label>
-              <Input
-                ref={accountNameRef}
-                className={`w-full border-gray-200 rounded-lg ${
-                  formErrors.accountName ? "border-red-500" : ""
-                }`}
-                placeholder="Nhập tên tài khoản"
-                value={formData.accountName}
-                onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
-                disabled={loading}
-              />
-              {formErrors.accountName && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.accountName}</p>
-              )}
+        <div className="space-y-6">
+          {/* Form Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Manager Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800">Thông tin quản lý</h3>
+              {/* Account Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tên tài khoản</label>
+                <Input
+                  ref={accountNameRef}
+                  className={`w-full border-gray-200 rounded-lg ${
+                    formErrors.accountName ? "border-red-500" : ""
+                  }`}
+                  placeholder="Nhập tên tài khoản"
+                  value={formData.accountName}
+                  onChange={(e) => setFormData({ ...formData, accountName: e.target.value })}
+                  disabled={loading}
+                />
+                {formErrors.accountName && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.accountName}</p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
+                <Input.Password
+                  className={`w-full border-gray-200 rounded-lg ${
+                    formErrors.password ? "border-red-500" : ""
+                  }`}
+                  placeholder="Nhập mật khẩu"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  disabled={loading}
+                />
+                {formErrors.password && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.password}</p>
+                )}
+              </div>
+
+              {/* Manager Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email quản lý</label>
+                <Input
+                  className={`w-full border-gray-200 rounded-lg ${
+                    formErrors.managerEmail ? "border-red-500" : ""
+                  }`}
+                  placeholder="Nhập email quản lý"
+                  value={formData.managerEmail}
+                  onChange={(e) => setFormData({ ...formData, managerEmail: e.target.value })}
+                  disabled={loading}
+                />
+                {formErrors.managerEmail && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.managerEmail}</p>
+                )}
+              </div>
+
+              {/* Manager Full Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Họ tên quản lý</label>
+                <Input
+                  className={`w-full border-gray-200 rounded-lg ${
+                    formErrors.managerFullName ? "border-red-500" : ""
+                  }`}
+                  placeholder="Nhập họ tên quản lý"
+                  value={formData.managerFullName}
+                  onChange={(e) => setFormData({ ...formData, managerFullName: e.target.value })}
+                  disabled={loading}
+                />
+                {formErrors.managerFullName && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.managerFullName}</p>
+                )}
+              </div>
+
+              {/* Manager Phone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại quản lý</label>
+                <Input
+                  className={`w-full border-gray-200 rounded-lg ${
+                    formErrors.managerPhone ? "border-red-500" : ""
+                  }`}
+                  placeholder="Nhập số điện thoại quản lý"
+                  value={formData.managerPhone}
+                  onChange={(e) => setFormData({ ...formData, managerPhone: e.target.value })}
+                  disabled={loading}
+                />
+                {formErrors.managerPhone && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.managerPhone}</p>
+                )}
+              </div>
+
+              {/* Manager Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả quản lý</label>
+                <TextArea
+                  className="w-full border-gray-200 rounded-lg"
+                  placeholder="Nhập mô tả quản lý (tùy chọn)"
+                  value={formData.managerDescription}
+                  onChange={(e) => setFormData({ ...formData, managerDescription: e.target.value })}
+                  disabled={loading}
+                  rows={4}
+                />
+              </div>
             </div>
 
-            {/* Password */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
-              <Input.Password
-                className={`w-full border-gray-200 rounded-lg ${
-                  formErrors.password ? "border-red-500" : ""
-                }`}
-                placeholder="Nhập mật khẩu"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                disabled={loading}
-              />
-              {formErrors.password && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.password}</p>
-              )}
-            </div>
+            {/* Facility Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800">Thông tin cơ sở</h3>
+              {/* Facility Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tên cơ sở</label>
+                <Input
+                  className={`w-full border-gray-200 rounded-lg ${
+                    formErrors.facilityName ? "border-red-500" : ""
+                  }`}
+                  placeholder="Nhập tên cơ sở"
+                  value={formData.facilityName}
+                  onChange={(e) => setFormData({ ...formData, facilityName: e.target.value })}
+                  disabled={loading}
+                />
+                {formErrors.facilityName && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.facilityName}</p>
+                )}
+              </div>
 
-            {/* Manager Email */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email quản lý</label>
-              <Input
-                className={`w-full border-gray-200 rounded-lg ${
-                  formErrors.managerEmail ? "border-red-500" : ""
-                }`}
-                placeholder="Nhập email quản lý"
-                value={formData.managerEmail}
-                onChange={(e) => setFormData({ ...formData, managerEmail: e.target.value })}
-                disabled={loading}
-              />
-              {formErrors.managerEmail && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.managerEmail}</p>
-              )}
-            </div>
+              {/* License Number */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Số giấy phép</label>
+                <Input
+                  type="number"
+                  className={`w-full border-gray-200 rounded-lg ${
+                    formErrors.licenseNumber ? "border-red-500" : ""
+                  }`}
+                  placeholder="Nhập số giấy phép"
+                  value={formData.licenseNumber || ""}
+                  onChange={(e) => setFormData({ ...formData, licenseNumber: Number(e.target.value) })}
+                  disabled={loading}
+                />
+                {formErrors.licenseNumber && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.licenseNumber}</p>
+                )}
+              </div>
 
-            {/* Manager Full Name */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Họ tên quản lý</label>
-              <Input
-                className={`w-full border-gray-200 rounded-lg ${
-                  formErrors.managerFullName ? "border-red-500" : ""
-                }`}
-                placeholder="Nhập họ tên quản lý"
-                value={formData.managerFullName}
-                onChange={(e) => setFormData({ ...formData, managerFullName: e.target.value })}
-                disabled={loading}
-              />
-              {formErrors.managerFullName && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.managerFullName}</p>
-              )}
-            </div>
+              {/* Facility Address */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ cơ sở</label>
+                <Input
+                  className={`w-full border-gray-200 rounded-lg ${
+                    formErrors.facilityAddress ? "border-red-500" : ""
+                  }`}
+                  placeholder="Nhập địa chỉ cơ sở"
+                  value={formData.facilityAddress}
+                  onChange={(e) => setFormData({ ...formData, facilityAddress: e.target.value })}
+                  disabled={loading}
+                />
+                {formErrors.facilityAddress && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.facilityAddress}</p>
+                )}
+              </div>
 
-            {/* Manager Phone */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại quản lý</label>
-              <Input
-                className={`w-full border-gray-200 rounded-lg ${
-                  formErrors.managerPhone ? "border-red-500" : ""
-                }`}
-                placeholder="Nhập số điện thoại quản lý"
-                value={formData.managerPhone}
-                onChange={(e) => setFormData({ ...formData, managerPhone: e.target.value })}
-                disabled={loading}
-              />
-              {formErrors.managerPhone && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.managerPhone}</p>
-              )}
-            </div>
+              {/* Facility Phone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại cơ sở</label>
+                <Input
+                  className={`w-full border-gray-200 rounded-lg ${
+                    formErrors.facilityPhone ? "border-red-500" : ""
+                  }`}
+                  placeholder="Nhập số điện thoại cơ sở"
+                  value={formData.facilityPhone || ""}
+                  onChange={(e) => setFormData({ ...formData, facilityPhone: Number(e.target.value) })}
+                  disabled={loading}
+                />
+                {formErrors.facilityPhone && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.facilityPhone}</p>
+                )}
+              </div>
 
-            {/* Manager Description */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả quản lý</label>
-              <TextArea
-                className="w-full border-gray-200 rounded-lg"
-                placeholder="Nhập mô tả quản lý (tùy chọn)"
-                value={formData.managerDescription}
-                onChange={(e) => setFormData({ ...formData, managerDescription: e.target.value })}
-                disabled={loading}
-                rows={4}
-              />
-            </div>
-          </div>
+              {/* Facility Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email cơ sở</label>
+                <Input
+                  className={`w-full border-gray-200 rounded-lg ${
+                    formErrors.facilityEmail ? "border-red-500" : ""
+                  }`}
+                  placeholder="Nhập email cơ sở"
+                  value={formData.facilityEmail}
+                  onChange={(e) => setFormData({ ...formData, facilityEmail: e.target.value })}
+                  disabled={loading}
+                />
+                {formErrors.facilityEmail && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.facilityEmail}</p>
+                )}
+              </div>
 
-          {/* Facility Information */}
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Thông tin cơ sở</h3>
-            {/* Facility Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tên cơ sở</label>
-              <Input
-                className={`w-full border-gray-200 rounded-lg ${
-                  formErrors.facilityName ? "border-red-500" : ""
-                }`}
-                placeholder="Nhập tên cơ sở"
-                value={formData.facilityName}
-                onChange={(e) => setFormData({ ...formData, facilityName: e.target.value })}
-                disabled={loading}
-              />
-              {formErrors.facilityName && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.facilityName}</p>
-              )}
-            </div>
-
-            {/* License Number */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Số giấy phép</label>
-              <Input
-                type="number"
-                className={`w-full border-gray-200 rounded-lg ${
-                  formErrors.licenseNumber ? "border-red-500" : ""
-                }`}
-                placeholder="Nhập số giấy phép"
-                value={formData.licenseNumber || ""}
-                onChange={(e) => setFormData({ ...formData, licenseNumber: Number(e.target.value) })}
-                disabled={loading}
-              />
-              {formErrors.licenseNumber && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.licenseNumber}</p>
-              )}
-            </div>
-
-            {/* Facility Address */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ cơ sở</label>
-              <Input
-                className={`w-full border-gray-200 rounded-lg ${
-                  formErrors.facilityAddress ? "border-red-500" : ""
-                }`}
-                placeholder="Nhập địa chỉ cơ sở"
-                value={formData.facilityAddress}
-                onChange={(e) => setFormData({ ...formData, facilityAddress: e.target.value })}
-                disabled={loading}
-              />
-              {formErrors.facilityAddress && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.facilityAddress}</p>
-              )}
-            </div>
-
-            {/* Facility Phone */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại cơ sở</label>
-              <Input
-                className={`w-full border-gray-200 rounded-lg ${
-                  formErrors.facilityPhone ? "border-red-500" : ""
-                }`}
-                placeholder="Nhập số điện thoại cơ sở"
-                value={formData.facilityPhone || ""}
-                onChange={(e) => setFormData({ ...formData, facilityPhone: Number(e.target.value) })}
-                disabled={loading}
-              />
-              {formErrors.facilityPhone && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.facilityPhone}</p>
-              )}
-            </div>
-
-            {/* Facility Email */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email cơ sở</label>
-              <Input
-                className={`w-full border-gray-200 rounded-lg ${
-                  formErrors.facilityEmail ? "border-red-500" : ""
-                }`}
-                placeholder="Nhập email cơ sở"
-                value={formData.facilityEmail}
-                onChange={(e) => setFormData({ ...formData, facilityEmail: e.target.value })}
-                disabled={loading}
-              />
-              {formErrors.facilityEmail && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.facilityEmail}</p>
-              )}
-            </div>
-
-            {/* Facility Description */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả cơ sở</label>
-              <TextArea
-                className="w-full border-gray-200 rounded-lg"
-                placeholder="Nhập mô tả cơ sở (tùy chọn)"
-                value={formData.facilityDescription}
-                onChange={(e) => setFormData({ ...formData, facilityDescription: e.target.value })}
-                disabled={loading}
-                rows={4}
-              />
+              {/* Facility Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả cơ sở</label>
+                <TextArea
+                  className="w-full border-gray-200 rounded-lg"
+                  placeholder="Nhập mô tả cơ sở (tùy chọn)"
+                  value={formData.facilityDescription}
+                  onChange={(e) => setFormData({ ...formData, facilityDescription: e.target.value })}
+                  disabled={loading}
+                  rows={4}
+                />
+              </div>
             </div>
           </div>
 

@@ -75,7 +75,7 @@ const StaffProfile: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <UserOutlined className="text-3xl text-blue-600" />
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Quản lý hồ sơ</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Profile Staff</h2>
           </div>
         </div>
 
@@ -170,17 +170,7 @@ const StaffProfile: React.FC = () => {
                 className="rounded-lg border-gray-200 focus:ring-2 focus:ring-blue-500 resize-none transition-colors duration-200"
               />
             </Form.Item>
-            <Form.Item
-              label={<span className="text-gray-700 font-medium">Trạng thái</span>}
-              name="status"
-              valuePropName="checked"
-            >
-              <Switch
-                checkedChildren="Kích hoạt"
-                unCheckedChildren="Vô hiệu"
-                className="bg-gray-300"
-              />
-            </Form.Item>
+           
             <div className="flex justify-end space-x-4">
               <button
                 type="button"
