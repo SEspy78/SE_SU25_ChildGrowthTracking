@@ -234,7 +234,7 @@ const FacilityManagement: React.FC = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border hover:cursor-pointer border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Hoạt động</option>
@@ -340,7 +340,7 @@ const FacilityManagement: React.FC = () => {
                           <div className="flex space-x-2">
                             <button
                               onClick={() => handleEdit(facility.facilityId)}
-                              className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
+                              className="text-green-600 hover:cursor-pointer hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
                             >
                               <Edit className="w-4 h-4" />
                             </button>
@@ -436,7 +436,7 @@ const FacilityManagement: React.FC = () => {
               <Switch checkedChildren="Hoạt động" unCheckedChildren="Ngừng hoạt động" />
             </Form.Item>
             <Form.Item
-              label="Tệp giấy phép"
+              label="Cập nhật giấy phép"
               name="licenseFile"
               valuePropName="fileList"
             >
@@ -449,19 +449,6 @@ const FacilityManagement: React.FC = () => {
                 <Button className="rounded-lg">Chọn tệp</Button>
               </Upload>
             </Form.Item>
-            {currentLicenseFile && (
-              <div className="text-sm text-gray-600">
-                <span>Tệp giấy phép hiện tại: </span>
-                <a
-                  href={currentLicenseFile}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline break-all"
-                >
-                  {currentLicenseFile}
-                </a>
-              </div>
-            )}
             <div className="flex justify-end space-x-4">
               <Button
                 onClick={handleCancel}

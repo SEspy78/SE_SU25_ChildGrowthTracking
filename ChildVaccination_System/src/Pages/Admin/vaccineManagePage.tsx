@@ -674,7 +674,7 @@ const VaccineManagement: React.FC = () => {
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border cursor-pointer border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Tất cả loại</option>
               {categories.map((category) => (
@@ -687,7 +687,7 @@ const VaccineManagement: React.FC = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border hover:cursor-pointer border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="Approved">Hoạt động</option>
@@ -816,9 +816,9 @@ const VaccineManagement: React.FC = () => {
                             </div>
                             <div
                               className="text-sm text-gray-500 max-w-xs truncate"
-                              title={vaccine.sideEffects}
+                              title={vaccine.diseases.map((d) => d.name).join(", ")}
                             >
-                              {vaccine.sideEffects}
+                              {vaccine.diseases.map((d) => d.name).join(", ")}
                             </div>
                           </div>
                         </td>
@@ -864,20 +864,10 @@ const VaccineManagement: React.FC = () => {
                           <div className="flex space-x-2">
                             <button
                               onClick={() => openUpdateModal(vaccine)}
-                              className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
+                              className="text-blue-600 hover:cursor-pointer hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
                               title="Cập nhật"
                             >
                               <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedVaccine(vaccine);
-                                setShowDeleteModal(true);
-                              }}
-                              className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
-                              title="Xoá"
-                            >
-                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>

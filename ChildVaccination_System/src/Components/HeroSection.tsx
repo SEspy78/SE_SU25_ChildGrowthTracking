@@ -1,6 +1,6 @@
 import { Button } from "./ui/button";
 import { Link } from "react-router-dom";
-import vaccineImage from "../assets/vaccine-illustration.png";
+import vaccineImage from "../assets/download.png";
 
 const HeroSection = () => (
   <section className="relative py-16 md:py-24 overflow-hidden bg-gradient-to-br from-indigo-50 via-blue-100 to-purple-100">
@@ -20,7 +20,7 @@ const HeroSection = () => (
         </Link>
       </div>
       <div className="flex justify-center md:w-1/2 relative">
-        <div className="relative transform transition-all duration-500 hover:scale-105">
+        <div className="relative transform transition-all duration-500 scale-130 hover:scale-135">
           <img
             src={vaccineImage}
             alt="Vaccine illustration"

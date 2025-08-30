@@ -242,7 +242,7 @@ const MemberManagement: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-6">
           <div className="flex flex-wrap gap-2 mb-6">
             <button
-              className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+              className={`px-6 py-3 rounded-lg hover:cursor-pointer font-medium transition-all duration-200 ${
                 tab === "normal" 
                   ? "bg-blue-600 text-white shadow-md" 
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -252,7 +252,7 @@ const MemberManagement: React.FC = () => {
               Tài khoản thường ({filteredMembers.length})
             </button>
             <button
-              className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+              className={`px-6 py-3 hover:cursor-pointer rounded-lg font-medium transition-all duration-200 ${
                 tab === "vip" 
                   ? "bg-blue-600 text-white shadow-md" 
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -278,7 +278,7 @@ const MemberManagement: React.FC = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-200 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
+              className="px-4 py-2 border hover:cursor-pointer border-gray-200 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="active">Hoạt động</option>
@@ -336,17 +336,12 @@ const MemberManagement: React.FC = () => {
                           <div className="flex space-x-3">
                             <button
                               onClick={() => handleViewChildren(member.accountId, member)}
-                              className="text-blue-500 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition-colors duration-200"
+                              className="text-blue-500 hover:cursor-pointer hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition-colors duration-200"
                               title="Xem trẻ em"
                             >
                               <Eye className="w-5 h-5" />
                             </button>
-                            <button
-                              className="text-green-500 hover:text-green-600 p-2 rounded-full hover:bg-green-50 transition-colors duration-200"
-                              title="Chỉnh sửa"
-                            >
-                              <Edit className="w-5 h-5" />
-                            </button>
+                            
                           </div>
                         </td>
                       </tr>
@@ -455,17 +450,12 @@ const MemberManagement: React.FC = () => {
                           <div className="flex space-x-3">
                             <button
                               onClick={() => handleViewChildren(member.accountId, member)}
-                              className="text-blue-500 hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition-colors duration-200"
+                              className="text-blue-500 hover:cursor-pointer hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition-colors duration-200"
                               title="Xem trẻ em"
                             >
-                              <Eye className="w-5 h-5" />
+                              <Eye className=" w-5 h-5" />
                             </button>
-                            <button
-                              className="text-green-500 hover:text-green-600 p-2 rounded-full hover:bg-green-50 transition-colors duration-200"
-                              title="Chỉnh sửa"
-                            >
-                              <Edit className="w-5 h-5" />
-                            </button>
+                            
                           </div>
                         </td>
                       </tr>

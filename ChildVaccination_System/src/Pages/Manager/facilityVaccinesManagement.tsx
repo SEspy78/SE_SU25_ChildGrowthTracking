@@ -1,87 +1,105 @@
-import React, { useEffect, useState } from "react";
-import {
-  facilityVaccineApi,
-  vaccineApi,
-  type FacilityVaccine,
-  type Vaccine,
-  type CreateFacilityVaccineRequest,
-} from "@/api/vaccineApi";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { facilityVaccineApi, type CreateFacilityVaccineRequest, type FacilityVaccine } from "@/api/vaccineApi";
+import { Loader2, Plus, Pencil, ChevronLeft, ChevronRight, Search, AlertCircle } from "lucide-react";
+import { Modal, Form, Input, Button, InputNumber, Select } from "antd";
 import { getUserInfo } from "@/lib/storage";
-import { Loader2, Syringe, AlertCircle, Plus, Edit, ChevronLeft, ChevronRight, Search } from "lucide-react";
-import { Button, Col, Row, Form, Input, Select, Table, Modal, InputNumber } from "antd";
 
 const { Option } = Select;
 
-interface FacilityVaccineResponse {
-  totalCount: number;
-  data: FacilityVaccine[];
-}
+// Custom debounce hook
+const useDebounce = (callback: (value: string) => void, delay: number) => {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-const FacilityVaccinePage: React.FC = () => {
-  const [vaccines, setVaccines] = useState<FacilityVaccine[]>([]);
-  const [totalCount, setTotalCount] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notificationModal, setNotificationModal] = useState<{
-    show: boolean;
-    message: string;
-    type: "success" | "error";
-  }>({
-    show: false,
-    message: "",
-    type: "success",
-  });
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [selectedFacilityVaccine, setSelectedFacilityVaccine] = useState<FacilityVaccine | null>(null);
-  const [allVaccines, setAllVaccines] = useState<Vaccine[]>([]);
-  const [form] = Form.useForm();
-  const [updateForm] = Form.useForm();
-  const [formLoading, setFormLoading] = useState(false);
-  const [selectedVaccine, setSelectedVaccine] = useState<Vaccine | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize] = useState<number>(10);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  return useCallback(
+    (value: string) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        callback(value);
+      }, delay);
+    },
+    [callback, delay]
+  );
+};
 
+const VaccineManagement: React.FC = () => {
   const user = getUserInfo();
-  const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
+  const [vaccines, setVaccines] = useState<FacilityVaccine[]>([]);
+  const [filteredVaccines, setFilteredVaccines] = useState<FacilityVaccine[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage] = useState<number>(10);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [selectedVaccine, setSelectedVaccine] = useState<FacilityVaccine | null>(null);
+  const [formData, setFormData] = useState<CreateFacilityVaccineRequest>({
+    facilityId: user?.facilityId ?? 1,
+    vaccineId: 0,
+    price: 0,
+    availableQuantity: 0,
+    batchNumber: 0,
+    expiryDate: "",
+    importDate: "",
+    status: "Approved",
+  });
+  const [addForm] = Form.useForm();
+  const [updateForm] = Form.useForm();
 
-  const fetchVaccines = async (suppressSuccessNotification = false) => {
+  // Debounced search function
+  const debouncedSearch = useDebounce((value: string) => {
+    setSearchQuery(value.trim());
+    setCurrentPage(1); // Reset to first page on new search
+  }, 300);
+
+  const fetchVaccines = async () => {
     if (!user?.facilityId) {
-      setError("Không tìm thấy mã cơ sở.");
-      setNotificationModal({ show: true, message: "Không tìm thấy mã cơ sở.", type: "error" });
+      setError("Không tìm thấy ID cơ sở. Vui lòng đăng nhập lại.");
+      setFilteredVaccines([]);
+      setLoading(false);
       return;
     }
     try {
       setLoading(true);
-      const res: FacilityVaccineResponse = await facilityVaccineApi.getAll(user.facilityId);
-      let filteredVaccines = res.data || [];
-      
+      const response = await facilityVaccineApi.getAll(user.facilityId);
+      const data = response.data || [];
+      let filtered = data;
+
       // Apply status filter
-      if (statusFilter !== "all") {
-        filteredVaccines = filteredVaccines.filter(v => v.status === statusFilter);
+      if (filterStatus !== "all") {
+        filtered = filtered.filter(v => v.status.toLowerCase() === filterStatus);
+      }
+
+      // Apply category filter
+      if (filterCategory !== "all") {
+        filtered = filtered.filter(v => v.vaccine?.category === filterCategory);
       }
 
       // Apply search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        filteredVaccines = filteredVaccines.filter(
-          v => v.vaccine.name.toLowerCase().includes(query) || 
-              v.vaccine.manufacturer.toLowerCase().includes(query)
+        filtered = filtered.filter(
+          v =>
+            (v.vaccine?.name && v.vaccine.name.toLowerCase().includes(query)) ||
+            (v.vaccine?.manufacturer && v.vaccine.manufacturer.toLowerCase().includes(query))
         );
       }
 
-      setTotalCount(filteredVaccines.length);
-      setVaccines(filteredVaccines.slice((currentPage - 1) * pageSize, currentPage * pageSize));
-      if (!suppressSuccessNotification) {
-        // No success notification for vaccine list loading
-      }
-    } catch {
-      setError("Không thể tải danh sách vaccine.");
-      setNotificationModal({ show: true, message: "Tải danh sách vaccine thất bại", type: "error" });
+      setFilteredVaccines(filtered);
+      setVaccines(data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || "Lỗi không xác định");
+      setFilteredVaccines([]);
     } finally {
       setLoading(false);
     }
@@ -89,467 +107,293 @@ const FacilityVaccinePage: React.FC = () => {
 
   useEffect(() => {
     fetchVaccines();
-  }, [user?.facilityId, currentPage, pageSize, statusFilter, searchQuery]);
+  }, [filterStatus, filterCategory, searchQuery]);
 
-  useEffect(() => {
-    const fetchAllVaccines = async () => {
-      try {
-        const res = await vaccineApi.getAll();
-        setAllVaccines(res || []);
-      } catch {
-        setNotificationModal({ show: true, message: "Không thể tải danh sách vaccine tổng quan", type: "error" });
-      }
-    };
-    fetchAllVaccines();
-  }, []);
-
-  const handleViewDetails = async (vaccineId: number) => {
-    if (selectedVaccine && selectedVaccine.vaccineId === vaccineId) {
-      setSelectedVaccine(null);
-      setDetailError(null);
+  const handleCreateVaccine = async () => {
+    if (formData.price < 0 || formData.availableQuantity < 0 || formData.batchNumber < 0) {
+      setErrorMessage("Giá, số lượng hoặc số lô không được nhỏ hơn 0");
+      setShowErrorModal(true);
       return;
     }
-    setDetailError(null);
-    setDetailLoading(true);
-    setSelectedVaccine(null);
-    try {
-      const data = await vaccineApi.getById(vaccineId);
-      setSelectedVaccine(data);
-    } catch {
-      setDetailError("Không thể tải chi tiết vaccine.");
-      setNotificationModal({ show: true, message: "Không thể tải chi tiết vaccine", type: "error" });
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
-  const generateRandomBatchNumber = () => {
-    return Math.floor(100000 + Math.random() * 900000);
-  };
-
-  const handleAddVaccine = async (values: CreateFacilityVaccineRequest) => {
-    if (!user?.facilityId) {
-      setNotificationModal({ show: true, message: "Không tìm thấy mã cơ sở.", type: "error" });
+    if (!formData.facilityId) {
+      setErrorMessage("ID cơ sở không hợp lệ");
+      setShowErrorModal(true);
       return;
     }
-    setFormLoading(true);
     try {
-      await facilityVaccineApi.create({
-        ...values,
-        facilityId: user.facilityId,
-        batchNumber: generateRandomBatchNumber(),
-        importDate: today, 
+      const newVaccine = await facilityVaccineApi.create(formData);
+      setVaccines((prev) => [...prev, newVaccine]);
+      setShowAddModal(false);
+      setFormData({
+        facilityId: user?.facilityId ?? 1,
+        vaccineId: 0,
+        price: 0,
+        availableQuantity: 0,
+        batchNumber: 0,
+        expiryDate: "",
+        importDate: "",
+        status: "Approved",
       });
-      setNotificationModal({ show: true, message: "Thêm vaccine thành công!", type: "success" });
-      setShowCreateModal(false);
-      form.resetFields();
-      setCurrentPage(1); 
-      await fetchVaccines(true); 
-    } catch {
-      setNotificationModal({ show: true, message: "Thêm vaccine thất bại!", type: "error" });
-    } finally {
-      setFormLoading(false);
+      addForm.resetFields();
+      setSuccessMessage("Thêm vaccine cơ sở thành công");
+      setShowSuccessModal(true);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Lỗi khi tạo vaccine cơ sở");
+      setShowErrorModal(true);
     }
   };
 
-  const handleUpdateVaccine = async (values: CreateFacilityVaccineRequest) => {
-    if (!user?.facilityId || !selectedFacilityVaccine) {
-      setNotificationModal({ show: true, message: "Không tìm thấy mã cơ sở hoặc vaccine.", type: "error" });
+  const handleUpdateVaccine = async () => {
+    if (!selectedVaccine) return;
+    if (formData.price < 0 || formData.availableQuantity < 0 || formData.batchNumber < 0) {
+      setErrorMessage("Giá, số lượng hoặc số lô không được nhỏ hơn 0");
+      setShowErrorModal(true);
       return;
     }
-    setFormLoading(true);
+    if (!formData.facilityId) {
+      setErrorMessage("ID cơ sở không hợp lệ");
+      setShowErrorModal(true);
+      return;
+    }
     try {
-      await facilityVaccineApi.update(selectedFacilityVaccine.facilityVaccineId, {
-        ...values,
-        facilityId: user.facilityId,
-        vaccineId: selectedFacilityVaccine.vaccineId,
-        batchNumber: selectedFacilityVaccine.batchNumber,
-        importDate: today,
-      });
-      setNotificationModal({ show: true, message: "Cập nhật vaccine thành công!", type: "success" });
+      const updatedVaccine = await facilityVaccineApi.update(selectedVaccine.facilityVaccineId, formData);
+      setVaccines((prev) =>
+        prev.map((v) =>
+          v.facilityVaccineId === selectedVaccine.facilityVaccineId
+            ? { ...v, ...updatedVaccine }
+            : v
+        )
+      );
       setShowUpdateModal(false);
-      setSelectedFacilityVaccine(null);
+      setSelectedVaccine(null);
       updateForm.resetFields();
-      await fetchVaccines(true);
-    } catch {
-      setNotificationModal({ show: true, message: "Cập nhật vaccine thất bại!", type: "error" });
-    } finally {
-      setFormLoading(false);
+      setSuccessMessage("Cập nhật vaccine cơ sở thành công");
+      setShowSuccessModal(true);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Lỗi khi cập nhật vaccine cơ sở");
+      setShowErrorModal(true);
     }
   };
 
-  const handleOpenUpdateModal = (facilityVaccine: FacilityVaccine) => {
-    setSelectedFacilityVaccine(facilityVaccine);
-    updateForm.setFieldsValue({
-      vaccineId: facilityVaccine.vaccineId,
-      availableQuantity: facilityVaccine.availableQuantity,
-      price: facilityVaccine.price,
-      importDate: today,
-      expiryDate: facilityVaccine.expiryDate.split("T")[0],
-      status: facilityVaccine.status,
-    });
+
+  const openUpdateModal = (vaccine: FacilityVaccine) => {
+    setSelectedVaccine(vaccine);
+    const updateData: CreateFacilityVaccineRequest = {
+      facilityId: vaccine.facilityId,
+      vaccineId: vaccine.vaccineId,
+      price: vaccine.price,
+      availableQuantity: vaccine.availableQuantity,
+      batchNumber: vaccine.batchNumber,
+      expiryDate: vaccine.expiryDate,
+      importDate: vaccine.importDate,
+      status: vaccine.status,
+    };
+    setFormData(updateData);
+    updateForm.setFieldsValue(updateData);
     setShowUpdateModal(true);
   };
 
-  const columns = [
-    {
-      title: "Tên vaccine",
-      dataIndex: ["vaccine", "name"],
-      key: "name",
-      render: (text: string) => <span className="font-medium text-gray-900">{text}</span>,
-    },
-    {
-      title: "Hãng SX",
-      dataIndex: ["vaccine", "manufacturer"],
-      key: "manufacturer",
-      render: (text: string) => <span className="text-gray-500">{text}</span>,
-    },
-    {
-      title: "Số lô",
-      dataIndex: "batchNumber",
-      key: "batchNumber",
-      render: (text: string) => <span className="text-gray-500">{text}</span>,
-    },
-    {
-      title: "SL còn",
-      dataIndex: "availableQuantity",
-      key: "availableQuantity",
-      render: (text: number) => <span className="text-gray-500">{text}</span>,
-    },
-    {
-      title: "Ngày nhập",
-      dataIndex: "importDate",
-      key: "importDate",
-      render: (text: string) => new Date(text).toLocaleDateString("vi-VN"),
-    },
-    {
-      title: "HSD",
-      dataIndex: "expiryDate",
-      key: "expiryDate",
-      render: (text: string) => new Date(text).toLocaleDateString("vi-VN"),
-    },
-    {
-      title: "Giá (VNĐ)",
-      dataIndex: "price",
-      key: "price",
-      render: (text: number) => text.toLocaleString("vi-VN"),
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
-      render: (status: string) => (
-        <span
-          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-            status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-          }`}
-        >
-          {status === "active" ? "Active" : "Inactive"}
-        </span>
-      ),
-    },
-    {
-      title: "Hành động",
-      key: "action",
-      render: (_: any, record: FacilityVaccine) => (
-        <div className="flex space-x-2">
-          <Button
-            type="link"
-            onClick={() => handleViewDetails(record.vaccine.vaccineId)}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Xem chi tiết
-          </Button>
-          <Button
-            type="link"
-            onClick={() => handleOpenUpdateModal(record)}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            <Edit className="w-4 h-4" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  const openAddModal = () => {
+    const initialFormData: CreateFacilityVaccineRequest = {
+      facilityId: user?.facilityId ?? 1,
+      vaccineId: 0,
+      price: 0,
+      availableQuantity: 0,
+      batchNumber: 0,
+      expiryDate: "",
+      importDate: "",
+      status: "Approved",
+    };
+    setFormData(initialFormData);
+    addForm.setFieldsValue(initialFormData);
+    setShowAddModal(true);
+  };
 
-  const totalPages = Math.ceil(totalCount / pageSize);
+  const categories = [...new Set(vaccines.map((v) => v.vaccine?.category).filter((c): c is string => !!c))];
 
-  if (loading) {
-    return (
-      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="animate-pulse space-y-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
-              <div className="space-y-2">
-                <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </div>
-          </div>
-          <div className="h-64 bg-gray-200 rounded-lg"></div>
-        </div>
-      </div>
-    );
-  }
+  const getCurrentPageData = (data: FacilityVaccine[]) => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return data.slice(startIndex, endIndex);
+  };
 
-  if (error) {
-    return (
-      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-          <AlertCircle className="w-6 h-6 text-red-600" />
-          <p className="text-red-600 font-medium">{error}</p>
-        </div>
-      </div>
-    );
-  }
+  const totalPages = Math.ceil(filteredVaccines.length / itemsPerPage);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const currentVaccines = getCurrentPageData(filteredVaccines);
 
   return (
     <div className="space-y-6">
-      {/* Notification Modal */}
+      {/* Error Modal */}
       <Modal
-        title={notificationModal.type === "success" ? "Thành công" : "Lỗi"}
-        open={notificationModal.show}
-        onCancel={() => setNotificationModal({ show: false, message: "", type: "success" })}
+        title="Lỗi"
+        open={showErrorModal}
+        onCancel={() => setShowErrorModal(false)}
         footer={[
           <Button
-            key="ok"
-            type="primary"
-            onClick={() => setNotificationModal({ show: false, message: "", type: "success" })}
+            key="close"
+            onClick={() => setShowErrorModal(false)}
             className="rounded-lg"
           >
-            OK
+            Đóng
           </Button>,
         ]}
         centered
       >
-        <div className={`flex items-center gap-3 p-4 ${notificationModal.type === "success" ? "text-green-600" : "text-red-600"}`}>
-          {notificationModal.type === "success" ? (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          ) : (
-            <AlertCircle className="w-6 h-6" />
-          )}
-          <p className="font-medium">{notificationModal.message}</p>
-        </div>
+        <p className="text-red-500">{errorMessage}</p>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        title="Thành công"
+        open={showSuccessModal}
+        onCancel={() => setShowSuccessModal(false)}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => setShowSuccessModal(false)}
+            className="rounded-lg"
+          >
+            Đóng
+          </Button>,
+        ]}
+        centered
+      >
+        <p className="text-green-500">{successMessage}</p>
       </Modal>
 
       {/* Header */}
-      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Syringe className="w-8 h-8 text-blue-600" />
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Quản lý vaccine tại cơ sở</h1>
-              <p className="text-gray-600 mt-1">Quản lý danh sách vaccine và thông tin chi tiết</p>
-            </div>
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+              Quản lý Vaccine Cơ sở
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Quản lý danh sách vaccine tại cơ sở và thông tin chi tiết
+            </p>
           </div>
-          <Button
-            type="primary"
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 rounded-lg"
-          >
-            <Plus className="w-4 h-4" />
-            Thêm vaccine
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              type="primary"
+              onClick={openAddModal}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 rounded-lg"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Thêm Vaccine Cơ sở</span>
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Vaccine Table */}
-      <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Danh sách vaccine ({totalCount})
-          </h3>
-        </div>
-        <div className="px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="text-sm text-gray-700">
-              Tổng số vaccine: {totalCount}
-            </div>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Input
-                placeholder="Tìm kiếm theo tên hoặc hãng sản xuất"
-                prefix={<Search className="w-4 h-4 text-gray-500" />}
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full sm:w-64"
-              />
-              <Select
-                value={statusFilter}
-                onChange={(value) => {
-                  setStatusFilter(value);
-                  setCurrentPage(1);
-                }}
-                className="w-full sm:w-40"
-              >
-                <Option value="all">Tất cả trạng thái</Option>
-                <Option value="active">Đang sử dụng</Option>
-                <Option value="inactive">Ngừng SD</Option>
-              </Select>
-            </div>
-          </div>
-        </div>
-        <Table
-          dataSource={vaccines}
-          columns={columns}
-          rowKey="facilityVaccineId"
-          pagination={false}
-          className="overflow-x-auto"
-        />
-        {vaccines.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Không tìm thấy vaccine nào.</p>
-          </div>
-        )}
-        {totalCount > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Hiển thị {(currentPage - 1) * pageSize + 1} đến{" "}
-                {Math.min(currentPage * pageSize, totalCount)} trong tổng số {totalCount} kết quả
-              </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg hover:bg-gray-100"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      currentPage === page ? "bg-blue-600 text-white" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg hover:bg-gray-100"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Create Vaccine Modal */}
+      {/* Add Facility Vaccine Modal */}
       <Modal
-        title="Thêm vaccine mới"
-        open={showCreateModal}
+        title="Thêm Vaccine Cơ sở mới"
+        open={showAddModal}
         onCancel={() => {
-          setShowCreateModal(false);
-          form.resetFields();
+          setShowAddModal(false);
+          addForm.resetFields();
         }}
         footer={null}
+        width={800}
         centered
       >
         <Form
-          form={form}
+          form={addForm}
           layout="vertical"
-          onFinish={handleAddVaccine}
-          initialValues={{
-            status: "active",
-            price: 0,
-            availableQuantity: 0,
-            importDate: today,
-          }}
+          onFinish={handleCreateVaccine}
+          initialValues={formData}
+          onValuesChange={(_, values) => setFormData({ ...formData, ...values })}
         >
-          <Row gutter={[16, 16]}>
-            <Col span={12}>
-              <Form.Item
-                name="vaccineId"
-                label="Vaccine"
-                rules={[{ required: true, message: "Vui lòng chọn vaccine!" }]}
-              >
-                <Select
-                  showSearch
-                  placeholder="Tìm kiếm và chọn vaccine"
-                  filterOption={(input, option) =>
-                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  <Option value="">-- Chọn vaccine --</Option>
-                  {allVaccines.map((v) => (
-                    <Option key={v.vaccineId} value={v.vaccineId}>
-                      {v.name}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="availableQuantity"
-                label="Số lượng"
-                rules={[
-                  { required: true, message: "Vui lòng nhập số lượng!" },
-                  { type: "number", min: 0, message: "Số lượng phải lớn hơn hoặc bằng 0!" },
-                ]}
-              >
-                <InputNumber className="w-full" placeholder="Nhập số lượng" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="price"
-                label="Giá (VNĐ)"
-                rules={[
-                  { required: true, message: "Vui lòng nhập giá!" },
-                  { type: "number", min: 0, message: "Giá phải lớn hơn hoặc bằng 0!" },
-                ]}
-              >
-                <InputNumber className="w-full" placeholder="Nhập giá" formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="importDate"
-                label="Ngày nhập"
-                rules={[{ required: true, message: "Vui lòng chọn ngày nhập!" }]}
-              >
-                <Input type="date" disabled value={today} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="expiryDate"
-                label="Hạn sử dụng"
-                rules={[{ required: true, message: "Vui lòng chọn hạn sử dụng!" }]}
-              >
-                <Input type="date" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="status"
-                label="Trạng thái"
-                rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
-              >
-                <Select placeholder="Chọn trạng thái">
-                  <Option value="active">Đang sử dụng</Option>
-                  <Option value="inactive">Ngừng SD</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <div className="flex justify-end gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Form.Item
+              label="ID Vaccine"
+              name="vaccineId"
+              rules={[{ required: true, message: "Vui lòng nhập ID vaccine" }]}
+            >
+              <InputNumber min={1} className="w-full rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="ID Cơ sở"
+              name="facilityId"
+              rules={[{ required: true, message: "Vui lòng nhập ID cơ sở" }]}
+            >
+              <InputNumber min={1} className="w-full rounded-lg" disabled />
+            </Form.Item>
+
+            <Form.Item
+              label="Giá (VNĐ)"
+              name="price"
+              rules={[{ required: true, message: "Vui lòng nhập giá" }]}
+            >
+              <InputNumber min={0} className="w-full rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Số lượng có sẵn"
+              name="availableQuantity"
+              rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
+            >
+              <InputNumber min={0} className="w-full rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Số lô"
+              name="batchNumber"
+              rules={[{ required: true, message: "Vui lòng nhập số lô" }]}
+            >
+              <InputNumber min={0} className="w-full rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Ngày hết hạn"
+              name="expiryDate"
+              rules={[{ required: true, message: "Vui lòng nhập ngày hết hạn" }]}
+            >
+              <Input type="date" className="rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Ngày nhập"
+              name="importDate"
+              rules={[{ required: true, message: "Vui lòng nhập ngày nhập" }]}
+            >
+              <Input type="date" className="rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Trạng thái"
+              name="Hoạt dộng"
+              rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+            >
+              <Select className="rounded-lg">
+                <Select.Option value="active">Hoạt động</Select.Option>
+                <Select.Option value="unactive">Không hoạt động</Select.Option>
+              </Select>
+            </Form.Item>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
             <Button
               onClick={() => {
-                setShowCreateModal(false);
-                form.resetFields();
+                setShowAddModal(false);
+                addForm.resetFields();
               }}
               className="rounded-lg"
             >
@@ -558,122 +402,109 @@ const FacilityVaccinePage: React.FC = () => {
             <Button
               type="primary"
               htmlType="submit"
-              loading={formLoading}
-              className="rounded-lg"
+              className="bg-green-600 hover:bg-green-700 rounded-lg"
             >
-              Thêm
+              Lưu
             </Button>
           </div>
         </Form>
       </Modal>
 
-      {/* Update Vaccine Modal */}
+      {/* Update Facility Vaccine Modal */}
       <Modal
-        title="Cập nhật vaccine"
+        title="Cập nhật Vaccine Cơ sở"
         open={showUpdateModal}
         onCancel={() => {
           setShowUpdateModal(false);
-          setSelectedFacilityVaccine(null);
           updateForm.resetFields();
+          setSelectedVaccine(null);
         }}
         footer={null}
+        width={800}
         centered
       >
         <Form
           form={updateForm}
           layout="vertical"
           onFinish={handleUpdateVaccine}
-          initialValues={{
-            status: "active",
-            price: 0,
-            availableQuantity: 0,
-            importDate: today,
-          }}
+          initialValues={formData}
+          onValuesChange={(_, values) => setFormData({ ...formData, ...values })}
         >
-          <Row gutter={[16, 16]}>
-            <Col span={12}>
-              <Form.Item
-                name="vaccineId"
-                label="Vaccine"
-                rules={[{ required: true, message: "Vui lòng chọn vaccine!" }]}
-              >
-                <Select
-                  showSearch
-                  placeholder="Tìm kiếm và chọn vaccine"
-                  filterOption={(input, option) =>
-                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  <Option value="">-- Chọn vaccine --</Option>
-                  {allVaccines.map((v) => (
-                    <Option key={v.vaccineId} value={v.vaccineId}>
-                      {v.name}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="availableQuantity"
-                label="Số lượng"
-                rules={[
-                  { required: true, message: "Vui lòng nhập số lượng!" },
-                  { type: "number", min: 0, message: "Số lượng phải lớn hơn hoặc bằng 0!" },
-                ]}
-              >
-                <InputNumber className="w-full" placeholder="Nhập số lượng" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="price"
-                label="Giá (VNĐ)"
-                rules={[
-                  { required: true, message: "Vui lòng nhập giá!" },
-                  { type: "number", min: 0, message: "Giá phải lớn hơn hoặc bằng 0!" },
-                ]}
-              >
-                <InputNumber className="w-full" placeholder="Nhập giá" formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="importDate"
-                label="Ngày nhập"
-                rules={[{ required: true, message: "Vui lòng chọn ngày nhập!" }]}
-              >
-                <Input type="date" disabled value={today} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="expiryDate"
-                label="Hạn sử dụng"
-                rules={[{ required: true, message: "Vui lòng chọn hạn sử dụng!" }]}
-              >
-                <Input type="date" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="status"
-                label="Trạng thái"
-                rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
-              >
-                <Select placeholder="Chọn trạng thái">
-                  <Option value="active">Đang sử dụng</Option>
-                  <Option value="inactive">Ngừng SD</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <div className="flex justify-end gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Form.Item
+              label="ID Vaccine"
+              name="vaccineId"
+              rules={[{ required: true, message: "Vui lòng nhập ID vaccine" }]}
+            >
+              <InputNumber min={1} className="w-full rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="ID Cơ sở"
+              name="facilityId"
+              rules={[{ required: true, message: "Vui lòng nhập ID cơ sở" }]}
+            >
+              <InputNumber min={1} className="w-full rounded-lg" disabled />
+            </Form.Item>
+
+            <Form.Item
+              label="Giá (VNĐ)"
+              name="price"
+              rules={[{ required: true, message: "Vui lòng nhập giá" }]}
+            >
+              <InputNumber min={0} className="w-full rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Số lượng có sẵn"
+              name="availableQuantity"
+              rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
+            >
+              <InputNumber min={0} className="w-full rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Số lô"
+              name="batchNumber"
+              rules={[{ required: true, message: "Vui lòng nhập số lô" }]}
+            >
+              <InputNumber min={0} className="w-full rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Ngày hết hạn"
+              name="expiryDate"
+              rules={[{ required: true, message: "Vui lòng nhập ngày hết hạn" }]}
+            >
+              <Input type="date" className="rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Ngày nhập"
+              name="importDate"
+              rules={[{ required: true, message: "Vui lòng nhập ngày nhập" }]}
+            >
+              <Input type="date" className="rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Trạng thái"
+              name="status"
+              rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+            >
+              <Select className="rounded-lg">
+                <Select.Option value="active">Hoạt động</Select.Option>
+                <Select.Option value="unactive">Không hoạt động</Select.Option>
+              </Select>
+            </Form.Item>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
             <Button
               onClick={() => {
                 setShowUpdateModal(false);
-                setSelectedFacilityVaccine(null);
                 updateForm.resetFields();
+                setSelectedVaccine(null);
               }}
               className="rounded-lg"
             >
@@ -682,8 +513,7 @@ const FacilityVaccinePage: React.FC = () => {
             <Button
               type="primary"
               htmlType="submit"
-              loading={formLoading}
-              className="rounded-lg"
+              className="bg-blue-600 hover:bg-blue-700 rounded-lg"
             >
               Cập nhật
             </Button>
@@ -691,74 +521,301 @@ const FacilityVaccinePage: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* Vaccine Details Modal */}
-      <Modal
-        title="Chi tiết vaccine"
-        open={!!selectedVaccine}
-        onCancel={() => setSelectedVaccine(null)}
-        footer={null}
-        centered
-      >
-        {detailLoading ? (
-          <div className="flex items-center justify-center py-6">
-            <Loader2 className="animate-spin w-6 h-6 text-blue-600 mr-2" />
-            <span>Đang tải chi tiết vaccine...</span>
+      {/* Delete Confirmation Modal */}
+   
+      {/* Search and Filter */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex flex-col lg:flex-row gap-4 mb-6">
+          <div className="flex-1">
+            <Input
+              placeholder="Tìm kiếm theo tên vaccine hoặc hãng sản xuất"
+              prefix={<Search className="w-4 h-4 text-gray-500" />}
+              onChange={(e) => debouncedSearch(e.target.value)}
+              className="w-full"
+              allowClear
+            />
           </div>
-        ) : detailError ? (
-          <div className="text-red-600 text-center py-6">{detailError}</div>
-        ) : (
-          selectedVaccine && (
-            <div className="space-y-4">
-              <div>
-                <span className="font-medium">Tên vaccine:</span>{" "}
-                {selectedVaccine.name}
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Select
+              value={filterCategory}
+              onChange={(value) => {
+                setFilterCategory(value);
+                setCurrentPage(1);
+              }}
+              className="w-full sm:w-40"
+            >
+              <Option value="all">Tất cả loại</Option>
+              {categories.map((category) => (
+                <Option key={category} value={category}>
+                  {category}
+                </Option>
+              ))}
+            </Select>
+
+            <Select
+              value={filterStatus}
+              onChange={(value) => {
+                setFilterStatus(value);
+                setCurrentPage(1);
+              }}
+              className="w-full sm:w-40"
+            >
+              <Option value="all">Tất cả trạng thái</Option>
+              <Option value="Approved">Hoạt động</Option>
+              <Option value="Unaproved">Không hoạt động</Option>
+            </Select>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="w-6 h-6 bg-blue-600 rounded-full"></div>
               </div>
-              <div>
-                <span className="font-medium">Hãng SX:</span>{" "}
-                {selectedVaccine.manufacturer}
-              </div>
-              <div>
-                <span className="font-medium">Mô tả:</span>{" "}
-                {selectedVaccine.description}
-              </div>
-              <div>
-                <span className="font-medium">Nhóm tuổi:</span>{" "}
-                {selectedVaccine.ageGroup}
-              </div>
-              <div>
-                <span className="font-medium">Số mũi:</span>{" "}
-                {selectedVaccine.numberOfDoses}
-              </div>
-              <div>
-                <span className="font-medium">Khoảng cách tối thiểu giữa các mũi:</span>{" "}
-                {selectedVaccine.minIntervalBetweenDoses}
-              </div>
-              <div>
-                <span className="font-medium">Tác dụng phụ:</span>{" "}
-                {selectedVaccine.sideEffects}
-              </div>
-              <div>
-                <span className="font-medium">Chống chỉ định:</span>{" "}
-                {selectedVaccine.contraindications}
-              </div>
-              <div>
-                <span className="font-medium">Trạng thái:</span>{" "}
-                {selectedVaccine.status === "Approved" ? "Approved" : "UnApproved"}
-              </div>
-              <div>
-                <span className="font-medium">Ngày tạo:</span>{" "}
-                {new Date(selectedVaccine.createdAt).toLocaleDateString("vi-VN")}
-              </div>
-              <div>
-                <span className="font-medium">Ngày cập nhật:</span>{" "}
-                {new Date(selectedVaccine.updatedAt).toLocaleDateString("vi-VN")}
+              <div className="ml-4">
+                <p className="text-sm font-medium text-blue-600">
+                  Tổng số vaccine cơ sở
+                </p>
+                <p className="text-2xl font-bold text-blue-900">
+                  {vaccines.length}
+                </p>
               </div>
             </div>
-          )
+          </div>
+
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <div className="w-6 h-6 bg-green-600 rounded-full"></div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-green-600">
+                  Đang hoạt động
+                </p>
+                <p className="text-2xl font-bold text-green-900">
+                  {vaccines.filter((v) => v.status === "Approved").length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <div className="w-6 h-6 bg-orange-600 rounded-full"></div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-orange-600">
+                  Loại vaccine
+                </p>
+                <p className="text-2xl font-bold text-orange-900">
+                  {categories.length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Loading and Error States */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="animate-spin w-8 h-8 text-blue-600" />
+            <span className="ml-3 text-gray-600">Đang tải dữ liệu...</span>
+          </div>
         )}
-      </Modal>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-600 font-semibold">{error}</p>
+          </div>
+        )}
+
+        {/* Vaccine Table */}
+        {!loading && !error && (
+          <div className="overflow-x-auto">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Danh sách vaccine cơ sở ({filteredVaccines.length})
+                </h3>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Thông tin vaccine
+                      </th>
+                     
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Độ tuổi & Loại
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Số lượng
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Giá
+                      </th>
+                      
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ngày hết hạn
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Trạng thái
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Hành động
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {currentVaccines.map((vaccine) => (
+                      <tr
+                        key={vaccine.facilityVaccineId}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <div>
+                            <div className="text-md font-medium text-gray-900">
+                              {vaccine.vaccine?.name || "N/A"}
+                            </div>
+                            <div
+                              className="text-md text-blue-500 max-w-xs truncate"
+                              title={vaccine.vaccine?.diseases?.map((d) => d.name).join(", ") || ""}
+                            >
+                              {vaccine.vaccine?.diseases?.map((d) => d.name).join(", ") || "N/A"}
+                            </div>
+                            <div className="text-sm mt-2  text-gray-900">
+                              Nhà sản xuất: <h4 className="font-bold text-amber-600">
+                                {vaccine.vaccine?.manufacturer || "N/A"}
+                                </h4>
+                            </div>
+                          </div>
+                        </td>
+                        
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900">
+                            <div className="font-medium">
+                              {vaccine.vaccine?.ageGroup || "N/A"}
+                            </div>
+                            <div className="text-gray-500">
+                              {vaccine.vaccine?.category || "N/A"}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {vaccine.availableQuantity}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-semibold text-green-600">
+                            {vaccine.price.toLocaleString("vi-VN")}₫
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900">
+                            {new Date(vaccine.expiryDate).toLocaleDateString("vi-VN")}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              vaccine.status === "active"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {vaccine.status === "active"
+                              ? "Hoạt động"
+                              : "Không hoạt động"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex space-x-2">
+                            <Button
+                              type="link"
+                              onClick={() => openUpdateModal(vaccine)}
+                              className="text-blue-600 hover:text-blue-800"
+                              icon={<Pencil className="w-4 h-4" />}
+                            >
+                              Cập nhật
+                            </Button>
+                          
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredVaccines.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">Không tìm thấy vaccine cơ sở nào.</p>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {filteredVaccines.length > 0 && (
+                <div className="px-6 py-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-700">
+                      Hiển thị {(currentPage - 1) * itemsPerPage + 1} đến{" "}
+                      {Math.min(
+                        currentPage * itemsPerPage,
+                        filteredVaccines.length
+                      )}{" "}
+                      trong tổng số {filteredVaccines.length} kết quả
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        onClick={handlePreviousPage}
+                        disabled={currentPage === 1}
+                        className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg hover:bg-gray-100"
+                        icon={<ChevronLeft className="w-4 h-4" />}
+                      >
+                        Trước
+                      </Button>
+
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                        (page) => (
+                          <Button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                              currentPage === page
+                                ? "bg-blue-600 text-white"
+                                : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                            }`}
+                          >
+                            {page}
+                          </Button>
+                        )
+                      )}
+
+                      <Button
+                        onClick={handleNextPage}
+                        disabled={currentPage === totalPages}
+                        className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg hover:bg-gray-100"
+                        icon={<ChevronRight className="w-4 h-4" />}
+                      >
+                        Sau
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-export default FacilityVaccinePage;
+export default VaccineManagement;

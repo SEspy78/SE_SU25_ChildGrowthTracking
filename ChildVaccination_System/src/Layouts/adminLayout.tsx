@@ -149,19 +149,11 @@ export default function AdminLayout() {
               <p className="text-sm text-gray-500">Administrator</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Đăng xuất
-          </button>
+         
         </div>
       </aside>
 
-      {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Top header */}
         <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <button
@@ -178,7 +170,7 @@ export default function AdminLayout() {
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
+                  className="flex hover:cursor-pointer items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
                 >
                   <LogOut className="w-4 h-4" />
                   <span className="hidden sm:inline">Đăng xuất</span>
@@ -188,7 +180,6 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        {/* Page content */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-6">
           <Outlet />
         </div>

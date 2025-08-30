@@ -388,7 +388,7 @@ const BlogManagement: React.FC = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditBlog(blog)}
-                      className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
+                      className="text-blue-600 hover:cursor-pointer hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
                       title="Chỉnh sửa"
                     >
                       <Edit className="w-4 h-4" />
@@ -396,7 +396,7 @@ const BlogManagement: React.FC = () => {
                     <button
                       onClick={() => handleDeleteBlog(blog.id)}
                       disabled={deleteLoading === blog.id}
-                      className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors disabled:opacity-50"
+                      className="text-red-600 hover:cursor-pointer hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors disabled:opacity-50"
                       title="Xóa"
                     >
                       <Trash2 className="w-4 h-4" />
