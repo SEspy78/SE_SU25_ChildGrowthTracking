@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { getUserInfo } from "@/lib/storage";
 import { appointmentApi, type AppointmentResponse, type Appointment } from "../../api/appointmentAPI";
 import Pagination from "@/Components/Pagination";
+import { DatePicker, Radio, Button, message } from "antd";
+import dayjs from "dayjs";
 
 // Custom hook for debouncing
 const useDebounce = (value: string, delay: number): string => {
@@ -22,9 +24,13 @@ const useDebounce = (value: string, delay: number): string => {
 };
 
 const statusStyle: Record<string, string> = {
-  Paid: "bg-yellow-100 text-yellow-800 border-yellow-300",
-  Completed: "bg-green-100 text-green-800 border-green-300",
-  Pending: "bg-gray-100 text-gray-800 border-gray-300",
+  Scheduled: "bg-indigo-500 text-white",
+  Confirmed: "bg-teal-500 text-white",
+  Completed: "bg-green-500 text-white",
+  Cancelled: "bg-red-500 text-white",
+  Pending: "bg-gray-500 text-white",
+  Approval: "bg-amber-500 text-white",
+  Paid: "bg-yellow-400 text-gray-900",
 };
 
 export default function DoctorAppointment() {
@@ -42,38 +48,84 @@ export default function DoctorAppointment() {
     message: "",
     type: "success",
   });
+  const [pendingCount, setPendingCount] = useState<number>(0);
+  const [completedCount, setCompletedCount] = useState<number>(0);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [filterMode, setFilterMode] = useState<"date" | "week">("date");
+  const [isFilterApplied, setIsFilterApplied] = useState<boolean>(false);
+  const user = getUserInfo();
 
   const fetchData = useCallback(async () => {
+    if (!user?.accountId) {
+      setError("Chưa có thông tin tài khoản, vui lòng đăng nhập lại.");
+      setAppointments([]);
+      setPendingCount(0);
+      setCompletedCount(0);
+      setHasNextPage(false);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      const res: AppointmentResponse = await appointmentApi.getAllAppointments(pageIndex, pageSize, debouncedSearch);
+      let res: AppointmentResponse;
+      if (isFilterApplied && selectedDate) {
+        const formattedDate = dayjs(selectedDate).format("YYYY/MM/DD");
+        if (filterMode === "date") {
+          res = await appointmentApi.getAppointmentByDate(formattedDate, pageIndex, pageSize);
+        } else {
+          res = await appointmentApi.getAppointmentByWeek(formattedDate, pageIndex, pageSize);
+        }
+      } else {
+        res = await appointmentApi.getAllAppointments(pageIndex, pageSize, debouncedSearch);
+      }
       const filteredAppointments = (res.appointments || []).filter(
         (item) => item.status === "Paid" || item.status === "Completed" || item.status === "Pending"
-      );
-      setAppointments(filteredAppointments.sort((a, b) => b.appointmentId - a.appointmentId));
+      ).sort((a, b) => b.appointmentId - a.appointmentId);
+      setAppointments(filteredAppointments);
+      setPendingCount(res.pendingCount || 0);
+      setCompletedCount(res.completedCount || 0);
       setHasNextPage((res.appointments?.length || 0) === pageSize);
-      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+      setError("");
+      setToast({ show: false, message: "", type: "success" });
     } catch {
       setError("Không thể tải danh sách cuộc hẹn.");
       setAppointments([]);
+      setPendingCount(0);
+      setCompletedCount(0);
       setHasNextPage(false);
       setToast({ show: true, message: "Không thể tải danh sách cuộc hẹn", type: "error" });
       setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } finally {
       setLoading(false);
     }
-  }, [pageIndex, pageSize, debouncedSearch]);
+  }, [pageIndex, pageSize, debouncedSearch, isFilterApplied, selectedDate, filterMode, user?.accountId]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   useEffect(() => {
-    setPageIndex(1); // Reset to first page when search term changes
-  }, [debouncedSearch]);
+    setPageIndex(1); // Reset to first page when search or filter changes
+  }, [debouncedSearch, isFilterApplied, filterMode, selectedDate]);
+
+  const handleFilter = () => {
+    if (!selectedDate) {
+      message.error("Vui lòng chọn ngày để lọc.");
+      return;
+    }
+    setPageIndex(1); // Reset to first page
+    setIsFilterApplied(true);
+    fetchData();
+  };
+
+  const handleClearFilter = () => {
+    setSelectedDate(null);
+    setIsFilterApplied(false);
+    setPageIndex(1); // Reset to first page
+    fetchData();
+  };
 
   const handleNavigateByRoleAndStatus = (appointmentId: number, status: string) => {
-    const user = getUserInfo();
     let stepIndex = 0;
     switch (status) {
       case "Pending": stepIndex = 1; break;
@@ -96,7 +148,7 @@ export default function DoctorAppointment() {
     const months = Math.floor(diffDays / 30.42);
     const years = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-    const dayDiff = today.getDate() - birth.getDay();
+    const dayDiff = today.getDate() - birth.getDate();
     let adjustedYears = years;
     if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) adjustedYears--;
     if (diffDays <= 90) return `${weeks} tuần`;
@@ -118,6 +170,7 @@ export default function DoctorAppointment() {
       )}
 
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
           <h2 className="text-3xl font-bold text-gray-800">Tất cả lịch hẹn</h2>
           <button
@@ -142,29 +195,80 @@ export default function DoctorAppointment() {
           </button>
         </div>
 
-        <div className="mb-8">
-          <div className="relative max-w-md">
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo tên trẻ"
-              className="w-full px-4 py-3 pl-10 border border-gray-200 rounded-full shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200 bg-white"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-            <svg
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              ></path>
-            </svg>
+        {/* Statistics */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-gray-500 transform hover:scale-105 transition duration-300">
+            <h3 className="text-lg font-semibold text-gray-700">Lịch hẹn đang chờ</h3>
+            <p className="text-3xl font-bold text-gray-900">{pendingCount}</p>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500 transform hover:scale-105 transition duration-300">
+            <h3 className="text-lg font-semibold text-gray-700">Lịch hẹn đã hoàn thành</h3>
+            <p className="text-3xl font-bold text-gray-900">{completedCount}</p>
+          </div>
+        </div>
+
+        {/* Search and Filter */}
+        <div className="mb-8 bg-white rounded-xl shadow-lg p-6">
+          <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-6 items-center">
+            <div className="relative w-full md:w-1/3">
+              <input
+                type="text"
+                placeholder="Tìm kiếm theo tên trẻ"
+                className="w-full px-4 py-3 pl-10 border border-gray-200 rounded-full shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200 bg-white"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              <svg
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                ></path>
+              </svg>
+            </div>
+            <div className="flex flex-col md:flex-row md:space-x-4 items-center w-full md:w-auto">
+              <Radio.Group
+                value={filterMode}
+                onChange={(e) => setFilterMode(e.target.value)}
+                className="mb-4 md:mb-0"
+              >
+                <Radio value="date" className="text-gray-700">Theo ngày</Radio>
+                <Radio value="week" className="text-gray-700">Theo tuần</Radio>
+              </Radio.Group>
+              <DatePicker
+                value={selectedDate ? dayjs(selectedDate) : null}
+                onChange={(date) => setSelectedDate(date ? date.format("YYYY-MM-DD") : null)}
+                format="DD/MM/YYYY"
+                placeholder="Chọn ngày"
+                className="w-full md:w-auto rounded-lg border-gray-200 shadow-sm focus:ring-blue-500"
+              />
+              <div className="flex space-x-3">
+                <Button
+                  type="primary"
+                  onClick={handleFilter}
+                  disabled={loading || !selectedDate}
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-6 py-2"
+                >
+                  Lọc
+                </Button>
+                {isFilterApplied && (
+                  <Button
+                    type="default"
+                    onClick={handleClearFilter}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg px-6 py-2"
+                  >
+                    Xóa bộ lọc
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

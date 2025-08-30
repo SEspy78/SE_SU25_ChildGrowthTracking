@@ -157,7 +157,7 @@ const MemberManagement: React.FC = () => {
       <Modal
         title={
           <span className="text-xl font-semibold text-gray-800">
-            Danh sách trẻ em của {selectedMember ? 'fullName' in selectedMember ? selectedMember.fullName : `@${selectedMember.accountName}` : ''}
+            Danh sách trẻ em của {selectedMember ? 'fullName' in selectedMember ? selectedMember.fullName : `Account Name:${selectedMember.accountName}` : ''}
           </span>
         }
         open={showChildrenModal}

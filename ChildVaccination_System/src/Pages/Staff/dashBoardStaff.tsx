@@ -158,8 +158,22 @@ export default function DashboardStaff() {
           <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Quản lý lịch hẹn</h2>
           <button
             onClick={fetchData}
-            className="mt-4 sm:mt-0 px-6 py-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition duration-300 ease-in-out"
+            className="mt-4 sm:mt-0 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 flex items-center"
           >
+            <svg
+              className="w-5 h-5 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              ></path>
+            </svg>
             Làm mới
           </button>
         </div>
@@ -262,11 +276,12 @@ export default function DashboardStaff() {
                       </tr>
                     ) : (
                       appointments.map((item, index) => {
-                        const vaccineDisplay = item.order?.packageName
-                          ? item.order.packageName
-                          : Array.isArray(item.vaccinesToInject) && item.vaccinesToInject.length > 0
-                          ? item.vaccinesToInject.map(v => v.vaccineName).join(", ")
-                          : "Không có vắc xin";
+                        let vaccineDisplay = "Không có vắc xin";
+                        if (item.order?.packageName) {
+                          vaccineDisplay = item.order.packageName;
+                        } else if (Array.isArray(item.facilityVaccines) && item.facilityVaccines.length > 0) {
+                          vaccineDisplay = item.facilityVaccines[0].vaccine?.name || `ID: ${item.facilityVaccines[0].vaccineId}`;
+                        }
 
                         let date = "";
                         if (item.appointmentDate) {
