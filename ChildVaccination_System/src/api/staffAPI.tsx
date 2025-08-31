@@ -52,6 +52,9 @@ export type UpdateStaffPayload = {
   bio?: string;
 }
 
+
+
+
 export const FacilityStaffAPI = {
   getAllStaff: async (facilityId: number, position: string ,pageIndex:number,pageSize:number): Promise<FacilityDashBoardResponse> => {
     return await axiosClient.get(`api/FacilityStaff`, {
@@ -64,12 +67,11 @@ export const FacilityStaffAPI = {
     });
   },
 
-  createStaff: async (staffData: CreateStaffPayload): Promise<any> => {
+  createStaff: async (staffData: CreateStaffPayload): Promise<{ message: string }> => {
     return await axiosClient.post(`api/auth/create-staff`, staffData);
   },
 
-  updateStaff: async ( staffData: UpdateStaffPayload): Promise<any> => {
+  updateStaff: async ( staffData: UpdateStaffPayload): Promise<{ message: string }> => {
     return await axiosClient.put(`api/auth/update-facility-staff-info`, staffData);
   }
-
 };

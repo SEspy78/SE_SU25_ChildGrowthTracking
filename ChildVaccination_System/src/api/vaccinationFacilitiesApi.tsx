@@ -26,7 +26,7 @@ export type GetAllFacilitiesResponse = {
 export type GetByIdFacilitiesResponse = {
   success: boolean;
   message: string;
-  data: Facility ;
+  data: Facility;
 };
 
 export type UpdateFacilityRequest = {
@@ -53,6 +53,7 @@ export type CreateFacilityRequest = {
   facilityAddress: string;
   facilityPhone: number;
   facilityEmail: string;
+  licenseFile: File | null;
   facilityDescription: string;
 };
 
@@ -88,12 +89,26 @@ export const facilityApi = {
   },
 
   createFacility: async (payload: CreateFacilityRequest): Promise<any> => {
-    return await axiosClient.post(`api/auth/create-manager-with-facility`, payload);
+    const formData = new FormData();
+    formData.append("accountName", payload.accountName);
+    formData.append("password", payload.password);
+    formData.append("managerEmail", payload.managerEmail);
+    formData.append("managerFullName", payload.managerFullName);
+    formData.append("managerPhone", payload.managerPhone);
+    formData.append("managerDescription", payload.managerDescription || "");
+    formData.append("facilityName", payload.facilityName);
+    formData.append("licenseNumber", payload.licenseNumber.toString());
+    formData.append("facilityAddress", payload.facilityAddress);
+    formData.append("facilityPhone", payload.facilityPhone.toString());
+    formData.append("facilityEmail", payload.facilityEmail);
+    formData.append("facilityDescription", payload.facilityDescription || "");
+    if (payload.licenseFile) {
+      formData.append("licenseFile", payload.licenseFile);
+    }
+    return await axiosClient.post(`api/auth/create-manager-with-facility`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
   },
 };
-
-
-
-
-
-

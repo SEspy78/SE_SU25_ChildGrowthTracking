@@ -49,10 +49,6 @@ export type AdminDashboardResponse = {
        paid:number;
        uniqueChildrenVaccinated:number;
     }
-
-
-
-
 }
 
 

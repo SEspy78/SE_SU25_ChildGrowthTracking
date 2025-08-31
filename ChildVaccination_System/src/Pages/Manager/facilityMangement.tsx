@@ -211,27 +211,20 @@ const FacilityDetail: React.FC = () => {
 
   const dataSource = [
     { key: "1", label: "Tên cơ sở", value: facility.facilityName || "" },
-    { key: "2", label: "Giấy phép", value: facility.licenseNumber?.toString() || "" },
-    { key: "3", label: "Địa chỉ", value: facility.address || "" },
-    { key: "4", label: "Số điện thoại", value: facility.phone?.toString() || "" },
-    { key: "5", label: "Email", value: facility.email || "" },
-    { key: "6", label: "Mô tả", value: facility.description || "" },
-    { key: "7", label: "Trạng thái", value: facility.status === 1 ? "Active" : "Inactive" },
-    { key: "8", label: "Tệp giấy phép", value: facility.licenseFile || "" },
+    { key: "2", label: "Địa chỉ", value: facility.address || "" },
+    { key: "3", label: "Số điện thoại", value: facility.phone?.toString() || "" },
+    { key: "4", label: "Email", value: facility.email || "" },
+    { key: "5", label: "Mô tả", value: facility.description || "" },
+    { key: "6", label: "Trạng thái", value: facility.status === 1 ? "Active" : "Inactive" },
+    { key: "7", label: "Tệp giấy phép", value: facility.licenseFile || "" },
     {
-      key: "9",
+      key: "8",
       label: "Ngày tạo",
       value: facility.createdAt
         ? new Date(facility.createdAt).toLocaleDateString("vi-VN")
         : "",
     },
-    {
-      key: "10",
-      label: "Ngày cập nhật",
-      value: facility.updatedAt
-        ? new Date(facility.updatedAt).toLocaleDateString("vi-VN")
-        : "",
-    },
+   
   ];
 
   return (

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { facilityApi } from "@/api/vaccinationFacilitiesApi";
-import type { Facility, UpdateFacilityRequest } from "@/api/vaccinationFacilitiesApi";
-import { Search, MapPin, Phone, Mail, Building2, Edit } from "lucide-react";
-import { Form, Modal, Upload, Input, Switch, Button, Spin, message } from "antd";
+import type { Facility, UpdateFacilityRequest, CreateFacilityRequest } from "@/api/vaccinationFacilitiesApi";
+import { Search, MapPin, Phone, Mail, Building2, Edit, Plus } from "lucide-react";
+import { Form, Modal, Upload, Input, Switch, Button, Spin, message, Select } from "antd";
 import type { RcFile, UploadFile } from "antd/es/upload/interface";
 import { getUserInfo } from "@/lib/storage";
+
+const { Option } = Select;
 
 const FacilityManagement: React.FC = () => {
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -12,13 +14,15 @@ const FacilityManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [selectedFacilityId, setSelectedFacilityId] = useState<number | null>(null);
   const [formLoading, setFormLoading] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [currentLicenseFile, setCurrentLicenseFile] = useState<string | null>(null);
   const user = getUserInfo();
   const [form] = Form.useForm();
+  const [createForm] = Form.useForm();
 
   useEffect(() => {
     const fetchFacilities = async () => {
@@ -54,7 +58,7 @@ const FacilityManagement: React.FC = () => {
         });
         setCurrentLicenseFile(res.data.licenseFile);
         setFormError(null);
-        setIsModalOpen(true);
+        setIsUpdateModalOpen(true);
       } else {
         setFormError(res.message || "Không tìm thấy thông tin cơ sở.");
       }
@@ -101,7 +105,7 @@ const FacilityManagement: React.FC = () => {
           : null,
       };
       console.log("Sending update request with payload:", payload, "accountId:", user.accountId);
-      const res = await facilityApi.update( user.accountId, payload);
+      const res = await facilityApi.update(user.accountId, payload);
       Modal.confirm({
         title: res.success ? "Cập nhật thành công" : "Cập nhật thất bại",
         content: res.success
@@ -115,7 +119,7 @@ const FacilityManagement: React.FC = () => {
               f.facilityId === selectedFacilityId ? res.data : f
             );
             setFacilities(updatedFacilities);
-            setIsModalOpen(false);
+            setIsUpdateModalOpen(false);
             form.resetFields(); // Reset form after successful update
           }
         },
@@ -133,11 +137,62 @@ const FacilityManagement: React.FC = () => {
     }
   };
 
+  const handleCreate = async (values: any) => {
+    setFormLoading(true);
+    try {
+      const payload: CreateFacilityRequest = {
+        accountName: values.accountName,
+        password: values.password,
+        managerEmail: values.managerEmail,
+        managerFullName: values.managerFullName,
+        managerPhone: values.managerPhone,
+        managerDescription: values.managerDescription || "",
+        facilityName: values.facilityName,
+        licenseNumber: Number(values.licenseNumber),
+        facilityAddress: values.facilityAddress,
+        facilityPhone: Number(values.facilityPhone),
+        facilityEmail: values.facilityEmail,
+        licenseFile: Array.isArray(values.licenseFile) && values.licenseFile.length > 0
+          ? (values.licenseFile[0].originFileObj as RcFile)
+          : null,
+        facilityDescription: values.facilityDescription || "",
+      };
+      const res = await facilityApi.createFacility(payload);
+      Modal.confirm({
+        title: res.success ? "Tạo cơ sở thành công" : "Tạo cơ sở thất bại",
+        content: res.success
+          ? "Cơ sở và tài khoản quản lý đã được tạo thành công."
+          : res.message || "Đã xảy ra lỗi khi tạo cơ sở.",
+        okText: "Đóng",
+        cancelButtonProps: { style: { display: "none" } },
+        onOk: () => {
+          if (res.success && res.data) {
+            setFacilities([...facilities, res.data]);
+            setIsCreateModalOpen(false);
+            createForm.resetFields();
+          }
+        },
+      });
+    } catch (err: any) {
+      console.error("Create error:", err);
+      Modal.confirm({
+        title: "Tạo cơ sở thất bại",
+        content: err?.message || "Đã xảy ra lỗi khi tạo cơ sở. Vui lòng thử lại.",
+        okText: "Đóng",
+        cancelButtonProps: { style: { display: "none" } },
+      });
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
   const handleCancel = () => {
-    setIsModalOpen(false);
+    setIsUpdateModalOpen(false);
+    setIsCreateModalOpen(false);
     setSelectedFacilityId(null);
     setCurrentLicenseFile(null);
-    form.resetFields(); // Reset form to clear licenseFile
+    form.resetFields();
+    createForm.resetFields();
     setFormError(null);
   };
 
@@ -147,8 +202,21 @@ const FacilityManagement: React.FC = () => {
   };
 
   const handleUploadChange = (info: { fileList: UploadFile[] }) => {
-    console.log("Upload onChange:", info.fileList); // Debug fileList
-    form.setFieldsValue({ licenseFile: info.fileList }); // Ensure fileList is updated
+    console.log("Upload onChange:", info.fileList);
+    if (info.fileList.length > 0) {
+      form.setFieldsValue({ licenseFile: info.fileList });
+    } else {
+      form.setFieldsValue({ licenseFile: [] });
+    }
+  };
+
+  const handleCreateUploadChange = (info: { fileList: UploadFile[] }) => {
+    console.log("Create Upload onChange:", info.fileList);
+    if (info.fileList.length > 0) {
+      createForm.setFieldsValue({ licenseFile: info.fileList });
+    } else {
+      createForm.setFieldsValue({ licenseFile: [] });
+    }
   };
 
   const filteredFacilities = facilities.filter((facility) => {
@@ -177,6 +245,17 @@ const FacilityManagement: React.FC = () => {
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Quản lý cơ sở</h1>
             <p className="text-gray-600 mt-1">Quản lý danh sách cơ sở tiêm chủng</p>
           </div>
+          <Button
+            type="primary"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 rounded-lg"
+            onClick={() => {
+              setIsCreateModalOpen(true);
+              createForm.resetFields();
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            Tạo cơ sở mới
+          </Button>
         </div>
       </div>
 
@@ -364,7 +443,7 @@ const FacilityManagement: React.FC = () => {
       {/* Update Modal */}
       <Modal
         title="Cập nhật thông tin cơ sở"
-        open={isModalOpen}
+        open={isUpdateModalOpen}
         onCancel={handleCancel}
         footer={null}
         className="rounded-lg"
@@ -463,6 +542,155 @@ const FacilityManagement: React.FC = () => {
                 className="rounded-lg bg-blue-600 hover:bg-blue-700"
               >
                 Lưu
+              </Button>
+            </div>
+          </Form>
+        )}
+      </Modal>
+
+      {/* Create Modal */}
+      <Modal
+        title="Tạo cơ sở mới"
+        open={isCreateModalOpen}
+        onCancel={handleCancel}
+        footer={null}
+        className="rounded-lg"
+      >
+        {formLoading ? (
+          <Spin tip="Đang tạo cơ sở..." size="large">
+            <div className="py-12" />
+          </Spin>
+        ) : formError ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-600">{formError}</p>
+          </div>
+        ) : (
+          <Form
+            form={createForm}
+            layout="vertical"
+            onFinish={handleCreate}
+            onFinishFailed={handleFinishFailed}
+            className="space-y-4"
+          >
+            <Form.Item
+              label="Tên tài khoản"
+              name="accountName"
+              rules={[{ required: true, message: "Vui lòng nhập tên tài khoản!" }]}
+            >
+              <Input placeholder="Nhập tên tài khoản" className="rounded-lg" />
+            </Form.Item>
+            <Form.Item
+              label="Mật khẩu"
+              name="password"
+              rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
+            >
+              <Input.Password placeholder="Nhập mật khẩu" className="rounded-lg" />
+            </Form.Item>
+            <Form.Item
+              label="Email quản lý"
+              name="managerEmail"
+              rules={[
+                { required: true, message: "Vui lòng nhập email quản lý!" },
+                { type: "email", message: "Email không hợp lệ!" },
+              ]}
+            >
+              <Input placeholder="Nhập email quản lý" className="rounded-lg" />
+            </Form.Item>
+            <Form.Item
+              label="Họ tên quản lý"
+              name="managerFullName"
+              rules={[{ required: true, message: "Vui lòng nhập họ tên quản lý!" }]}
+            >
+              <Input placeholder="Nhập họ tên quản lý" className="rounded-lg" />
+            </Form.Item>
+            <Form.Item
+              label="Số điện thoại quản lý"
+              name="managerPhone"
+              rules={[
+                { required: true, message: "Vui lòng nhập số điện thoại quản lý!" },
+                { pattern: /^\d{10,15}$/, message: "Số điện thoại phải là 10-15 chữ số!" },
+              ]}
+            >
+              <Input placeholder="Nhập số điện thoại quản lý" className="rounded-lg" />
+            </Form.Item>
+            <Form.Item label="Mô tả quản lý" name="managerDescription">
+              <Input.TextArea rows={4} placeholder="Nhập mô tả quản lý (tùy chọn)" className="rounded-lg" />
+            </Form.Item>
+            <Form.Item
+              label="Tên cơ sở"
+              name="facilityName"
+              rules={[{ required: true, message: "Vui lòng nhập tên cơ sở!" }]}
+            >
+              <Input placeholder="Nhập tên cơ sở" className="rounded-lg" />
+            </Form.Item>
+            <Form.Item
+              label="Số giấy phép"
+              name="licenseNumber"
+              rules={[
+                { required: true, message: "Vui lòng nhập số giấy phép!" },
+                { pattern: /^\d+$/, message: "Số giấy phép phải là số!" },
+              ]}
+            >
+              <Input placeholder="Nhập số giấy phép" type="number" className="rounded-lg" />
+            </Form.Item>
+            <Form.Item
+              label="Địa chỉ cơ sở"
+              name="facilityAddress"
+              rules={[{ required: true, message: "Vui lòng nhập địa chỉ cơ sở!" }]}
+            >
+              <Input placeholder="Nhập địa chỉ cơ sở" className="rounded-lg" />
+            </Form.Item>
+            <Form.Item
+              label="Số điện thoại cơ sở"
+              name="facilityPhone"
+              rules={[
+                { required: true, message: "Vui lòng nhập số điện thoại cơ sở!" },
+                { pattern: /^\d{10,15}$/, message: "Số điện thoại phải là 10-15 chữ số!" },
+              ]}
+            >
+              <Input placeholder="Nhập số điện thoại cơ sở" className="rounded-lg" />
+            </Form.Item>
+            <Form.Item
+              label="Email cơ sở"
+              name="facilityEmail"
+              rules={[
+                { required: true, message: "Vui lòng nhập email cơ sở!" },
+                { type: "email", message: "Email không hợp lệ!" },
+              ]}
+            >
+              <Input placeholder="Nhập email cơ sở" className="rounded-lg" />
+            </Form.Item>
+            <Form.Item label="Mô tả cơ sở" name="facilityDescription">
+              <Input.TextArea rows={4} placeholder="Nhập mô tả cơ sở (tùy chọn)" className="rounded-lg" />
+            </Form.Item>
+            <Form.Item
+              label="Giấy phép"
+              name="licenseFile"
+              valuePropName="fileList"
+            >
+              <Upload
+                beforeUpload={() => false}
+                maxCount={1}
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleCreateUploadChange}
+              >
+                <Button className="rounded-lg">Chọn tệp</Button>
+              </Upload>
+            </Form.Item>
+            <div className="flex justify-end space-x-4">
+              <Button
+                onClick={handleCancel}
+                className="rounded-lg border-gray-300 hover:bg-gray-100"
+              >
+                Hủy
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={formLoading}
+                className="rounded-lg bg-blue-600 hover:bg-blue-700"
+              >
+                Tạo
               </Button>
             </div>
           </Form>

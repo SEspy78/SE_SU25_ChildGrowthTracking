@@ -81,12 +81,6 @@ export default function AdminLayout() {
       label: "Quản lý Blog",
       path: "/admin/blogs"
     },
-    {
-      to: "/admin/create-account",
-      icon: UserPlus,
-      label: "Tạo tài khoản cho cơ sở ",
-      path: "/admin/create-account"
-    }
   ];
 
   return (

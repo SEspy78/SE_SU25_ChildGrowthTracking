@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Button, Card, Col, Row, Input, Select, Table, Modal, Form, InputNumber } from "antd";
+import { Button, Card, Col, Row, Input, Select, Table, Modal, Form, InputNumber, message } from "antd";
 import { Search, Users, AlertCircle, Pencil, Trash2, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { FacilityStaffAPI, type Staff, type CreateStaffPayload, type UpdateStaffPayload } from "@/api/staffAPI";
 import { getUserInfo } from "@/lib/storage";
@@ -20,19 +20,13 @@ const StaffManagement: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
-  const [toast, setToast] = useState<{ show: boolean; message: string; type: "success" | "error" }>({
-    show: false,
-    message: "",
-    type: "success",
-  });
   const [form] = Form.useForm();
 
   const fetchStaffData = async () => {
     const userInfo = getUserInfo();
     if (!userInfo?.facilityId) {
       setError("Không tìm thấy mã cơ sở.");
-      setToast({ show: true, message: "Không tìm thấy mã cơ sở.", type: "error" });
-      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+      setTimeout(() => setError(null), 2500);
       return;
     }
     setLoading(true);
@@ -46,13 +40,10 @@ const StaffManagement: React.FC = () => {
       console.log("API Response:", res);
       setStaffData(res.data || []);
       setTotalCount(res.totalCount || 0);
-      setToast({ show: true, message: "Tải dữ liệu nhân viên thành công", type: "success" });
-      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } catch (err: any) {
       console.error("API Error:", err);
       setError(err.message || "Không thể tải dữ liệu nhân viên.");
-      setToast({ show: true, message: err.message || "Tải dữ liệu nhân viên thất bại", type: "error" });
-      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+      setTimeout(() => setError(null), 2500);
     } finally {
       setLoading(false);
     }
@@ -67,36 +58,17 @@ const StaffManagement: React.FC = () => {
     fetchStaffData();
   };
 
-  // const handleDeleteStaff = async () => {
-  //   if (!selectedStaff) return;
-  //   setLoading(true);
-  //   try {
-  //     await FacilityStaffAPI.deleteStaff(selectedStaff.staffId);
-  //     setToast({ show: true, message: `Đã xóa nhân viên ${selectedStaff.fullName} thành công!`, type: "success" });
-  //     setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
-  //     setShowDeleteModal(false);
-  //     setSelectedStaff(null);
-  //     fetchStaffData();
-  //   } catch (err: any) {
-  //     setToast({ show: true, message: `Xóa nhân viên ${selectedStaff.fullName} thất bại: ${err.message || "Lỗi không xác định"}`, type: "error" });
-  //     setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const handleCreateStaff = async (values: CreateStaffPayload) => {
     setModalLoading(true);
     try {
-      await FacilityStaffAPI.createStaff(values);
-      setToast({ show: true, message: `Đã thêm nhân viên ${values.fullName} thành công!`, type: "success" });
-      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+      const res = await FacilityStaffAPI.createStaff(values);
+      message.success(res.message || `Đã thêm nhân viên ${values.fullName} thành công!`);
+      console.log("Create Response:", res.message);
       setShowCreateModal(false);
       form.resetFields();
       fetchStaffData();
     } catch (err: any) {
-      setToast({ show: true, message: `Thêm nhân viên thất bại: ${err.message || "Lỗi không xác định"}`, type: "error" });
-      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+      message.error(err.response?.data?.message || `Thêm nhân viên thất bại: Lỗi không xác định`);
     } finally {
       setModalLoading(false);
     }
@@ -120,15 +92,14 @@ const StaffManagement: React.FC = () => {
         university: values.university,
         bio: values.bio,
       };
-      await FacilityStaffAPI.updateStaff(payload);
-      setToast({ show: true, message: `Đã cập nhật nhân viên ${values.fullName} thành công!`, type: "success" });
-      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+      const res = await FacilityStaffAPI.updateStaff(payload);
+      message.success(res.message || `Đã cập nhật nhân viên ${values.fullName} thành công!`);
+      console.log("Update Response:", res.message);
       setShowEditModal(false);
       form.resetFields();
       fetchStaffData();
     } catch (err: any) {
-      setToast({ show: true, message: `Cập nhật nhân viên thất bại: ${err.message || "Lỗi không xác định"}`, type: "error" });
-      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+      message.error(err.response?.data?.message || `Cập nhật nhân viên thất bại: Lỗi không xác định`);
     } finally {
       setModalLoading(false);
     }
@@ -213,7 +184,6 @@ const StaffManagement: React.FC = () => {
                 position: record.position,
                 description: record.description,
                 status: record.status,
-                
               });
             }}
             className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
@@ -221,16 +191,7 @@ const StaffManagement: React.FC = () => {
           >
             <Pencil className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => {
-              setSelectedStaff(record);
-              setShowDeleteModal(true);
-            }}
-            className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
-            title="Xóa"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          
         </div>
       ),
     },
@@ -275,17 +236,6 @@ const StaffManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Toast Notification */}
-      {toast.show && (
-        <div
-          className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded shadow-lg text-white font-semibold transition ${
-            toast.type === "success" ? "bg-green-600" : "bg-red-600"
-          }`}
-        >
-          {toast.message}
-        </div>
-      )}
-
       {/* Header */}
       <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
