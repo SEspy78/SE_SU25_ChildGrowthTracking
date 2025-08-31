@@ -7,6 +7,13 @@
     };
 
 
+    export type response = {
+    message: string;
+    success: boolean;
+
+    }
+
+
     export type AccountResponse = {
     accountId: number;
     accountName: string;
@@ -61,6 +68,8 @@ export type Member = {
   updatedAt: string;
 };
 
+
+
 export type MemberListResponse = {
   totalCount: number;
   data: Member[];
@@ -102,7 +111,11 @@ export type MemberListResponse = {
         const response = await axiosClient.post("api/Auth/register", data);
         return response; 
     },
+     
 
-    
+    sendMail: async (memberId: number) => {
+        const response: response = await axiosClient.post(`api/ThankYouEmail/send/${memberId}?includeStatistics=true`);
+        return response;
+    }
 
-    };
+};

@@ -133,15 +133,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-sm text-center mt-6 text-gray-600">
-            Chưa có tài khoản?{" "}
-            <a
-              href="/register"
-              className="text-indigo-600 font-semibold hover:underline transition-all duration-200"
-            >
-              Đăng ký ngay
-            </a>
-          </p>
         </div>
       </div>
     </div>

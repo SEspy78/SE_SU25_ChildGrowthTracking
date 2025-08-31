@@ -520,7 +520,7 @@ export default function DoctorConfirmVaccination() {
                   disabled={submitting}
                 />
               </div>
-              </div>
+            </div>
           </div>
         )}
 
@@ -550,13 +550,13 @@ export default function DoctorConfirmVaccination() {
               </button>
             </>
           )}
-          {(isCompletedStatus || vaccinationConfirmed || isCancelledStatus || (!isPaidStatus && !isCompletedStatus && !isCancelledStatus)) && (
+          {isCompletedStatus && (
             <button
               onClick={handleComplete}
               disabled={submitting}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
-              Hoàn thành
+              Xong
             </button>
           )}
           {submitMessage && !vaccinationConfirmed && (

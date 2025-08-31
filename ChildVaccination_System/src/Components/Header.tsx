@@ -77,15 +77,10 @@ const Header = () => {
             </div>
           ) : (
             <div className="flex items-center space-x-4">
-              <Link
-                to="/login"
-                className="text-indigo-600 font-semibold hover:text-indigo-800 transition-all duration-200 hover:scale-105"
-              >
-                Đăng nhập
-              </Link>
-              <Link to="/register">
+             
+              <Link to="/login">
                 <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg px-6 py-2 shadow-md hover:shadow-lg transition-all duration-300">
-                  Đăng ký ngay
+                 Đăng nhập
                 </Button>
               </Link>
             </div>

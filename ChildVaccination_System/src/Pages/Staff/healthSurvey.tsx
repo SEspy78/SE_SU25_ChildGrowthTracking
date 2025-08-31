@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getUserInfo } from "@/lib/storage";
 import VaccinationSteps from "@/Components/VaccinationStep";
 import { Button } from "@/Components/ui/button";
+import {diseaseApi} from "@/api/diseaseApi";
 import { useEffect, useState, useMemo } from "react";
 import { appointmentApi, orderApi, type Appointment, type FacilityScheduleResponse } from "@/api/appointmentAPI";
 import { surveyAPI, type Survey, type Question, type QuestionResponse } from "@/api/surveyAPI";
@@ -79,10 +80,38 @@ export default function HealthSurvey() {
     type: "success",
   });
   const user = getUserInfo();
+  const [vaccineProfiles, setVaccineProfiles] = useState<VaccineProfile[]>([]);
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
+  const [errorProfiles, setErrorProfiles] = useState<string>("");
+  const [vaccineMap, setVaccineMap] = useState<Record<number, string>>({});
+  const [diseaseMap, setDiseaseMap] = useState<Record<number, string>>({});
+
+  const getVaccineName = async (id: number) => {
+    if (vaccineMap[id]) return vaccineMap[id];
+    try {
+      const v = await facilityVaccineApi.getById(id);
+      setVaccineMap((prev) => ({ ...prev, [id]: v.vaccine.name }));
+      return v.vaccine.name;
+    } catch {
+      setVaccineMap((prev) => ({ ...prev, [id]: `ID: ${id}` }));
+      return `ID: ${id}`;
+    }
+  };
+
+  const getDiseaseName = async (id: number) => {
+    if (diseaseMap[id]) return diseaseMap[id];
+    try {
+      const d = await diseaseApi.getById(id); 
+      setDiseaseMap((prev) => ({ ...prev, [id]: d.name }));
+      return d.name;
+    } catch {
+      setDiseaseMap((prev) => ({ ...prev, [id]: `Bệnh ID: ${id}` }));
+      return `Bệnh ID: ${id}`;
+    }
+  };
 
   const showSurveySelect = appointment && user?.position === "Doctor" && appointment.status === "Pending";
 
-  // Calculate total package price based on selected vaccines and quantities
   const totalPrice = useMemo(() => {
     if (!appointment?.order?.orderDetails || !availableVaccines.length) return 0;
     return appointment.order.orderDetails.reduce((total, detail) => {
@@ -208,6 +237,23 @@ export default function HealthSurvey() {
       setTempVaccineSelections(initialSelections);
     }
   }, [showAdjustPackageModal, appointment?.order?.orderDetails]);
+
+  useEffect(() => {
+    if (appointment?.child?.childId && user?.position === "Doctor") {
+      setLoadingProfiles(true);
+      setErrorProfiles("");
+      childprofileApi
+        .getChildVaccineProfile(appointment.child.childId)
+        .then((profiles) => {
+          console.log("Raw vaccine profiles:", profiles);
+          const filteredProfiles = profiles.filter((vp) => vp.status === "Completed");
+          console.log("Filtered vaccine profiles (Completed only):", filteredProfiles);
+          setVaccineProfiles(filteredProfiles);
+        })
+        .catch(() => setErrorProfiles("Không thể tải lịch sử tiêm chủng."))
+        .finally(() => setLoadingProfiles(false));
+    }
+  }, [appointment?.child?.childId, user?.position]);
 
   useEffect(() => {
     if (appointment?.status === "Pending" && user?.position === "Staff") {
@@ -946,7 +992,7 @@ export default function HealthSurvey() {
           </div>
         )}
 
-        {(user?.position === "Doctor" || (user?.position === "Doctor" && appointment.order && appointment.status === "Pending")) && (
+        {(user?.position === "Doctor" || (user?.position === "Doctor" && appointment.order &&   appointment.status === "Pending")) && (
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
             <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
               <h3 className="text-xl font-semibold text-gray-800">
@@ -1194,6 +1240,71 @@ export default function HealthSurvey() {
           </div>
         )}
 
+        {user?.position === "Doctor" && (
+          <Collapse
+            activeKey={isAnswersVisible ? ["1"] : []}
+            className="mb-8 bg-white rounded-xl shadow-md border-l-4 border-teal-500"
+            expandIcon={({ isActive }) => (
+              <CaretRightOutlined rotate={isActive ? 90 : 0} className="text-teal-600 text-lg" />
+            )}
+            onChange={() => setIsAnswersVisible(!isAnswersVisible)}
+          >
+            <Collapse.Panel
+              header={
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-0">
+                    Lịch sử tiêm chủng
+                  </h3>
+                </div>
+              }
+              key="1"
+              className="p-6"
+            >
+              {loadingProfiles ? (
+                <div className="flex flex-col items-center py-6 bg-gray-50 rounded-lg">
+                  <svg className="animate-spin h-8 w-8 text-indigo-600 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="text-gray-600 text-lg">Đang tải thông tin...</span>
+                  <div className="w-full max-w-xs bg-gray-200 rounded-full h-2 mt-3">
+                    <div className="bg-indigo-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                  </div>
+                </div>
+              ) : errorProfiles ? (
+                <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M12 17h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"></path>
+                  </svg>
+                  {errorProfiles}
+                </div>
+              ) : vaccineProfiles.length === 0 ? (
+                <div className="bg-gray-50 text-gray-600 p-4 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"></path>
+                  </svg>
+                  Không có lịch sử tiêm chủng.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-teal-50 rounded-lg p-4 flex items-center justify-between">
+                    <span className="text-teal-700 font-semibold text-lg">Tổng cộng: {vaccineProfiles.length} liều</span>
+                    <span className="text-sm text-gray-500">Cập nhật đến {new Date().toLocaleDateString("vi-VN")}</span>
+                  </div>
+                  {vaccineProfiles.map((vp) => (
+                    <VaccineProfileCard
+                      key={vp.vaccineProfileId}
+                      vp={vp}
+                      getVaccineName={getVaccineName}
+                      getDiseaseName={getDiseaseName}
+                    />
+                  ))}
+                </div>
+              )}
+            </Collapse.Panel>
+          </Collapse>
+        )}
+
         {!showSurveySelect && surveyAnswers && surveyAnswers.questions.length > 0 && (
           <Collapse
             activeKey={isAnswersVisible ? ["1"] : []}
@@ -1350,3 +1461,68 @@ export default function HealthSurvey() {
     </div>
   );
 }
+
+interface VaccineProfileCardProps {
+  vp: VaccineProfile;
+  getVaccineName: (id: number) => Promise<string>;
+  getDiseaseName: (id: number) => Promise<string>;
+}
+
+const VaccineProfileCard: React.FC<VaccineProfileCardProps> = ({ vp, getVaccineName, getDiseaseName }) => {
+  const [vaccineName, setVaccineName] = useState<string>(`ID: ${vp.vaccineId}`);
+  const [diseaseName, setDiseaseName] = useState<string>(`Bệnh ID: ${vp.diseaseId}`);
+
+  useEffect(() => {
+    let mounted = true;
+    getVaccineName(vp.vaccineId).then((name) => {
+      if (mounted) setVaccineName(name);
+    });
+    getDiseaseName(vp.diseaseId).then((name) => {
+      if (mounted) setDiseaseName(name);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [vp.vaccineId, vp.diseaseId, getVaccineName, getDiseaseName]);
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow duration-300">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-3">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 3.996a11.955 11.955 0 01-8.618 3.986A12.02 12.02 0 003 12c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+            <span className="font-medium text-gray-600">Bệnh:</span>
+            <span className="ml-2 text-gray-800 font-semibold">{diseaseName}</span>
+          </div>
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+            </svg>
+            <span className="font-medium text-gray-600">Vắc xin:</span>
+            <span className="ml-2 text-gray-800 font-semibold">{vaccineName}</span>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            <span className="font-medium text-gray-600">Liều:</span>
+            <span className="ml-2 text-gray-800">{vp.doseNum}</span>
+          </div>
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <span className="font-medium text-gray-600">Ngày tiêm:</span>
+            <span className="ml-2 text-gray-800 font-semibold">{new Date(vp.actualDate).toLocaleDateString("vi-VN")}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export { VaccineProfileCard };

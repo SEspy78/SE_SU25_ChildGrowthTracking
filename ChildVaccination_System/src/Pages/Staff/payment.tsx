@@ -4,9 +4,9 @@ import { appointmentApi, type Appointment } from "@/api/appointmentAPI";
 import { vaccinePackageApi, type VaccinePackage } from "@/api/vaccinePackageApi";
 import { FacilityPaymentAccountApi, type PaymentResponse } from "@/api/facilityPaymentAPI";
 import { getUserInfo } from "@/lib/storage";
-import { Button as AntButton, message, Modal } from "antd";
-import VaccinationSteps from "@/Components/VaccinationStep";
 import { Button } from "@/Components/ui/button";
+import { message, Modal } from "antd";
+import VaccinationSteps from "@/Components/VaccinationStep";
 
 export default function Payment() {
   const { id } = useParams<{ id?: string }>();
@@ -133,11 +133,9 @@ export default function Payment() {
   };
 
   const handleBackByPosition = () => {
-    if (user?.position === "Doctor") {
-      navigate("/doctor/appointments");
-    } else {
-      navigate("/staff/appointments");
-    }
+    if (!id) return;
+    const basePath = user?.position === "Doctor" ? "/doctor" : "/staff";
+    navigate(`${basePath}/appointments/${id}/step-2`); // Navigate to Pre-vaccination health assessment step
   };
 
   const handleConfirmPayment = async () => {
@@ -236,7 +234,10 @@ export default function Payment() {
   }
 
   const child = appointment.child;
-  const vaccineDisplay = appointment.order?.packageName
+  // Use packageId to display vaccine name if order exists
+  const vaccineDisplay = appointment.order?.packageId && vaccinePackage?.name
+    ? vaccinePackage.name
+    : appointment.order?.packageName
     ? appointment.order.packageName
     : appointment.vaccinesToInject?.length
     ? `Vắc xin ${appointment.vaccinesToInject.map(v => v.vaccineName).join(", ")}`
@@ -252,8 +253,9 @@ export default function Payment() {
             type="button"
             className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition duration-300"
             onClick={handleBackByPosition}
+            disabled={submitting}
           >
-            Quay lại
+            Trở lại
           </Button>
         </div>
 
@@ -396,45 +398,43 @@ export default function Payment() {
 
         {/* Action Buttons and Message */}
         <div className="flex justify-end space-x-4 mt-8 items-center">
-          <AntButton
-            type="default"
-            onClick={() => window.history.back()}
-            disabled={submitting}
+          <Button
+            type="button"
             className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-full transition duration-300"
+            onClick={handleBackByPosition}
+            disabled={submitting}
           >
             Trở lại
-          </AntButton>
+          </Button>
           {showPaymentSection && !isAppointmentPaid && !isOrderPaid && selectedPaymentMethod === "cash" && (
-            <AntButton
-              type="primary"
-              onClick={handleConfirmPayment}
-              loading={submitting}
-              disabled={submitting}
+            <Button
+              type="button"
               className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition duration-300"
+              onClick={handleConfirmPayment}
+              disabled={submitting}
             >
               {submitting ? "Đang xử lý..." : "Xác nhận thanh toán"}
-            </AntButton>
+            </Button>
           )}
           {appointment?.order && appointment.order.status === "Paid" && appointment.status === "Approval" && (
-            <AntButton
-              type="primary"
-              onClick={handleNext}
-              loading={submitting}
-              disabled={submitting}
+            <Button
+              type="button"
               className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition duration-300"
+              onClick={handleNext}
+              disabled={submitting}
             >
               {submitting ? "Đang xử lý..." : "Tiếp theo"}
-            </AntButton>
+            </Button>
           )}
           {isAppointmentPaid && (
-            <AntButton
-              type="primary"
+            <Button
+              type="button"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition duration-300"
               onClick={handleContinue}
               disabled={submitting}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full transition duration-300"
             >
               Tiếp tục
-            </AntButton>
+            </Button>
           )}
           {submitMessage && (
             <span className={`ml-4 font-medium ${submitMessage.includes("thành công") ? "text-teal-600" : "text-red-500"}`}>

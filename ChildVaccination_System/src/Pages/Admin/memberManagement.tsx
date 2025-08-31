@@ -60,6 +60,28 @@ const MemberManagement: React.FC = () => {
     }
   };
 
+  const handleSendMail = async (memberId: number) => {
+    setLoading(true);
+    try {
+      const response = await authApi.sendMail(memberId);
+      setToast({
+        show: true,
+        message: response.success ? "Gửi email thành công!" : "Gửi email thất bại.",
+        type: response.success ? "success" : "error",
+      });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+    } catch (err) {
+      setToast({
+        show: true,
+        message: "Gửi email thất bại.",
+        type: "error",
+      });
+      setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredMembers = members.filter(member => {
     const matchesSearch = 
       member.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -341,7 +363,15 @@ const MemberManagement: React.FC = () => {
                             >
                               <Eye className="w-5 h-5" />
                             </button>
-                            
+                            <button
+                              onClick={() => handleSendMail(member.memberId)}
+                              className="text-green-500 hover:cursor-pointer hover:text-green-600 p-2 rounded-full hover:bg-green-50 transition-colors duration-200"
+                              title="Gửi email"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                              </svg>
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -453,9 +483,17 @@ const MemberManagement: React.FC = () => {
                               className="text-blue-500 hover:cursor-pointer hover:text-blue-600 p-2 rounded-full hover:bg-blue-50 transition-colors duration-200"
                               title="Xem trẻ em"
                             >
-                              <Eye className=" w-5 h-5" />
+                              <Eye className="w-5 h-5" />
                             </button>
-                            
+                            <button
+                              onClick={() => handleSendMail(member.accountId)}
+                              className="text-green-500 hover:cursor-pointer hover:text-green-600 p-2 rounded-full hover:bg-green-50 transition-colors duration-200"
+                              title="Gửi email"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                              </svg>
+                            </button>
                           </div>
                         </td>
                       </tr>

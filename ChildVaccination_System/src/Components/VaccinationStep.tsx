@@ -56,7 +56,7 @@ export default function VaccinationSteps({ currentStep: propCurrentStep }: Vacci
   }, [id, location.pathname])
 
   const isStepClickable = (_stepIndex: number, _status: string | null): boolean => {
-    return true // All steps are always clickable
+    return false // All steps are not clickable
   }
 
   const isStepCompleted = (stepIndex: number, status: string | null): boolean => {
@@ -90,9 +90,8 @@ export default function VaccinationSteps({ currentStep: propCurrentStep }: Vacci
           <div
             key={index}
             className={`flex items-center space-x-2 ${
-              isStepClickable(index, appointmentStatus) ? 'cursor-pointer' : 'cursor-not-allowed'
+              isStepClickable(index, appointmentStatus) ? 'cursor-pointer' : 'cursor-default'
             }`}
-            onClick={() => goToStep(index)}
           >
             <div
               className={`rounded-full flex items-center justify-center transition-all ${
