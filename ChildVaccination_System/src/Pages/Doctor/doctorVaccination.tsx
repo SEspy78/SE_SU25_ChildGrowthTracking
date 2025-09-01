@@ -136,7 +136,7 @@ export default function DoctorConfirmVaccination() {
       return;
     }
     // Only validate expectedDateForNextDose if not the last dose
-    if (!isLastDose && !expectedDateForNextDose) {
+    if (!isLastDose && !isLastDoseOrder && !expectedDateForNextDose) {
       setSubmitMessage("Vui lòng chọn ngày dự kiến liều tiếp theo.");
       message.error("Vui lòng chọn ngày dự kiến liều tiếp theo.");
       return;
@@ -149,8 +149,8 @@ export default function DoctorConfirmVaccination() {
         facilityVaccineId,
         note: postVaccinationNotes,
         doseNumber: doseNum,
-        expectedDateForNextDose: isLastDose ? "2025-01-01" : expectedDateForNextDose,
-        nextFacilityVaccineId: appointment.order && !isLastDose ? nextVaccineId : facilityVaccineId, // Use facilityVaccineId if no order
+        expectedDateForNextDose: (isLastDose || isLastDoseOrder) ? "2025-01-01" : expectedDateForNextDose,
+        nextFacilityVaccineId: appointment.order && !isLastDoseOrder ? nextVaccineId : facilityVaccineId, // Use facilityVaccineId if no order or last dose
       };
       await appointmentApi.completeVaccination(payload);
       setSubmitMessage("Đã hoàn thành lịch tiêm.");
@@ -229,10 +229,13 @@ export default function DoctorConfirmVaccination() {
     0
   ) || 0;
 
-  // Determine if this is the last dose for vaccinesToInject
+  // Determine if this is the last dose for vaccinesToInject (non-order)
   const isLastDose = appointment?.vaccinesToInject?.length
     ? parseInt(appointment.vaccinesToInject[0].doseNumber, 10) === appointment.facilityVaccines?.[0]?.vaccine?.numberOfDoses
-    : totalRemainingQuantity === 1;
+    : false;
+
+  // Determine if this is the last dose for order-based appointments
+  const isLastDoseOrder = appointment?.order ? totalRemainingQuantity === 1 : false;
 
   if (loading || loadingPackage) {
     return (
@@ -556,7 +559,7 @@ export default function DoctorConfirmVaccination() {
                   disabled={submitting || !!appointment.vaccinesToInject?.length} // Disable if vaccinesToInject exists
                 />
               </div>
-              {!isLastDose && (
+              {!(appointment.order ? isLastDoseOrder : isLastDose) && (
                 <div>
                   <label className="block text-gray-700 font-medium mb-2">Ngày dự kiến liều tiếp theo:</label>
                   <DatePicker
@@ -568,7 +571,7 @@ export default function DoctorConfirmVaccination() {
                   />
                 </div>
               )}
-              {appointment.order && !isPackageComplete && (
+              {appointment.order && !isLastDoseOrder && (
                 <div>
                   <label className="block text-gray-700 font-medium mb-2">Vắc xin cho lần tiêm tiếp theo:</label>
                   <Select
@@ -576,7 +579,7 @@ export default function DoctorConfirmVaccination() {
                     value={nextVaccineId}
                     onChange={(value) => setNextVaccineId(value)}
                     placeholder="Chọn vắc xin cho lần tiêm tiếp theo"
-                    disabled={submitting || isLastDose}
+                    disabled={submitting}
                   >
                     {appointment.order?.orderDetails
                       ?.filter(detail => detail.remainingQuantity > 0)
@@ -586,9 +589,6 @@ export default function DoctorConfirmVaccination() {
                         </Select.Option>
                       ))}
                   </Select>
-                  {isLastDose && (
-                    <p className="text-sm text-gray-600 mt-2">Không cần chọn vắc xin vì đây là liều cuối cùng trong gói.</p>
-                  )}
                 </div>
               )}
               <div>
