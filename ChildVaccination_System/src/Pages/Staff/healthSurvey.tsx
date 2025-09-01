@@ -306,12 +306,12 @@ export default function HealthSurvey() {
       return true;
     }
 
-    if (temperatureC !== null && (temperatureC < 35.0 || temperatureC > 40.0)) {
-      message.error("Nhiệt độ cơ thể phải từ 35.0°C đến 40.0°C.");
+    if (temperatureC !== null && (temperatureC < 35.0 || temperatureC > 37.5)) {
+      message.error("Nhiệt độ cơ thể phải từ 35.0°C đến 37.5°C.");
       return false;
     }
     if (heartRateBpm !== null && (heartRateBpm < 60 || heartRateBpm > 160)) {
-      message.error("Nhịp tim phải từ 60 đến 160 bpm.");
+      message.error("Nhịp tim trẻ sơ sinh từ 60-160 bpm, 80-130 cho trẻ 1-3 tuổi.");
       return false;
     }
     if (systolicBpmmHg !== null && (systolicBpmmHg < 70 || systolicBpmmHg > 120)) {
@@ -1152,7 +1152,7 @@ export default function HealthSurvey() {
                         placeholder="Nhập nhiệt độ cơ thể (tùy chọn)"
                         className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
                       />
-                      <p className="text-sm text-gray-500 mt-2">Bình thường: 35.0°C - 40.0°C</p>
+                      <p className="text-sm text-gray-500 mt-2">Bình thường: 36.0°C - 37.5°C</p>
                     </div>
                     <div>
                       <label className="block text-gray-700 font-medium mb-2">
@@ -1167,7 +1167,7 @@ export default function HealthSurvey() {
                         placeholder="Nhập nhịp tim (tùy chọn)"
                         className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
                       />
-                      <p className="text-sm text-gray-500 mt-2">Bình thường: 60 - 160 bpm</p>
+                      <p className="text-sm text-gray-500 mt-2">Nhịp tim trẻ sơ sinh từ 60-160 bpm, 80-130 cho trẻ 1-3 tuổi</p>
                     </div>
                     <div>
                       <label className="block text-gray-700 font-medium mb-2">
@@ -1215,7 +1215,7 @@ export default function HealthSurvey() {
                         placeholder="Nhập độ bão hòa oxy (tùy chọn)"
                         className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
                       />
-                      <p className="text-sm text-gray-500 mt-2">Bình thường: 90% - 100%</p>
+                      <p className="text-sm text-gray-500 mt-2">Lý tưởng: 97 - 99%, Trung bình: 94 - 96%, Thấp: 90 - 93%</p>
                     </div>
                     <div>
                       <label className="block text-gray-700 font-medium mb-2">Ghi chú quyết định</label>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import { facilityApi, type Facility, type UpdateFacilityRequest } from "@/api/vaccinationFacilitiesApi";
 import { getUserInfo } from "@/lib/storage";
@@ -41,7 +42,6 @@ const FacilityDetail: React.FC = () => {
   }, [user?.accountId]);
 
   const handleCreateFacility = () => {
-    console.log("Navigate to /facility/create");
     // Example: window.location.href = "/facility/create";
   };
 
@@ -55,7 +55,7 @@ const FacilityDetail: React.FC = () => {
       email: facility.email,
       description: facility.description,
       status: facility.status === 1,
-      licenseFile: facility.licenseFile ? [{ uid: "-1", name: "Giấy phép hiện tại", url: facility.licenseFile, status: "done" }] : [],
+      licenseFile: undefined, // Không set giá trị mặc định cho licenseFile
     });
     setCurrentLicenseFile(facility.licenseFile || null);
     setFormError(null);
@@ -73,6 +73,18 @@ const FacilityDetail: React.FC = () => {
     }
     setFormLoading(true);
     try {
+      // Kiểm tra xem có file mới được chọn không
+      const hasNewFile = values.licenseFile && Array.isArray(values.licenseFile) && values.licenseFile.length > 0 && values.licenseFile[0].originFileObj;
+      
+      // Nếu không có file mới và có file cũ, tạo một file giả để giữ file cũ
+      let licenseFileToSend: File | null = null;
+      if (hasNewFile) {
+        licenseFileToSend = values.licenseFile[0].originFileObj as RcFile;
+      } else if (currentLicenseFile) {
+        // Tạo một file giả từ URL hiện tại để giữ file cũ
+        licenseFileToSend = await createFileFromUrl(currentLicenseFile, "license.pdf");
+      }
+      
       const payload: UpdateFacilityRequest = {
         facilityId: facility.facilityId,
         facilityName: values.facilityName,
@@ -82,16 +94,14 @@ const FacilityDetail: React.FC = () => {
         email: values.email,
         description: values.description || "",
         status: values.status,
-        licenseFile: Array.isArray(values.licenseFile) && values.licenseFile.length > 0
-          ? (values.licenseFile[0].originFileObj as RcFile)
-          : (currentLicenseFile || ""), // Send existing URL or empty string if no file
+        licenseFile: licenseFileToSend,
       };
       const res = await facilityApi.update(user.accountId, payload);
       if (res.success && res.data) {
         setFacility(res.data);
         setCurrentLicenseFile(res.data.licenseFile || null);
         setIsModalOpen(false);
-        form.resetFields();
+        // Không reset form để tránh mất dữ liệu
         Modal.success({
           title: "Cập nhật thành công",
           content: res.message || "Thông tin cơ sở đã được cập nhật thành công.",
@@ -110,13 +120,34 @@ const FacilityDetail: React.FC = () => {
   const handleCancel = () => {
     setIsModalOpen(false);
     setFormError(null);
-    setCurrentLicenseFile(facility?.licenseFile || null);
-    form.resetFields();
+    setCurrentLicenseFile(null);
+    // Không reset form để tránh mất dữ liệu đã nhập
+    form.setFieldsValue({
+      facilityName: "",
+      licenseNumber: "",
+      address: "",
+      phone: "",
+      email: "",
+      description: "",
+      status: false,
+      licenseFile: undefined,
+    });
   };
 
   const handleUploadChange = (info: { fileList: UploadFile[] }) => {
-    console.log("Upload onChange:", info.fileList);
     form.setFieldsValue({ licenseFile: info.fileList });
+  };
+
+  // Hàm tạo File object từ URL để giữ file cũ
+  const createFileFromUrl = async (url: string, filename: string): Promise<File> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new File([blob], filename, { type: blob.type });
+    } catch {
+      // Tạo file rỗng nếu có lỗi
+      return new File([""], filename, { type: "application/pdf" });
+    }
   };
 
   if (loading) {
@@ -224,6 +255,7 @@ const FacilityDetail: React.FC = () => {
         ? new Date(facility.createdAt).toLocaleDateString("vi-VN")
         : "",
     },
+   
   ];
 
   return (
@@ -286,7 +318,6 @@ const FacilityDetail: React.FC = () => {
             <Form.Item
               label="Số giấy phép"
               name="licenseNumber"
-              hidden
               rules={[
                 { required: true, message: "Vui lòng nhập số giấy phép!" },
                 { pattern: /^\d+$/, message: "Số giấy phép phải là số!" },

@@ -135,14 +135,7 @@ const AdminDashboard: React.FC = () => {
                   {dashboardData.totalRevenueFromMemberships.toLocaleString()} VND
                 </p>
               </div>
-              <div className="border-t pt-3">
-                <div className="text-center p-2 bg-purple-50 rounded-lg">
-                  <p className="text-xs text-gray-600">Hồ sơ theo dõi sức khỏe</p>
-                  <p className="text-lg font-bold text-purple-600">
-                    {dashboardData.totalGrowthRecords.toLocaleString()}
-                  </p>
-                </div>
-              </div>
+              
             </div>
           </div>
         </div>
@@ -205,19 +198,7 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="p-2 bg-yellow-100 rounded-full mr-2">
-                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                </div>
-                <span className="font-medium text-gray-900 text-sm">Chờ xác nhận</span>
-              </div>
-              <div className="text-right">
-                <div className="text-xl font-bold text-yellow-600">{appointmentStats.approval}</div>
-              </div>
-            </div>
-          </div>
+          
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <div className="flex items-center justify-between">
@@ -245,7 +226,7 @@ const AdminDashboard: React.FC = () => {
               <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                 <div>
                   <p className="font-bold text-green-700 text-sm">Số lịch hẹn đã thanh toán</p>
-                  <p className="text-2xl font-bold text-green-600">{appointmentStats.paid.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-green-600">{appointmentStats.completed.toLocaleString()}</p>
                 </div>
               </div>
             </div>

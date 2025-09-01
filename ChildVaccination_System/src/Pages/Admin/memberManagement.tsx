@@ -9,6 +9,7 @@ const MemberManagement: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [totalMemberCount, setTotalMemberCount] = useState<number>(0);
   const [vipMembers, setVipMembers] = useState<UserMembership[]>([]);
+  const [totalVipMemberCount, setTotalVipMemberCount] = useState<number>(0);
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,8 +35,9 @@ const MemberManagement: React.FC = () => {
           setMembers(res.data);
           setTotalMemberCount(res.totalCount);
         } else {
-          const res = await userMembershipApi.getAll();
+          const res = await userMembershipApi.getAll(currentPage - 1, itemsPerPage);
           setVipMembers(res.data);
+          setTotalVipMemberCount(res.totalCount);
         }
       } catch (err) {
         setError("Không thể tải danh sách người dùng.");
@@ -110,7 +112,7 @@ const MemberManagement: React.FC = () => {
   });
 
   const totalPages = Math.ceil(
-    tab === "normal" ? totalMemberCount : filteredVipMembers.length
+    tab === "normal" ? totalMemberCount : totalVipMemberCount
   ) / itemsPerPage;
 
   const handlePageChange = (page: number) => {
@@ -272,7 +274,7 @@ const MemberManagement: React.FC = () => {
               }`}
               onClick={() => setTab("vip")}
             >
-              Tài khoản VIP ({filteredVipMembers.length})
+              Tài khoản VIP ({totalVipMemberCount})
             </button>
           </div>
 
@@ -418,7 +420,7 @@ const MemberManagement: React.FC = () => {
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-800">
-                  Danh sách thành viên VIP ({filteredVipMembers.length})
+                  Danh sách thành viên VIP ({totalVipMemberCount})
                 </h3>
               </div>
               <div className="overflow-x-auto">
@@ -497,11 +499,11 @@ const MemberManagement: React.FC = () => {
                   <p className="text-gray-600 text-lg font-medium">Không tìm thấy thành viên VIP nào.</p>
                 </div>
               )}
-              {filteredVipMembers.length > 0 && (
+              {totalVipMemberCount > 0 && (
                 <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between">
                   <div className="text-sm text-gray-600 mb-4 sm:mb-0">
                     Hiển thị {(currentPage - 1) * itemsPerPage + 1} đến{" "}
-                    {Math.min(currentPage * itemsPerPage, filteredVipMembers.length)} trong tổng số {filteredVipMembers.length} kết quả
+                    {Math.min(currentPage * itemsPerPage, totalVipMemberCount)} trong tổng số {totalVipMemberCount} kết quả
                   </div>
                   <div className="flex items-center space-x-2">
                     <button

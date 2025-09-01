@@ -24,7 +24,7 @@ export type UserMembershipListResponse = {
 };
 
 export const userMembershipApi = {
-  getAll: async (pageIndex = 1, pageSize = 10): Promise<UserMembershipListResponse> => {
+  getAll: async (pageIndex: number, pageSize: number): Promise<UserMembershipListResponse> => {
     return await axiosClient.get(
       `api/UserMemberships/all?pageIndex=${pageIndex}&pageSize=${pageSize}`
     );

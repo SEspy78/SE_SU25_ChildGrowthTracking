@@ -135,7 +135,7 @@ export default function Payment() {
   const handleBackByPosition = () => {
     if (!id) return;
     const basePath = user?.position === "Doctor" ? "/doctor" : "/staff";
-    navigate(`${basePath}/appointments/${id}/step-2`); // Navigate to Pre-vaccination health assessment step
+    navigate(`${basePath}/appointments/${id}/step-2`);
   };
 
   const handleConfirmPayment = async () => {
@@ -234,7 +234,6 @@ export default function Payment() {
   }
 
   const child = appointment.child;
-  // Use packageId to display vaccine name if order exists
   const vaccineDisplay = appointment.order?.packageId && vaccinePackage?.name
     ? vaccinePackage.name
     : appointment.order?.packageName
@@ -246,7 +245,6 @@ export default function Payment() {
   return (
     <div className="min-h-screen bg-gray-100 p-6 md:p-8">
       <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-2xl p-8">
-        {/* Header and Back Button */}
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Thanh toán</h2>
           <Button
@@ -259,12 +257,10 @@ export default function Payment() {
           </Button>
         </div>
 
-        {/* Vaccination Steps */}
         <div className="mb-10">
           <VaccinationSteps currentStep={2} />
         </div>
 
-        {/* Success/Error Modal */}
         <Modal
           title={<span className="text-xl font-semibold text-gray-800">{finishMessage.includes("thành công") ? "Thành công" : "Lỗi"}</span>}
           open={showFinishModal}
@@ -287,7 +283,6 @@ export default function Payment() {
           </div>
         </Modal>
 
-        {/* Cancelled Appointment Message */}
         {appointment.status === "Cancelled" && (
           <div className="mb-8 p-6 bg-red-50 text-red-600 rounded-xl shadow-lg flex items-center">
             <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -297,7 +292,6 @@ export default function Payment() {
           </div>
         )}
 
-        {/* Doctor Waiting Message */}
         {isApprovalOrPendingStatus && !isAppointmentPaid && !isOrderPaid && appointment.status !== "Cancelled" && user?.position === "Doctor" && (
           <div className="mb-8 p-6 bg-yellow-50 text-yellow-700 rounded-xl shadow-lg flex items-center">
             <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -307,8 +301,7 @@ export default function Payment() {
           </div>
         )}
 
-        {/* Paid Status Message */}
-        {(isAppointmentPaid || isOrderPaid) && (
+        {appointment.order && (isAppointmentPaid || isOrderPaid) && (
           <div className="mb-8 p-6 bg-teal-50 text-teal-700 rounded-xl shadow-lg flex items-center">
             <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -317,7 +310,15 @@ export default function Payment() {
           </div>
         )}
 
-        {/* Payment Details Section */}
+        {!appointment.order && appointment.status === "Paid" && (
+          <div className="mb-8 p-6 bg-teal-50 text-teal-700 rounded-xl shadow-lg flex items-center">
+            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="font-semibold text-lg">Lịch tiêm đã được thanh toán!</span>
+          </div>
+        )}
+
         <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-teal-500">
           <h3 className="text-xl font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Chi tiết thanh toán</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -356,7 +357,6 @@ export default function Payment() {
           </div>
         </div>
 
-        {/* Payment Method Section */}
         {showPaymentSection && (
           <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-teal-500">
             <h3 className="text-xl font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">Phương thức thanh toán</h3>
@@ -396,7 +396,6 @@ export default function Payment() {
           </div>
         )}
 
-        {/* Action Buttons and Message */}
         <div className="flex justify-end space-x-4 mt-8 items-center">
           <Button
             type="button"

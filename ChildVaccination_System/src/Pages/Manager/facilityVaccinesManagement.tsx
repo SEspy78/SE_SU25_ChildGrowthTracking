@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { facilityVaccineApi, type CreateFacilityVaccineRequest, type FacilityVaccine } from "@/api/vaccineApi";
-import { Loader2, Plus, Pencil, ChevronLeft, ChevronRight, Search, AlertCircle } from "lucide-react";
+import { vaccineApi, type Vaccine } from "@/api/vaccineApi";
+import { Loader2, Plus, Pencil, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Modal, Form, Input, Button, InputNumber, Select } from "antd";
 import { getUserInfo } from "@/lib/storage";
 
@@ -26,6 +27,7 @@ const useDebounce = (callback: (value: string) => void, delay: number) => {
 const VaccineManagement: React.FC = () => {
   const user = getUserInfo();
   const [vaccines, setVaccines] = useState<FacilityVaccine[]>([]);
+  const [allVaccines, setAllVaccines] = useState<Vaccine[]>([]);
   const [filteredVaccines, setFilteredVaccines] = useState<FacilityVaccine[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,6 @@ const VaccineManagement: React.FC = () => {
   const [itemsPerPage] = useState<number>(10);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -70,13 +71,16 @@ const VaccineManagement: React.FC = () => {
     }
     try {
       setLoading(true);
-      const response = await facilityVaccineApi.getAll(user.facilityId);
-      const data = response.data || [];
-      let filtered = data;
+      const [facilityVaccineResponse, allVaccinesResponse] = await Promise.all([
+        facilityVaccineApi.getAll(user.facilityId),
+        vaccineApi.getAll(),
+      ]);
+      const facilityVaccines = facilityVaccineResponse.data || [];
+      let filtered = facilityVaccines;
 
       // Apply status filter
       if (filterStatus !== "all") {
-        filtered = filtered.filter(v => v.status.toLowerCase() === filterStatus);
+        filtered = filtered.filter(v => v.status.toLowerCase() === filterStatus.toLowerCase());
       }
 
       // Apply category filter
@@ -95,7 +99,8 @@ const VaccineManagement: React.FC = () => {
       }
 
       setFilteredVaccines(filtered);
-      setVaccines(data);
+      setVaccines(facilityVaccines);
+      setAllVaccines(allVaccinesResponse);
       setError(null);
     } catch (err: any) {
       setError(err.message || "Lỗi không xác định");
@@ -115,8 +120,8 @@ const VaccineManagement: React.FC = () => {
       setShowErrorModal(true);
       return;
     }
-    if (!formData.facilityId) {
-      setErrorMessage("ID cơ sở không hợp lệ");
+    if (!formData.facilityId || !formData.vaccineId) {
+      setErrorMessage("ID cơ sở hoặc ID vaccine không hợp lệ");
       setShowErrorModal(true);
       return;
     }
@@ -150,8 +155,8 @@ const VaccineManagement: React.FC = () => {
       setShowErrorModal(true);
       return;
     }
-    if (!formData.facilityId) {
-      setErrorMessage("ID cơ sở không hợp lệ");
+    if (!formData.facilityId || !formData.vaccineId) {
+      setErrorMessage("ID cơ sở hoặc ID vaccine không hợp lệ");
       setShowErrorModal(true);
       return;
     }
@@ -175,7 +180,6 @@ const VaccineManagement: React.FC = () => {
     }
   };
 
-
   const openUpdateModal = (vaccine: FacilityVaccine) => {
     setSelectedVaccine(vaccine);
     const updateData: CreateFacilityVaccineRequest = {
@@ -196,7 +200,7 @@ const VaccineManagement: React.FC = () => {
   const openAddModal = () => {
     const initialFormData: CreateFacilityVaccineRequest = {
       facilityId: user?.facilityId ?? 1,
-      vaccineId: 0,
+      vaccineId: 0 ,
       price: 0,
       availableQuantity: 0,
       batchNumber: 0,
@@ -322,129 +326,25 @@ const VaccineManagement: React.FC = () => {
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Form.Item
-              label="ID Vaccine"
+              label="Vaccine"
               name="vaccineId"
-              rules={[{ required: true, message: "Vui lòng nhập ID vaccine" }]}
+              rules={[{ required: true, message: "Vui lòng chọn vaccine" }]}
             >
-              <InputNumber min={1} className="w-full rounded-lg" />
-            </Form.Item>
-
-            <Form.Item
-              label="ID Cơ sở"
-              name="facilityId"
-              rules={[{ required: true, message: "Vui lòng nhập ID cơ sở" }]}
-            >
-              <InputNumber min={1} className="w-full rounded-lg" disabled />
-            </Form.Item>
-
-            <Form.Item
-              label="Giá (VNĐ)"
-              name="price"
-              rules={[{ required: true, message: "Vui lòng nhập giá" }]}
-            >
-              <InputNumber min={0} className="w-full rounded-lg" />
-            </Form.Item>
-
-            <Form.Item
-              label="Số lượng có sẵn"
-              name="availableQuantity"
-              rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
-            >
-              <InputNumber min={0} className="w-full rounded-lg" />
-            </Form.Item>
-
-            <Form.Item
-              label="Số lô"
-              name="batchNumber"
-              rules={[{ required: true, message: "Vui lòng nhập số lô" }]}
-            >
-              <InputNumber min={0} className="w-full rounded-lg" />
-            </Form.Item>
-
-            <Form.Item
-              label="Ngày hết hạn"
-              name="expiryDate"
-              rules={[{ required: true, message: "Vui lòng nhập ngày hết hạn" }]}
-            >
-              <Input type="date" className="rounded-lg" />
-            </Form.Item>
-
-            <Form.Item
-              label="Ngày nhập"
-              name="importDate"
-              rules={[{ required: true, message: "Vui lòng nhập ngày nhập" }]}
-            >
-              <Input type="date" className="rounded-lg" />
-            </Form.Item>
-
-            <Form.Item
-              label="Trạng thái"
-              name="Hoạt dộng"
-              rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
-            >
-              <Select className="rounded-lg">
-                <Select.Option value="active">Hoạt động</Select.Option>
-                <Select.Option value="unactive">Không hoạt động</Select.Option>
+              <Select
+                showSearch
+                placeholder="Tìm kiếm và chọn vaccine"
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                }
+                className="w-full rounded-lg"
+              >
+                {allVaccines.map((vaccine) => (
+                  <Option key={vaccine.vaccineId} value={vaccine.vaccineId}>
+                    {vaccine.name}
+                  </Option>
+                ))}
               </Select>
-            </Form.Item>
-          </div>
-
-          <div className="flex justify-end gap-3 mt-6">
-            <Button
-              onClick={() => {
-                setShowAddModal(false);
-                addForm.resetFields();
-              }}
-              className="rounded-lg"
-            >
-              Hủy
-            </Button>
-            <Button
-              type="primary"
-              htmlType="submit"
-              className="bg-green-600 hover:bg-green-700 rounded-lg"
-            >
-              Lưu
-            </Button>
-          </div>
-        </Form>
-      </Modal>
-
-      {/* Update Facility Vaccine Modal */}
-      <Modal
-        title="Cập nhật Vaccine Cơ sở"
-        open={showUpdateModal}
-        onCancel={() => {
-          setShowUpdateModal(false);
-          updateForm.resetFields();
-          setSelectedVaccine(null);
-        }}
-        footer={null}
-        width={800}
-        centered
-      >
-        <Form
-          form={updateForm}
-          layout="vertical"
-          onFinish={handleUpdateVaccine}
-          initialValues={formData}
-          onValuesChange={(_, values) => setFormData({ ...formData, ...values })}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Form.Item
-              label="ID Vaccine"
-              name="vaccineId"
-              rules={[{ required: true, message: "Vui lòng nhập ID vaccine" }]}
-            >
-              <InputNumber min={1} className="w-full rounded-lg" />
-            </Form.Item>
-
-            <Form.Item
-              label="ID Cơ sở"
-              name="facilityId"
-              rules={[{ required: true, message: "Vui lòng nhập ID cơ sở" }]}
-            >
-              <InputNumber min={1} className="w-full rounded-lg" disabled />
             </Form.Item>
 
             <Form.Item
@@ -493,8 +393,124 @@ const VaccineManagement: React.FC = () => {
               rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
             >
               <Select className="rounded-lg">
-                <Select.Option value="active">Hoạt động</Select.Option>
-                <Select.Option value="unactive">Không hoạt động</Select.Option>
+                <Option value="active">Hoạt động</Option>
+                <Option value="unactive">Không hoạt động</Option>
+              </Select>
+            </Form.Item>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button
+              onClick={() => {
+                setShowAddModal(false);
+                addForm.resetFields();
+              }}
+              className="rounded-lg"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              className="bg-green-600 hover:bg-green-700 rounded-lg"
+            >
+              Lưu
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Update Facility Vaccine Modal */}
+      <Modal
+        title="Cập nhật Vaccine Cơ sở"
+        open={showUpdateModal}
+        onCancel={() => {
+          setShowUpdateModal(false);
+          updateForm.resetFields();
+          setSelectedVaccine(null);
+        }}
+        footer={null}
+        width={800}
+        centered
+      >
+        <Form
+          form={updateForm}
+          layout="vertical"
+          onFinish={handleUpdateVaccine}
+          initialValues={formData}
+          onValuesChange={(_, values) => setFormData({ ...formData, ...values })}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Form.Item
+              label="Vaccine"
+              name="vaccineId"
+              rules={[{ required: true, message: "Vui lòng chọn vaccine" }]}
+            >
+              <Select
+                showSearch
+                placeholder="Tìm kiếm và chọn vaccine"
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                }
+                className="w-full rounded-lg"
+              >
+                {allVaccines.map((vaccine) => (
+                  <Option key={vaccine.vaccineId} value={vaccine.vaccineId}>
+                    {vaccine.name}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              label="Giá (VNĐ)"
+              name="price"
+              rules={[{ required: true, message: "Vui lòng nhập giá" }]}
+            >
+              <InputNumber min={0} className="w-full rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Số lượng có sẵn"
+              name="availableQuantity"
+              rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
+            >
+              <InputNumber min={0} className="w-full rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Số lô"
+              name="batchNumber"
+              rules={[{ required: true, message: "Vui lòng nhập số lô" }]}
+            >
+              <InputNumber min={0} className="w-full rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Ngày hết hạn"
+              name="expiryDate"
+              rules={[{ required: true, message: "Vui lòng nhập ngày hết hạn" }]}
+            >
+              <Input type="date" className="rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Ngày nhập"
+              name="importDate"
+              rules={[{ required: true, message: "Vui lòng nhập ngày nhập" }]}
+            >
+              <Input type="date" className="rounded-lg" />
+            </Form.Item>
+
+            <Form.Item
+              label="Trạng thái"
+              name="status"
+              rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+            >
+              <Select className="rounded-lg">
+                <Option value="active">Hoạt động</Option>
+                <Option value="unactive">Không hoạt động</Option>
               </Select>
             </Form.Item>
           </div>
@@ -521,8 +537,6 @@ const VaccineManagement: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
-   
       {/* Search and Filter */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col lg:flex-row gap-4 mb-6">
@@ -562,8 +576,8 @@ const VaccineManagement: React.FC = () => {
               className="w-full sm:w-40"
             >
               <Option value="all">Tất cả trạng thái</Option>
-              <Option value="Approved">Hoạt động</Option>
-              <Option value="Unaproved">Không hoạt động</Option>
+              <Option value="active">Hoạt động</Option>
+              <Option value="unactive">Không hoạt động</Option>
             </Select>
           </div>
         </div>
@@ -650,7 +664,6 @@ const VaccineManagement: React.FC = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Thông tin vaccine
                       </th>
-                     
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Độ tuổi & Loại
                       </th>
@@ -660,7 +673,6 @@ const VaccineManagement: React.FC = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Giá
                       </th>
-                      
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Ngày hết hạn
                       </th>
@@ -689,14 +701,13 @@ const VaccineManagement: React.FC = () => {
                             >
                               {vaccine.vaccine?.diseases?.map((d) => d.name).join(", ") || "N/A"}
                             </div>
-                            <div className="text-sm mt-2  text-gray-900">
+                            <div className="text-sm mt-2 text-gray-900">
                               Nhà sản xuất: <h4 className="font-bold text-amber-600">
                                 {vaccine.vaccine?.manufacturer || "N/A"}
-                                </h4>
+                              </h4>
                             </div>
                           </div>
                         </td>
-                        
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-900">
                             <div className="font-medium">
@@ -745,7 +756,6 @@ const VaccineManagement: React.FC = () => {
                             >
                               Cập nhật
                             </Button>
-                          
                           </div>
                         </td>
                       </tr>
@@ -797,7 +807,6 @@ const VaccineManagement: React.FC = () => {
                           </Button>
                         )
                       )}
-
                       <Button
                         onClick={handleNextPage}
                         disabled={currentPage === totalPages}

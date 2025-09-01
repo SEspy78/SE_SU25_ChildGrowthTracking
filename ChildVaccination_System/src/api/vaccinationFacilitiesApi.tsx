@@ -38,7 +38,7 @@ export type UpdateFacilityRequest = {
   email: string;
   description: string;
   status: boolean;
-  licenseFile: string | File | null;
+  licenseFile: File | null;
 };
 
 export type CreateFacilityRequest = {
@@ -78,12 +78,13 @@ export const facilityApi = {
     formData.append("email", payload.email);
     formData.append("description", payload.description || "");
     formData.append("status", payload.status ? "1" : "0");
-    if (payload.licenseFile instanceof File) {
+    console.log("API Update - licenseFile:", payload.licenseFile);
+    
+    if (payload.licenseFile) {
       formData.append("licenseFile", payload.licenseFile);
-    } else if (typeof payload.licenseFile === "string") {
-      formData.append("licenseFile", payload.licenseFile); // Send existing URL or empty string
+      console.log("API Update - Appending licenseFile");
     } else {
-      formData.append("licenseFile", ""); // Explicitly send empty string for null
+      console.log("API Update - No licenseFile to append");
     }
     return await axiosClient.put(`api/VaccinationFacilities/${facilityId}`, formData, {
       headers: {
@@ -92,7 +93,7 @@ export const facilityApi = {
     });
   },
 
-  createFacility: async (payload: CreateFacilityRequest): Promise<any> => {
+  createFacility: async (payload: CreateFacilityRequest): Promise<GetByIdFacilitiesResponse> => {
     const formData = new FormData();
     formData.append("accountName", payload.accountName);
     formData.append("password", payload.password);

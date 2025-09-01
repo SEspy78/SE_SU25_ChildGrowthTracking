@@ -94,7 +94,6 @@ export default function DashboardManager() {
     fetchData();
   }, [fetchData]);
 
-  // Reset pageIndex to 1 when search or filter changes
   useEffect(() => {
     setPageIndex(1);
   }, [debouncedSearch, isFilterApplied, filterMode, selectedDate]);

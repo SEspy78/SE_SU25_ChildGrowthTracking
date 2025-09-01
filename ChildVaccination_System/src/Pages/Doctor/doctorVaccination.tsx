@@ -46,6 +46,10 @@ export default function DoctorConfirmVaccination() {
           const firstVaccine = appointmentRes.vaccinesToInject[0];
           setFacilityVaccineId(firstVaccine.facilityVaccineId);
           setDoseNum(Number(firstVaccine.doseNumber));
+          // Set nextVaccineId to facilityVaccineId if no order
+          if (!appointmentRes.order) {
+            setNextVaccineId(firstVaccine.facilityVaccineId);
+          }
         } else if (appointmentRes.order && appointmentRes.facilityVaccines?.length) {
           const firstVaccine = appointmentRes.facilityVaccines[0];
           setFacilityVaccineId(firstVaccine.facilityVaccineId);
@@ -114,6 +118,10 @@ export default function DoctorConfirmVaccination() {
   const handleVaccineSelect = (vaccineId: number, doseNumber: string | number = 1) => {
     setFacilityVaccineId(vaccineId);
     setDoseNum(Number(doseNumber));
+    // Set nextVaccineId to facilityVaccineId if no order
+    if (!appointment?.order) {
+      setNextVaccineId(vaccineId);
+    }
   };
 
   const handleConfirmVaccination = async () => {
@@ -142,7 +150,7 @@ export default function DoctorConfirmVaccination() {
         note: postVaccinationNotes,
         doseNumber: doseNum,
         expectedDateForNextDose: isLastDose ? "2025-01-01" : expectedDateForNextDose,
-        nextFacilityVaccineId: appointment.order && !isLastDose ? nextVaccineId : null, // Send null if last dose or no order
+        nextFacilityVaccineId: appointment.order && !isLastDose ? nextVaccineId : facilityVaccineId, // Use facilityVaccineId if no order
       };
       await appointmentApi.completeVaccination(payload);
       setSubmitMessage("Đã hoàn thành lịch tiêm.");
@@ -221,8 +229,10 @@ export default function DoctorConfirmVaccination() {
     0
   ) || 0;
 
-  // Disable next dose date and next vaccine fields if totalRemainingQuantity === 1
-  const isLastDose = totalRemainingQuantity === 1;
+  // Determine if this is the last dose for vaccinesToInject
+  const isLastDose = appointment?.vaccinesToInject?.length
+    ? parseInt(appointment.vaccinesToInject[0].doseNumber, 10) === appointment.facilityVaccines?.[0]?.vaccine?.numberOfDoses
+    : totalRemainingQuantity === 1;
 
   if (loading || loadingPackage) {
     return (
@@ -242,7 +252,7 @@ export default function DoctorConfirmVaccination() {
             className="w-8 h-8"
             fill="none"
             stroke="currentColor"
-            viewBox="0 0 24 24"
+            viewBox="0 24 24"
             xmlns="http://www.w3.org/2000/svg"
           >
             <path
@@ -543,22 +553,21 @@ export default function DoctorConfirmVaccination() {
                   value={doseNum}
                   onChange={(e) => setDoseNum(Number(e.target.value))}
                   min={1}
-                  disabled={submitting}
+                  disabled={submitting || !!appointment.vaccinesToInject?.length} // Disable if vaccinesToInject exists
                 />
               </div>
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">Ngày dự kiến liều tiếp theo:</label>
-                <DatePicker
-                  className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  value={expectedDateForNextDose ? dayjs(expectedDateForNextDose) : null}
-                  onChange={(date) => setExpectedDateForNextDose(date ? date.format("YYYY-MM-DD") : "")}
-                  format="DD/MM/YYYY"
-                  disabled={submitting || isLastDose}
-                />
-                {isLastDose && (
-                  <p className="text-sm text-gray-600 mt-2">Không cần chọn ngày vì đây là liều cuối cùng trong gói.</p>
-                )}
-              </div>
+              {!isLastDose && (
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">Ngày dự kiến liều tiếp theo:</label>
+                  <DatePicker
+                    className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    value={expectedDateForNextDose ? dayjs(expectedDateForNextDose) : null}
+                    onChange={(date) => setExpectedDateForNextDose(date ? date.format("YYYY-MM-DD") : "")}
+                    format="DD/MM/YYYY"
+                    disabled={submitting}
+                  />
+                </div>
+              )}
               {appointment.order && !isPackageComplete && (
                 <div>
                   <label className="block text-gray-700 font-medium mb-2">Vắc xin cho lần tiêm tiếp theo:</label>

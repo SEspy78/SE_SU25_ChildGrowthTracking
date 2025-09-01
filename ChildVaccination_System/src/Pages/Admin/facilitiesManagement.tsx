@@ -40,6 +40,17 @@ const FacilityManagement: React.FC = () => {
     fetchFacilities();
   }, []);
 
+  const createFileFromUrl = async (url: string, filename: string): Promise<File> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new File([blob], filename, { type: blob.type });
+    } catch {
+      // Create an empty file if fetch fails
+      return new File([""], filename, { type: "application/pdf" });
+    }
+  };
+
   const handleEdit = async (facilityId: number) => {
     setSelectedFacilityId(facilityId);
     setFormLoading(true);
@@ -91,18 +102,23 @@ const FacilityManagement: React.FC = () => {
     }
     setFormLoading(true);
     try {
+      const hasNewFile = values.licenseFile && Array.isArray(values.licenseFile) && values.licenseFile.length > 0 && values.licenseFile[0].originFileObj;
+      let licenseFileToSend: File | null = null;
+      if (hasNewFile) {
+        licenseFileToSend = values.licenseFile[0].originFileObj as RcFile;
+      } else if (currentLicenseFile) {
+        licenseFileToSend = await createFileFromUrl(currentLicenseFile, "license.pdf");
+      }
       const payload: UpdateFacilityRequest = {
         facilityId: selectedFacilityId,
         facilityName: values.facilityName,
         licenseNumber: Number(values.licenseNumber),
         address: values.address,
-        phone: values.phone,
+        phone: Number(values.phone),
         email: values.email,
         description: values.description || "",
         status: values.status,
-        licenseFile: Array.isArray(values.licenseFile) && values.licenseFile.length > 0
-          ? (values.licenseFile[0].originFileObj as RcFile)
-          : null,
+        licenseFile: licenseFileToSend,
       };
       console.log("Sending update request with payload:", payload, "accountId:", user.accountId);
       const res = await facilityApi.update(user.accountId, payload);
@@ -120,7 +136,8 @@ const FacilityManagement: React.FC = () => {
             );
             setFacilities(updatedFacilities);
             setIsUpdateModalOpen(false);
-            form.resetFields(); // Reset form after successful update
+            form.resetFields();
+            setCurrentLicenseFile(null);
           }
         },
       });
@@ -370,7 +387,6 @@ const FacilityManagement: React.FC = () => {
                         <td className="px-6 py-4">
                           <div>
                             <div className="text-sm font-medium text-gray-900">{facility.facilityName}</div>
-                            <div className="text-sm text-gray-500">Số GP: {facility.licenseNumber}</div>
                             <div className="text-sm text-gray-500">
                               Giấy phép:{" "}
                               {facility.licenseFile ? (
@@ -474,6 +490,7 @@ const FacilityManagement: React.FC = () => {
             <Form.Item
               label="Số giấy phép"
               name="licenseNumber"
+              hidden
               rules={[
                 { required: true, message: "Vui lòng nhập số giấy phép!" },
                 { pattern: /^\d+$/, message: "Số giấy phép phải là số!" },
@@ -528,6 +545,19 @@ const FacilityManagement: React.FC = () => {
                 <Button className="rounded-lg">Chọn tệp</Button>
               </Upload>
             </Form.Item>
+            {currentLicenseFile && (
+              <div className="text-sm text-gray-600">
+                <span>Tệp giấy phép hiện tại: </span>
+                <a
+                  href={currentLicenseFile}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline break-all"
+                >
+                  {currentLicenseFile}
+                </a>
+              </div>
+            )}
             <div className="flex justify-end space-x-4">
               <Button
                 onClick={handleCancel}
