@@ -55,7 +55,7 @@ const FacilityDetail: React.FC = () => {
       email: facility.email,
       description: facility.description,
       status: facility.status === 1,
-      licenseFile: [], // Initialize as empty array
+      licenseFile: facility.licenseFile ? [{ uid: "-1", name: "Giấy phép hiện tại", url: facility.licenseFile, status: "done" }] : [],
     });
     setCurrentLicenseFile(facility.licenseFile || null);
     setFormError(null);
@@ -84,7 +84,7 @@ const FacilityDetail: React.FC = () => {
         status: values.status,
         licenseFile: Array.isArray(values.licenseFile) && values.licenseFile.length > 0
           ? (values.licenseFile[0].originFileObj as RcFile)
-          : null,
+          : (currentLicenseFile || ""), // Send existing URL or empty string if no file
       };
       const res = await facilityApi.update(user.accountId, payload);
       if (res.success && res.data) {
@@ -110,7 +110,7 @@ const FacilityDetail: React.FC = () => {
   const handleCancel = () => {
     setIsModalOpen(false);
     setFormError(null);
-    setCurrentLicenseFile(null);
+    setCurrentLicenseFile(facility?.licenseFile || null);
     form.resetFields();
   };
 
@@ -224,7 +224,6 @@ const FacilityDetail: React.FC = () => {
         ? new Date(facility.createdAt).toLocaleDateString("vi-VN")
         : "",
     },
-   
   ];
 
   return (
@@ -287,6 +286,7 @@ const FacilityDetail: React.FC = () => {
             <Form.Item
               label="Số giấy phép"
               name="licenseNumber"
+              hidden
               rules={[
                 { required: true, message: "Vui lòng nhập số giấy phép!" },
                 { pattern: /^\d+$/, message: "Số giấy phép phải là số!" },

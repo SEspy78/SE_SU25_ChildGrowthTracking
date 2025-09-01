@@ -154,6 +154,7 @@ export type finishVaccinationPayload = {
   note: string;
   doseNumber: number;
   expectedDateForNextDose: string;
+  nextFacilityVaccineId: number | null;
 };
 
 export type GetOrderResponse = {

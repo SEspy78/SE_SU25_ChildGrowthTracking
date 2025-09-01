@@ -38,7 +38,7 @@ export type UpdateFacilityRequest = {
   email: string;
   description: string;
   status: boolean;
-  licenseFile: File | null;
+  licenseFile: string | File | null;
 };
 
 export type CreateFacilityRequest = {
@@ -78,8 +78,12 @@ export const facilityApi = {
     formData.append("email", payload.email);
     formData.append("description", payload.description || "");
     formData.append("status", payload.status ? "1" : "0");
-    if (payload.licenseFile) {
+    if (payload.licenseFile instanceof File) {
       formData.append("licenseFile", payload.licenseFile);
+    } else if (typeof payload.licenseFile === "string") {
+      formData.append("licenseFile", payload.licenseFile); // Send existing URL or empty string
+    } else {
+      formData.append("licenseFile", ""); // Explicitly send empty string for null
     }
     return await axiosClient.put(`api/VaccinationFacilities/${facilityId}`, formData, {
       headers: {

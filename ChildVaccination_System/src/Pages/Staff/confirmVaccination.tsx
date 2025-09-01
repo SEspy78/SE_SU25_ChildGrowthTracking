@@ -386,7 +386,7 @@ export default function ConfirmVaccination() {
             <button
               onClick={handleConfirmVaccination}
               disabled={submitting}
-              className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {submitting ? "Đang xử lý..." : "Xác nhận tiêm chủng"}
             </button>
@@ -394,7 +394,7 @@ export default function ConfirmVaccination() {
           {isCompletedStatus && (
             <button
               onClick={handleComplete}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Hoàn thành
             </button>

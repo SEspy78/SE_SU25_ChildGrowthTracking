@@ -7,6 +7,7 @@ import { userMembershipApi, type UserMembership } from "@/api/UserMembershipApi"
 const MemberManagement: React.FC = () => {
   const [tab, setTab] = useState<'normal' | 'vip'>("normal");
   const [members, setMembers] = useState<Member[]>([]);
+  const [totalMemberCount, setTotalMemberCount] = useState<number>(0);
   const [vipMembers, setVipMembers] = useState<UserMembership[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(false);
@@ -29,8 +30,9 @@ const MemberManagement: React.FC = () => {
       setError(null);
       try {
         if (tab === "normal") {
-          const res = await authApi.getAllMember();
+          const res = await authApi.getAllMember(currentPage - 1, itemsPerPage);
           setMembers(res.data);
+          setTotalMemberCount(res.totalCount);
         } else {
           const res = await userMembershipApi.getAll();
           setVipMembers(res.data);
@@ -42,8 +44,7 @@ const MemberManagement: React.FC = () => {
       }
     };
     fetchMembers();
-    setCurrentPage(1);
-  }, [tab]);
+  }, [tab, currentPage]);
 
   const handleViewChildren = async (accountId: number, member: Member | UserMembership) => {
     setLoading(true);
@@ -54,6 +55,11 @@ const MemberManagement: React.FC = () => {
       setShowChildrenModal(true);
       setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } catch (err: any) {
+      setToast({
+        show: true,
+        message: "Không thể tải danh sách trẻ em.",
+        type: "error",
+      });
       setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } finally {
       setLoading(false);
@@ -103,20 +109,8 @@ const MemberManagement: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const getCurrentPageData = (data: Member[]) => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return data.slice(startIndex, endIndex);
-  };
-
-  const getCurrentPageVipData = (data: UserMembership[]) => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return data.slice(startIndex, endIndex);
-  };
-
   const totalPages = Math.ceil(
-    tab === "normal" ? filteredMembers.length : filteredVipMembers.length
+    tab === "normal" ? totalMemberCount : filteredVipMembers.length
   ) / itemsPerPage;
 
   const handlePageChange = (page: number) => {
@@ -138,9 +132,6 @@ const MemberManagement: React.FC = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterStatus]);
-
-  const currentMembers = getCurrentPageData(filteredMembers);
-  const currentVipMembers = getCurrentPageVipData(filteredVipMembers);
 
   if (loading) {
     return (
@@ -179,7 +170,7 @@ const MemberManagement: React.FC = () => {
       <Modal
         title={
           <span className="text-xl font-semibold text-gray-800">
-            Danh sách trẻ em của {selectedMember ? 'fullName' in selectedMember ? selectedMember.fullName : `Account Name:${selectedMember.accountName}` : ''}
+            Danh sách trẻ em của {selectedMember ? 'fullName' in selectedMember ? selectedMember.fullName : `Account Name: ${selectedMember.accountName}` : ''}
           </span>
         }
         open={showChildrenModal}
@@ -271,7 +262,7 @@ const MemberManagement: React.FC = () => {
               }`}
               onClick={() => setTab("normal")}
             >
-              Tài khoản thường ({filteredMembers.length})
+              Tài khoản thường ({totalMemberCount})
             </button>
             <button
               className={`px-6 py-3 hover:cursor-pointer rounded-lg font-medium transition-all duration-200 ${
@@ -313,7 +304,7 @@ const MemberManagement: React.FC = () => {
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-800">
-                  Danh sách tài khoản thường ({filteredMembers.length})
+                  Danh sách tài khoản thường ({totalMemberCount})
                 </h3>
               </div>
               <div className="overflow-x-auto">
@@ -328,7 +319,7 @@ const MemberManagement: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {currentMembers.map((member) => (
+                    {filteredMembers.map((member) => (
                       <tr key={member.memberId} className="hover:bg-blue-50 transition-colors">
                         <td className="px-6 py-5">
                           <div>
@@ -384,11 +375,11 @@ const MemberManagement: React.FC = () => {
                   <p className="text-gray-600 text-lg font-medium">Không tìm thấy người dùng nào.</p>
                 </div>
               )}
-              {filteredMembers.length > 0 && (
+              {totalMemberCount > 0 && (
                 <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between">
                   <div className="text-sm text-gray-600 mb-4 sm:mb-0">
                     Hiển thị {(currentPage - 1) * itemsPerPage + 1} đến{" "}
-                    {Math.min(currentPage * itemsPerPage, filteredMembers.length)} trong tổng số {filteredMembers.length} kết quả
+                    {Math.min(currentPage * itemsPerPage, totalMemberCount)} trong tổng số {totalMemberCount} kết quả
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
@@ -442,7 +433,7 @@ const MemberManagement: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {currentVipMembers.map((member) => (
+                    {filteredVipMembers.map((member) => (
                       <tr key={member.userMembershipId} className="hover:bg-blue-50 transition-colors">
                         <td className="px-6 py-5">
                           <div className="text-base font-semibold text-gray-800">@{member.accountName}</div>

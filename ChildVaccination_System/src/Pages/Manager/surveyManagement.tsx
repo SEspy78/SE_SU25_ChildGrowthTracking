@@ -49,7 +49,8 @@ export default function SurveyManagement() {
       try {
         setLoading(true);
         const res = await surveyAPI.getAllSurveys();
-        setSurveys(res.data);
+        // Lọc các khảo sát có status là "Active"
+        setSurveys(res.data.filter((survey) => survey.status === "Active"));
       } catch {
         setError("Không thể tải danh sách khảo sát.");
       } finally {
@@ -78,7 +79,8 @@ export default function SurveyManagement() {
       });
       setSearchTerm("");
       const res = await surveyAPI.getAllSurveys();
-      setSurveys(res.data);
+      // Cập nhật danh sách sau khi tạo, chỉ giữ "Active"
+      setSurveys(res.data.filter((survey) => survey.status === "Active"));
       setToast({ show: true, message: "Tạo khảo sát thành công", type: "success" });
       setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } catch {
@@ -142,13 +144,14 @@ export default function SurveyManagement() {
     try {
       await surveyAPI.deleteSurvey(selectedSurveyForDelete.surveyId);
       const res = await surveyAPI.getAllSurveys();
-      setSurveys(res.data);
+      // Cập nhật danh sách sau khi xóa, chỉ giữ "Active"
+      setSurveys(res.data.filter((survey) => survey.status === "Active"));
       setShowDeleteModal(false);
       setSelectedSurveyForDelete(null);
-      setToast({ show: true, message: `Xóa khảo sát "${selectedSurveyForDelete.title}" thành công`, type: "success" });
+      setToast({ show: true, message: `Vô hiệu khảo sát "${selectedSurveyForDelete.title}" thành công`, type: "success" });
       setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } catch {
-      setToast({ show: true, message: `Xóa khảo sát "${selectedSurveyForDelete.title}" thất bại`, type: "error" });
+      setToast({ show: true, message: `Vô hiệu khảo sát "${selectedSurveyForDelete.title}" thất bại`, type: "error" });
       setTimeout(() => setToast({ show: false, message: "", type: "success" }), 2500);
     } finally {
       setLoading(false);
@@ -256,7 +259,7 @@ export default function SurveyManagement() {
             className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg"
             onClick={() => handleOpenDeleteModal(survey)}
           >
-            Xóa
+            Vô hiệu
           </Button>
         </div>
       ),
@@ -315,7 +318,7 @@ export default function SurveyManagement() {
           <div className="flex gap-4 w-full sm:w-auto">
             <Input
               className="w-full sm:w-64 border-gray-200 rounded-lg"
-              placeholder="Tìm kiếm theo tiêu đề..."
+              placeholder="Tìm kiếm theo tên khảo sát..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -619,7 +622,7 @@ export default function SurveyManagement() {
 
         {/* Delete Confirmation Modal */}
         <Modal
-          title="Xác nhận xóa"
+          title="Xác nhận vô hiệu hóa"
           open={showDeleteModal}
           onCancel={() => {
             setShowDeleteModal(false);
@@ -629,7 +632,7 @@ export default function SurveyManagement() {
           centered
         >
           <p className="text-gray-600 mb-4">
-            Bạn có chắc chắn muốn xóa khảo sát <strong>{selectedSurveyForDelete?.title}</strong> không?
+            Bạn có chắc chắn muốn vô hiệu hóa khảo sát <strong>{selectedSurveyForDelete?.title}</strong> không?
           </p>
           <div className="flex justify-end gap-3">
             <Button

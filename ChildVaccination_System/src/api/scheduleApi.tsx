@@ -23,8 +23,8 @@ export interface ScheduleSlot {
 
 
 export interface BulkWorkingHoursRequest {
-  facilityId:number;
-  workingHoursGroupId:number;
+  facilityId:number | undefined;
+  workingHoursGroupId:number | null;
   date:string;
   status: string;
 }

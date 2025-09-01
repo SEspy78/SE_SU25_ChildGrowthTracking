@@ -113,8 +113,6 @@ const ScheduleSlotPage: React.FC = () => {
   // Validation for BulkWorkingHours form
   const validateBulkForm = (): boolean => {
     const errors: Partial<Record<keyof BulkWorkingHoursRequest, string>> = {};
-    if (!bulkFormData.facilityId) errors.facilityId = "Mã cơ sở là bắt buộc";
-    if (!bulkFormData.workingHoursGroupId) errors.workingHoursGroupId = "Mã nhóm giờ làm việc là bắt buộc";
     if (!bulkFormData.date) errors.date = "Ngày là bắt buộc";
     if (!bulkFormData.status) errors.status = "Trạng thái là bắt buộc";
 
@@ -174,9 +172,15 @@ const ScheduleSlotPage: React.FC = () => {
     setBulkSuccess(null);
 
     try {
-      const response = await scheduleApi.BulkWorkingHours(bulkFormData);
+      const firstSlotGroupId = slots.length > 0 ? slots[0].workingHoursGroupId : 0;
+      const payload = {
+        ...bulkFormData,
+        workingHoursGroupId: firstSlotGroupId,
+        facilityId: getUserInfo()?.facilityId ,
+      };
+      const response = await scheduleApi.BulkWorkingHours(payload);
       if (response.success) {
-        setBulkSuccess("Gán lịch làm việc hàng loạt thành công!");
+        setBulkSuccess(response.message || "Gán lịch làm việc hàng loạt thành công!");
         setBulkFormData({
           facilityId: getUserInfo()?.facilityId || 0,
           workingHoursGroupId: 0,
@@ -237,12 +241,14 @@ const ScheduleSlotPage: React.FC = () => {
             <Clock className="w-6 h-6" /> Quản lý lịch khám
           </h1>
           <div className="flex gap-3">
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
-              onClick={() => setIsCreateModalOpen(true)}
-            >
-              <Plus className="w-4 h-4" /> Tạo slot lịch khám
-            </Button>
+            {!slots.length && (
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
+                onClick={() => setIsCreateModalOpen(true)}
+              >
+                <Plus className="w-4 h-4" /> Tạo slot lịch khám
+              </Button>
+            )}
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
               onClick={() => setIsBulkModalOpen(true)}
@@ -365,7 +371,6 @@ const ScheduleSlotPage: React.FC = () => {
                   <p className="text-red-500 text-sm mt-1">{createFormErrors.status}</p>
                 )}
               </div>
-             
             </div>
             {createError && (
               <div className="bg-red-100 text-red-700 p-4 rounded-lg flex items-center gap-3">
@@ -433,31 +438,6 @@ const ScheduleSlotPage: React.FC = () => {
           destroyOnClose
         >
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mã cơ sở</label>
-              <Input
-                value={bulkFormData.facilityId}
-                disabled
-                className={bulkFormErrors.facilityId ? "border-red-500" : ""}
-              />
-              {bulkFormErrors.facilityId && (
-                <p className="text-red-500 text-sm mt-1">{bulkFormErrors.facilityId}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mã nhóm giờ làm việc</label>
-              <Input
-                type="number"
-                placeholder="Nhập mã nhóm giờ làm việc"
-                value={bulkFormData.workingHoursGroupId || ""}
-                onChange={(e) => setBulkFormData({ ...bulkFormData, workingHoursGroupId: Number(e.target.value) })}
-                className={bulkFormErrors.workingHoursGroupId ? "border-red-500" : ""}
-                disabled={bulkLoading}
-              />
-              {bulkFormErrors.workingHoursGroupId && (
-                <p className="text-red-500 text-sm mt-1">{bulkFormErrors.workingHoursGroupId}</p>
-              )}
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Ngày</label>
               <DatePicker
@@ -580,8 +560,6 @@ const ScheduleSlotPage: React.FC = () => {
                   <th className="p-4 text-left font-semibold">Bắt đầu</th>
                   <th className="p-4 text-left font-semibold">Kết thúc</th>
                   <th className="p-4 text-left font-semibold">Sức chứa</th>
-                  {/* <th className="p-4 text-left font-semibold">Đã đặt</th> */}
-                  {/* <th className="p-4 text-left font-semibold">Còn lại</th>*/}
                   <th className="p-4 text-left font-semibold">Nghỉ trưa</th>
                   <th className="p-4 text-left font-semibold">Trạng thái</th>
                 </tr>
@@ -589,7 +567,7 @@ const ScheduleSlotPage: React.FC = () => {
               <tbody>
                 {slots.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="text-center py-8 text-gray-600">
+                    <td colSpan={8} className="text-center py-8 text-gray-600">
                       Không tìm thấy lịch khám
                     </td>
                   </tr>
@@ -605,8 +583,6 @@ const ScheduleSlotPage: React.FC = () => {
                       <td className="p-4 text-gray-800">{slot.startTime}</td>
                       <td className="p-4 text-gray-800">{slot.endTime}</td>
                       <td className="p-4 text-gray-800">{slot.maxCapacity}</td>
-                      {/* <td className="p-4 text-gray-800">{slot.bookedCount}</td>
-                      <td className="p-4 text-gray-800">{slot.availableCapacity}</td> */}
                       <td className="p-4 text-gray-800">{slot.lunchBreakStart} - {slot.lunchBreakEnd}</td>
                       <td className="p-4">
                         <span

@@ -2,12 +2,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getUserInfo } from "@/lib/storage";
 import VaccinationSteps from "@/Components/VaccinationStep";
 import { Button } from "@/Components/ui/button";
-import {diseaseApi} from "@/api/diseaseApi";
+import { diseaseApi } from "@/api/diseaseApi";
 import { useEffect, useState, useMemo } from "react";
 import { appointmentApi, orderApi, type Appointment, type FacilityScheduleResponse } from "@/api/appointmentAPI";
 import { surveyAPI, type Survey, type Question, type QuestionResponse } from "@/api/surveyAPI";
 import { childprofileApi, type VaccineProfile } from "@/api/childInfomationAPI";
-import { facilityVaccineApi, type FacilityVaccine } from "@/api/vaccineApi";
+import { facilityVaccineApi, vaccineApi, type FacilityVaccine } from "@/api/vaccineApi";
 import { Collapse, Select, message, Input, Checkbox, Modal, DatePicker, Table } from "antd";
 import { CaretRightOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -89,9 +89,9 @@ export default function HealthSurvey() {
   const getVaccineName = async (id: number) => {
     if (vaccineMap[id]) return vaccineMap[id];
     try {
-      const v = await facilityVaccineApi.getById(id);
-      setVaccineMap((prev) => ({ ...prev, [id]: v.vaccine.name }));
-      return v.vaccine.name;
+      const v = await vaccineApi.getById(id);
+      setVaccineMap((prev) => ({ ...prev, [id]: v.name }));
+      return v.name;
     } catch {
       setVaccineMap((prev) => ({ ...prev, [id]: `ID: ${id}` }));
       return `ID: ${id}`;
@@ -152,7 +152,9 @@ export default function HealthSurvey() {
     const fetchSurveys = async () => {
       try {
         const res = await surveyAPI.getAllSurveys();
-        setSurveys(res.data || []);
+        // Chỉ lấy các khảo sát có status là "Active"
+        const activeSurveys = res.data.filter((survey) => survey.status === "Active");
+        setSurveys(activeSurveys || []);
       } catch {
         setSurveys([]);
         message.error("Không thể tải danh sách khảo sát.");
@@ -329,7 +331,11 @@ export default function HealthSurvey() {
   };
 
   const handleBack = () => {
-    navigate(`/staff/appointments/${id}/step-1`);
+    if (user?.position === "Doctor") {
+      navigate(`/doctor/appointments/${id}/step-1`);
+    } else {
+      navigate(`/staff/appointments/${id}/step-1`);
+    }
   };
 
   const handleBackByPosition = () => {
@@ -992,13 +998,13 @@ export default function HealthSurvey() {
           </div>
         )}
 
-        {(user?.position === "Doctor" || (user?.position === "Doctor" && appointment.order &&   appointment.status === "Pending")) && (
+        {(user?.position === "Doctor" || (user?.position === "Doctor" && appointment.order && appointment.status === "Pending")) && (
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
             <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
               <h3 className="text-xl font-semibold text-gray-800">
                 Chọn bộ câu hỏi thăm khám trước tiêm chủng
               </h3>
-              {user?.position === "Doctor" && appointment.order && appointment.status === "Pending" && (
+              {user?.position === "Doctor" && appointment.order && appointment.order.status === "Pending" && appointment.status === "Pending" && (
                 <button
                   onClick={() => setShowAdjustPackageModal(true)}
                   disabled={submitting}
@@ -1427,7 +1433,7 @@ export default function HealthSurvey() {
           {user?.position === "Doctor" && showSurveySelect && (
             <button
               onClick={handleConfirmSubmit}
-              className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
               disabled={submitting}
             >
               {submitting ? "Đang lưu..." : "Gửi"}
@@ -1437,7 +1443,7 @@ export default function HealthSurvey() {
             <button
               onClick={() => navigate(`/staff/appointments/${id}/step-3`)}
               disabled={submitting}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Tiếp tục
             </button>
@@ -1446,7 +1452,7 @@ export default function HealthSurvey() {
             <button
               onClick={() => navigate(`/doctor/appointments/${id}/step-3`)}
               disabled={submitting}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Tiếp tục
             </button>

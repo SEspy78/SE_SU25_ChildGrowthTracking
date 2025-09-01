@@ -368,7 +368,7 @@ const VaccineManagement: React.FC = () => {
             </Form.Item>
 
             <Form.Item
-              label="Khoảng cách tối thiểu giữa các liều (ngày)"
+              label="Khoảng cách tối thiểu giữa các liều (tháng)"
               name="minIntervalBetweenDoses"
               rules={[{ required: true, message: "Vui lòng nhập khoảng cách tối thiểu" }]}
             >
@@ -525,7 +525,7 @@ const VaccineManagement: React.FC = () => {
             </Form.Item>
 
             <Form.Item
-              label="Khoảng cách tối thiểu giữa các liều (ngày)"
+              label="Khoảng cách tối thiểu giữa các liều (tháng)"
               name="minIntervalBetweenDoses"
               rules={[{ required: true, message: "Vui lòng nhập khoảng cách tối thiểu" }]}
             >

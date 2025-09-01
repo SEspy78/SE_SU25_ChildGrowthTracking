@@ -99,8 +99,8 @@ export type MemberListResponse = {
     }
     },
 
-    getAllMember: async (): Promise<MemberListResponse> => {
-        return await axiosClient.get("api/auth/members?pageIndex=1&pageSize=10");
+    getAllMember: async (pageIndex: number,pageSize: number): Promise<MemberListResponse> => {
+        return await axiosClient.get(`api/auth/members?pageIndex=${pageIndex}&pageSize=${pageSize}`);
     },
 
     getMemberChildren: async (accountId: number): Promise<Child[]> => {
@@ -114,7 +114,7 @@ export type MemberListResponse = {
      
 
     sendMail: async (memberId: number) => {
-        const response: response = await axiosClient.post(`api/ThankYouEmail/send/${memberId}?includeStatistics=true`);
+        const response: response = await axiosClient.post(`api/UpcomingVaccinationEmail/send/${memberId}`);
         return response;
     }
 

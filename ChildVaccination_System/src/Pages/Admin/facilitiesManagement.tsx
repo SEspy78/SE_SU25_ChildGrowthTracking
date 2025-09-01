@@ -398,7 +398,7 @@ const FacilityManagement: React.FC = () => {
                           <div className="space-y-1">
                             <div className="flex items-center text-sm text-gray-900">
                               <Phone className="w-4 h-4 text-gray-400 mr-2" />
-                              {facility.phone}
+                              (+84) {facility.phone}
                             </div>
                             <div className="flex items-center text-sm text-gray-500">
                               <Mail className="w-4 h-4 text-gray-400 mr-2" />

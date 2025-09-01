@@ -233,17 +233,7 @@ export default function DoctorAppointment() {
           </button>
         </div>
 
-        {/* Statistics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-gray-500 transform hover:scale-105 transition duration-300">
-            <h3 className="text-lg font-semibold text-gray-700">Lịch hẹn đang chờ</h3>
-            <p className="text-3xl font-bold text-gray-900">{pendingCount}</p>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500 transform hover:scale-105 transition duration-300">
-            <h3 className="text-lg font-semibold text-gray-700">Lịch hẹn đã hoàn thành</h3>
-            <p className="text-3xl font-bold text-gray-900">{completedCount}</p>
-          </div>
-        </div>
+        
 
         {/* Search and Filter */}
         <div className="mb-8 bg-white rounded-xl shadow-lg p-6">

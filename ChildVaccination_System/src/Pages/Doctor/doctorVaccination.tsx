@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import VaccinationSteps from "@/Components/VaccinationStep";
-import { Button as AntButton, message, DatePicker, Modal } from "antd";
+import { Button as AntButton, message, DatePicker, Modal, Input, Select } from "antd";
 import { appointmentApi, type Appointment, type finishVaccinationPayload } from "@/api/appointmentAPI";
 import { vaccinePackageApi, type VaccinePackage } from "@/api/vaccinePackageApi";
 import { getUserInfo } from "@/lib/storage";
@@ -23,6 +23,7 @@ export default function DoctorConfirmVaccination() {
   const [postVaccinationNotes, setPostVaccinationNotes] = useState("");
   const [facilityVaccineId, setFacilityVaccineId] = useState<number | null>(null);
   const [doseNum, setDoseNum] = useState<number>(1);
+  const [nextVaccineId, setNextVaccineId] = useState<number | null>(null);
   const [expectedDateForNextDose, setExpectedDateForNextDose] = useState<string>(dayjs().format("YYYY-MM-DD"));
   const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -116,7 +117,7 @@ export default function DoctorConfirmVaccination() {
   };
 
   const handleConfirmVaccination = async () => {
-    if (!id || !appointment || !facilityVaccineId || !expectedDateForNextDose || doseNum < 1) {
+    if (!id || !appointment || !facilityVaccineId || doseNum < 1) {
       setSubmitMessage("Vui lòng nhập đầy đủ thông tin hợp lệ.");
       message.error("Vui lòng nhập đầy đủ thông tin hợp lệ.");
       return;
@@ -124,6 +125,12 @@ export default function DoctorConfirmVaccination() {
     if (!postVaccinationNotes.trim()) {
       setSubmitMessage("Vui lòng nhập ghi chú sau tiêm.");
       message.error("Vui lòng nhập ghi chú sau tiêm.");
+      return;
+    }
+    // Only validate expectedDateForNextDose if not the last dose
+    if (!isLastDose && !expectedDateForNextDose) {
+      setSubmitMessage("Vui lòng chọn ngày dự kiến liều tiếp theo.");
+      message.error("Vui lòng chọn ngày dự kiến liều tiếp theo.");
       return;
     }
     setSubmitting(true);
@@ -134,7 +141,8 @@ export default function DoctorConfirmVaccination() {
         facilityVaccineId,
         note: postVaccinationNotes,
         doseNumber: doseNum,
-        expectedDateForNextDose,
+        expectedDateForNextDose: isLastDose ? "2025-01-01" : expectedDateForNextDose,
+        nextFacilityVaccineId: appointment.order && !isLastDose ? nextVaccineId : null, // Send null if last dose or no order
       };
       await appointmentApi.completeVaccination(payload);
       setSubmitMessage("Đã hoàn thành lịch tiêm.");
@@ -200,9 +208,21 @@ export default function DoctorConfirmVaccination() {
         .join(", ")
     : appointment && appointment.order && appointment.facilityVaccines?.length
     ? appointment.facilityVaccines
-        .map((vaccine) => `${vaccine.vaccine.name} (Liều 1, ${getDiseaseNameForFacilityVaccine(vaccine.facilityVaccineId)})`)
+        .map((vaccine) => `${vaccine.vaccine.name} (${getDiseaseNameForFacilityVaccine(vaccine.facilityVaccineId)})`)
         .join(", ")
     : "Không có vắc xin cần tiêm";
+
+  // Check if all orderDetails have remainingQuantity === 0
+  const isPackageComplete = appointment?.order?.orderDetails?.every(detail => detail.remainingQuantity === 0);
+
+  // Calculate total remaining quantity of all vaccines in orderDetails
+  const totalRemainingQuantity = appointment?.order?.orderDetails?.reduce(
+    (sum, detail) => sum + (detail.remainingQuantity || 0),
+    0
+  ) || 0;
+
+  // Disable next dose date and next vaccine fields if totalRemainingQuantity === 1
+  const isLastDose = totalRemainingQuantity === 1;
 
   if (loading || loadingPackage) {
     return (
@@ -305,7 +325,7 @@ export default function DoctorConfirmVaccination() {
                 setVaccinationConfirmed(false);
                 handleComplete();
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Tiếp tục
             </button>,
@@ -397,8 +417,30 @@ export default function DoctorConfirmVaccination() {
             <div className="space-y-4">
               <div className="flex items-center">
                 <span className="font-medium text-gray-600 w-32">Gói vắc xin:</span>
-                <span className="text-gray-800">{appointment.order?.packageName || "Không có gói vắc xin"}</span>
+                <span className="text-gray-800">{vaccinePackage?.name || appointment.order?.packageName || "Không có gói vắc xin"}</span>
               </div>
+              {vaccinePackage && (
+                <>
+                  <div className="flex items-center">
+                    <span className="font-medium text-gray-600 w-32">Mô tả gói:</span>
+                    <span className="text-gray-800">{vaccinePackage.description || "-"}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-medium text-gray-600 w-32">Thời gian gói:</span>
+                    <span className="text-gray-800">{vaccinePackage.duration ? `${vaccinePackage.duration} tháng` : "-"}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-medium text-gray-600 w-32">Vắc xin trong gói:</span>
+                    <span className="text-gray-800">
+                      {vaccinePackage.packageVaccines?.length
+                        ? vaccinePackage.packageVaccines
+                            .map((pv) => `${pv.facilityVaccine.vaccine.name} (${pv.quantity} liều)`)
+                            .join(", ")
+                        : "Không có vắc xin"}
+                    </span>
+                  </div>
+                </>
+              )}
               <div className="flex items-center">
                 <span className="font-medium text-gray-600 w-32">Vắc xin cần tiêm:</span>
                 <span className="text-gray-800">{vaccinesToInjectDisplay}</span>
@@ -446,42 +488,47 @@ export default function DoctorConfirmVaccination() {
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border-l-4 border-blue-500">
             <h3 className="text-xl font-semibold text-gray-800 mb-6 border-b border-gray-200 pb-4">Chi tiết tiêm chủng</h3>
             <div className="space-y-6">
+              {appointment.order && isPackageComplete && (
+                <div className="bg-green-50 p-6 rounded-lg border border-green-200 flex items-center space-x-3">
+                  <CheckCircleIcon className="w-8 h-8 text-green-600" />
+                  <span className="text-lg font-semibold text-green-700">Gói vắc xin đã hoàn tất!</span>
+                </div>
+              )}
               <div>
                 <label className="block text-gray-700 font-medium mb-2">Vắc xin:</label>
-                {appointment.vaccinesToInject?.length > 0 ? (
+                {appointment.order && appointment.facilityVaccines?.length > 0 ? (
+                  <div className="flex flex-wrap gap-4">
+                    {appointment.facilityVaccines.map(vaccine => {
+                      const orderDetail = appointment.order?.orderDetails?.find(
+                        detail => detail.facilityVaccineId === vaccine.facilityVaccineId
+                      );
+                      const remainingQuantity = orderDetail?.remainingQuantity || 0;
+                      return (
+                        <button
+                          key={vaccine.facilityVaccineId}
+                          type="button"
+                          onClick={() => handleVaccineSelect(vaccine.facilityVaccineId, 1)}
+                          disabled={submitting || remainingQuantity === 0}
+                          className={`px-5 py-2 border rounded-lg font-medium transition-colors duration-200 ${
+                            facilityVaccineId === vaccine.facilityVaccineId
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-gray-800 border-gray-300 hover:bg-blue-100 hover:border-blue-500"
+                          } ${remainingQuantity === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          {`${orderDetail?.facilityVaccine.vaccine.name} (Số lượng còn lại: ${remainingQuantity})`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : appointment.vaccinesToInject?.length > 0 ? (
                   <div className="flex flex-wrap gap-4">
                     {appointment.vaccinesToInject.map(vaccine => (
-                      <button
+                      <div
                         key={vaccine.facilityVaccineId}
-                        type="button"
-                        onClick={() => handleVaccineSelect(vaccine.facilityVaccineId, vaccine.doseNumber)}
-                        disabled={submitting}
-                        className={`px-5 py-2 border rounded-lg font-medium transition-colors duration-200 ${
-                          facilityVaccineId === vaccine.facilityVaccineId
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-gray-800 border-gray-300 hover:bg-blue-100 hover:border-blue-500"
-                        }`}
+                        className="px-5 py-2 border rounded-lg font-medium bg-gray-100 text-gray-800 border-gray-300"
                       >
-                        {`${vaccine.vaccineName} (${vaccine.diseaseName})`}
-                      </button>
-                    ))}
-                  </div>
-                ) : appointment && appointment.order && appointment.facilityVaccines ? (
-                  <div className="flex flex-wrap gap-4">
-                    {appointment.facilityVaccines.map(vaccine => (
-                      <button
-                        key={vaccine.facilityVaccineId}
-                        type="button"
-                        onClick={() => handleVaccineSelect(vaccine.facilityVaccineId, 1)}
-                        disabled={submitting}
-                        className={`px-5 py-2 border rounded-lg font-medium transition-colors duration-200 ${
-                          facilityVaccineId === vaccine.facilityVaccineId
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-gray-800 border-gray-300 hover:bg-blue-100 hover:border-blue-500"
-                        }`}
-                      >
-                        {`${vaccine.vaccine.name} (${getDiseaseNameForFacilityVaccine(vaccine.facilityVaccineId)})`}
-                      </button>
+                        {`${vaccine.vaccineName} (Liều ${vaccine.doseNumber}, ${vaccine.diseaseName})`}
+                      </div>
                     ))}
                   </div>
                 ) : (
@@ -490,11 +537,13 @@ export default function DoctorConfirmVaccination() {
               </div>
               <div>
                 <label className="block text-gray-700 font-medium mb-2">Mũi số:</label>
-                <input
+                <Input
                   type="number"
-                  className="w-full p-4 border border-gray-200 rounded-lg bg-gray-100 cursor-not-allowed text-gray-600"
+                  className="w-full p-4 border border-gray-200 rounded-lg"
                   value={doseNum}
-                  disabled
+                  onChange={(e) => setDoseNum(Number(e.target.value))}
+                  min={1}
+                  disabled={submitting}
                 />
               </div>
               <div>
@@ -504,9 +553,35 @@ export default function DoctorConfirmVaccination() {
                   value={expectedDateForNextDose ? dayjs(expectedDateForNextDose) : null}
                   onChange={(date) => setExpectedDateForNextDose(date ? date.format("YYYY-MM-DD") : "")}
                   format="DD/MM/YYYY"
-                  disabled={submitting}
+                  disabled={submitting || isLastDose}
                 />
+                {isLastDose && (
+                  <p className="text-sm text-gray-600 mt-2">Không cần chọn ngày vì đây là liều cuối cùng trong gói.</p>
+                )}
               </div>
+              {appointment.order && !isPackageComplete && (
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">Vắc xin cho lần tiêm tiếp theo:</label>
+                  <Select
+                    className="w-full"
+                    value={nextVaccineId}
+                    onChange={(value) => setNextVaccineId(value)}
+                    placeholder="Chọn vắc xin cho lần tiêm tiếp theo"
+                    disabled={submitting || isLastDose}
+                  >
+                    {appointment.order?.orderDetails
+                      ?.filter(detail => detail.remainingQuantity > 0)
+                      .map(detail => (
+                        <Select.Option key={detail.facilityVaccineId} value={detail.facilityVaccineId}>
+                          {`${detail.facilityVaccine.vaccine.name} (Số lượng còn lại: ${detail.remainingQuantity})`}
+                        </Select.Option>
+                      ))}
+                  </Select>
+                  {isLastDose && (
+                    <p className="text-sm text-gray-600 mt-2">Không cần chọn vắc xin vì đây là liều cuối cùng trong gói.</p>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="block text-gray-700 font-medium mb-2">
                   Ghi chú sau tiêm: <span className="text-red-500">*</span>
@@ -543,8 +618,8 @@ export default function DoctorConfirmVaccination() {
               </button>
               <button
                 onClick={handleConfirmVaccination}
-                disabled={submitting || !hasAvailableVaccines || !facilityVaccineId || !expectedDateForNextDose || doseNum < 1}
-                className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 ${submitting || !hasAvailableVaccines || !facilityVaccineId || !expectedDateForNextDose || doseNum < 1 ? "opacity-50 cursor-not-allowed" : ""}`}
+                disabled={submitting || !hasAvailableVaccines || !facilityVaccineId || doseNum < 1}
+                className={`bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 ${submitting || !hasAvailableVaccines || !facilityVaccineId || doseNum < 1 ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 {submitting ? "Đang xử lý..." : "Xác nhận tiêm chủng"}
               </button>
