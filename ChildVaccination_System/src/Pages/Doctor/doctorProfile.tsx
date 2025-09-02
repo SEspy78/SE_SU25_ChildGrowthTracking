@@ -65,7 +65,7 @@ const DoctorProfile: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate("/doctor/dashboard");
+    navigate("/doctor/appointments");
   };
 
   return (
@@ -148,6 +148,7 @@ const DoctorProfile: React.FC = () => {
               />
             </Form.Item>
             <Form.Item
+            hidden
               label={<span className="text-gray-700 font-medium text-sm">Chức vụ</span>}
               name="position"
             >
@@ -168,6 +169,7 @@ const DoctorProfile: React.FC = () => {
               />
             </Form.Item>
             <Form.Item
+            hidden
               label={<span className="text-gray-700 font-medium text-sm">Trạng thái</span>}
               name="status"
               valuePropName="checked"

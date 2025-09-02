@@ -150,6 +150,7 @@ const StaffProfile: React.FC = () => {
                 />
               </Form.Item>
               <Form.Item
+              hidden
                 label={<span className="text-gray-700 font-medium">Chức vụ</span>}
                 name="position"
               >

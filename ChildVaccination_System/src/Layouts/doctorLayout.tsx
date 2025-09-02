@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { getUserInfo, removeItem } from "@/lib/storage";
 import { facilityApi, type GetByIdFacilitiesResponse } from "@/api/vaccinationFacilitiesApi";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Calendar } from "lucide-react";
 
 export default function DoctorLayout() {
   const navigate = useNavigate();
@@ -50,6 +50,10 @@ export default function DoctorLayout() {
     navigate("/doctor/account");
   };
 
+  const handleAppointments = () => {
+    navigate("/doctor/appointments");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-teal-50 p-6">
       <main className="flex-1">
@@ -60,6 +64,13 @@ export default function DoctorLayout() {
           </h1>
           <div className="flex items-center space-x-4">
             <span className="text-gray-700 font-medium hidden sm:block">Dr. {userName}</span>
+            <button
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
+              onClick={handleAppointments}
+            >
+              <Calendar className="w-4 h-4 inline-block mr-2" />
+              Lịch hẹn
+            </button>
             <button
               className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200"
               onClick={handleAccountManagement}

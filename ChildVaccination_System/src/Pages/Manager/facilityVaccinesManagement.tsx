@@ -200,7 +200,7 @@ const VaccineManagement: React.FC = () => {
   const openAddModal = () => {
     const initialFormData: CreateFacilityVaccineRequest = {
       facilityId: user?.facilityId ?? 1,
-      vaccineId: 0 ,
+      vaccineId: 0,
       price: 0,
       availableQuantity: 0,
       batchNumber: 0,
@@ -339,11 +339,13 @@ const VaccineManagement: React.FC = () => {
                 }
                 className="w-full rounded-lg"
               >
-                {allVaccines.map((vaccine) => (
-                  <Option key={vaccine.vaccineId} value={vaccine.vaccineId}>
-                    {vaccine.name}
-                  </Option>
-                ))}
+                {allVaccines
+                  .filter(vaccine => vaccine.status === "Approved")
+                  .map((vaccine) => (
+                    <Option key={vaccine.vaccineId} value={vaccine.vaccineId}>
+                      {vaccine.name}
+                    </Option>
+                  ))}
               </Select>
             </Form.Item>
 

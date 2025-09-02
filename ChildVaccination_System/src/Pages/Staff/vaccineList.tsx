@@ -261,7 +261,7 @@ const VaccineListPage: React.FC = () => {
               >
                 <Option value="all">Tất cả trạng thái</Option>
                 <Option value="active">Đang sử dụng</Option>
-                <Option value="inactive">Ngừng sử dụng</Option>
+                <Option value="unactive">Ngừng sử dụng</Option>
               </Select>
             </div>
           </div>

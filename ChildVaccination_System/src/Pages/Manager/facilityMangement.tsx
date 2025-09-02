@@ -243,7 +243,7 @@ const FacilityDetail: React.FC = () => {
   const dataSource = [
     { key: "1", label: "Tên cơ sở", value: facility.facilityName || "" },
     { key: "2", label: "Địa chỉ", value: facility.address || "" },
-    { key: "3", label: "Số điện thoại", value: facility.phone?.toString() || "" },
+    { key: "3", label: "Số điện thoại", value: `(+84) ${facility.phone?.toString()}` || "" },
     { key: "4", label: "Email", value: facility.email || "" },
     { key: "5", label: "Mô tả", value: facility.description || "" },
     { key: "6", label: "Trạng thái", value: facility.status === 1 ? "Active" : "Inactive" },
