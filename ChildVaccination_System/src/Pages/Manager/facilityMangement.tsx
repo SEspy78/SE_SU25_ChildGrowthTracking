@@ -318,6 +318,7 @@ const FacilityDetail: React.FC = () => {
             <Form.Item
               label="Số giấy phép"
               name="licenseNumber"
+              hidden
               rules={[
                 { required: true, message: "Vui lòng nhập số giấy phép!" },
                 { pattern: /^\d+$/, message: "Số giấy phép phải là số!" },

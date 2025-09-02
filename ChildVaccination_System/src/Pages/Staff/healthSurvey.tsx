@@ -306,7 +306,7 @@ export default function HealthSurvey() {
       return true;
     }
 
-    if (temperatureC !== null && (temperatureC < 35.0 || temperatureC > 37.5)) {
+    if (temperatureC !== null && (temperatureC < 35.0 || temperatureC > 40)) {
       message.error("Nhiệt độ cơ thể phải từ 35.0°C đến 37.5°C.");
       return false;
     }

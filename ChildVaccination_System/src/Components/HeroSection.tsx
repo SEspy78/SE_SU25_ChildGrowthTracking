@@ -15,7 +15,7 @@ const HeroSection = () => (
         </p>
         <Link to="/register">
           <Button className="px-6 py-3 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105">
-            Đăng ký ngay
+            Đăng Nhập
           </Button>
         </Link>
       </div>

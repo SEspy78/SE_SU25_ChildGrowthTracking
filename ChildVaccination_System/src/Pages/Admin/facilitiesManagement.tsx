@@ -165,7 +165,7 @@ const FacilityManagement: React.FC = () => {
         managerPhone: values.managerPhone,
         managerDescription: values.managerDescription || "",
         facilityName: values.facilityName,
-        licenseNumber: Number(values.licenseNumber),
+        licenseNumber: Math.floor(Math.random() * 900000) + 100000, // Random 6-digit number
         facilityAddress: values.facilityAddress,
         facilityPhone: Number(values.facilityPhone),
         facilityEmail: values.facilityEmail,
@@ -652,16 +652,6 @@ const FacilityManagement: React.FC = () => {
               rules={[{ required: true, message: "Vui lòng nhập tên cơ sở!" }]}
             >
               <Input placeholder="Nhập tên cơ sở" className="rounded-lg" />
-            </Form.Item>
-            <Form.Item
-              label="Số giấy phép"
-              name="licenseNumber"
-              rules={[
-                { required: true, message: "Vui lòng nhập số giấy phép!" },
-                { pattern: /^\d+$/, message: "Số giấy phép phải là số!" },
-              ]}
-            >
-              <Input placeholder="Nhập số giấy phép" type="number" className="rounded-lg" />
             </Form.Item>
             <Form.Item
               label="Địa chỉ cơ sở"

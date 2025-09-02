@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Button, Card, Col, Row, Input, Select, Table, Modal, Form, InputNumber, message } from "antd";
+import { Button, Card, Col, Row, Input, Select, Table, Modal, Form, InputNumber, message, Upload } from "antd";
 import { Search, Users, AlertCircle, Pencil, Trash2, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { FacilityStaffAPI, type Staff, type CreateStaffPayload, type UpdateStaffPayload } from "@/api/staffAPI";
 import { getUserInfo } from "@/lib/storage";
@@ -58,11 +58,25 @@ const StaffManagement: React.FC = () => {
     fetchStaffData();
   };
 
-  const handleCreateStaff = async (values: CreateStaffPayload) => {
+  const handleCreateStaff = async (values: Omit<CreateStaffPayload, 'CertificationFile'> & { CertificationFile?: { file: File } }) => {
     setModalLoading(true);
     try {
-      const res = await FacilityStaffAPI.createStaff(values);
-      message.success(res.message || `Đã thêm nhân viên ${values.fullName} thành công!`);
+      const payload: CreateStaffPayload = {
+        AccountName: values.AccountName,
+        Email: values.Email,
+        Password: values.Password,
+        FullName: values.FullName,
+        Phone: values.Phone,
+        Position: values.Position,
+        Description: values.Description || "",
+        Age: values.Age,
+        Specialization: values.Specialization || "",
+        CertificationFile: values.CertificationFile?.file || null,
+        University: values.University || "",
+        Bio: values.Bio || "",
+      };
+      const res = await FacilityStaffAPI.createStaff(payload);
+      message.success(res.message || `Đã thêm nhân viên ${values.FullName} thành công!`);
       console.log("Create Response:", res.message);
       setShowCreateModal(false);
       form.resetFields();
@@ -191,7 +205,6 @@ const StaffManagement: React.FC = () => {
           >
             <Pencil className="w-4 h-4" />
           </button>
-          
         </div>
       ),
     },
@@ -463,12 +476,12 @@ const StaffManagement: React.FC = () => {
           form={form}
           layout="vertical"
           onFinish={handleCreateStaff}
-          initialValues={{ position: "Staff" }}
+          initialValues={{ Position: "Staff" }}
         >
           <Row gutter={[16, 16]}>
             <Col span={12}>
               <Form.Item
-                name="accountName"
+                name="AccountName"
                 label="Tên tài khoản"
                 rules={[{ required: true, message: "Vui lòng nhập tên tài khoản!" }]}
               >
@@ -477,7 +490,7 @@ const StaffManagement: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="email"
+                name="Email"
                 label="Email"
                 rules={[
                   { required: true, message: "Vui lòng nhập email!" },
@@ -489,7 +502,7 @@ const StaffManagement: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="password"
+                name="Password"
                 label="Mật khẩu"
                 rules={[
                   { required: true, message: "Vui lòng nhập mật khẩu!" },
@@ -501,7 +514,7 @@ const StaffManagement: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="fullName"
+                name="FullName"
                 label="Họ tên"
                 rules={[{ required: true, message: "Vui lòng nhập họ tên!" }]}
               >
@@ -510,7 +523,7 @@ const StaffManagement: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="phone"
+                name="Phone"
                 label="Số điện thoại"
                 rules={[
                   { required: true, message: "Vui lòng nhập số điện thoại!" },
@@ -522,7 +535,7 @@ const StaffManagement: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="position"
+                name="Position"
                 label="Vị trí"
                 rules={[{ required: true, message: "Vui lòng chọn vị trí!" }]}
               >
@@ -534,7 +547,7 @@ const StaffManagement: React.FC = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="age"
+                name="Age"
                 label="Tuổi"
                 rules={[
                   { required: true, message: "Vui lòng nhập tuổi!" },
@@ -545,27 +558,44 @@ const StaffManagement: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="specialization" label="Chuyên môn">
+              <Form.Item name="Specialization" label="Chuyên môn">
                 <Input placeholder="Nhập chuyên môn (nếu có)" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="certifications" label="Chứng chỉ">
-                <Input placeholder="Nhập chứng chỉ (nếu có)" />
+              <Form.Item
+                name="CertificationFile"
+                label="Chứng chỉ (PDF, PNG, JPG)"
+                valuePropName="file"
+                getValueFromEvent={(e) => {
+                  if (e && e.fileList && e.fileList.length > 0) {
+                    return { file: e.fileList[0].originFileObj };
+                  }
+                  return null;
+                }}
+              >
+                <Upload
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  beforeUpload={() => false}
+                  maxCount={1}
+                  className="w-full"
+                >
+                  <Button icon={<Upload />}>Chọn file</Button>
+                </Upload>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="university" label="Trường đại học">
+              <Form.Item name="University" label="Trường đại học">
                 <Input placeholder="Nhập trường đại học (nếu có)" />
               </Form.Item>
             </Col>
             <Col span={24}>
-              <Form.Item name="description" label="Mô tả">
+              <Form.Item name="Description" label="Mô tả">
                 <Input.TextArea rows={3} placeholder="Nhập mô tả (nếu có)" />
               </Form.Item>
             </Col>
             <Col span={24}>
-              <Form.Item name="bio" label="Tiểu sử">
+              <Form.Item name="Bio" label="Tiểu sử">
                 <Input.TextArea rows={3} placeholder="Nhập tiểu sử (nếu có)" />
               </Form.Item>
             </Col>

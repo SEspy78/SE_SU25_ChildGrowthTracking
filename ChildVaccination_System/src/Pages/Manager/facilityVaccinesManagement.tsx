@@ -47,7 +47,7 @@ const VaccineManagement: React.FC = () => {
     facilityId: user?.facilityId ?? 1,
     vaccineId: 0,
     price: 0,
-    availableQuantity: 0,
+    availableQuantity: 100,
     batchNumber: Math.floor(Math.random() * 900) + 100, // Random 3-digit number
     expiryDate: "",
     importDate: new Date().toISOString().split("T")[0], // Today's date
@@ -126,22 +126,28 @@ const VaccineManagement: React.FC = () => {
       return;
     }
     try {
-      const newVaccine = await facilityVaccineApi.create(formData);
-      setVaccines((prev) => [...prev, newVaccine]);
-      setShowAddModal(false);
-      setFormData({
-        facilityId: user?.facilityId ?? 1,
-        vaccineId: 0,
-        price: 0,
-        availableQuantity: 0,
-        batchNumber: Math.floor(Math.random() * 900) + 100, // Random 3-digit number
-        expiryDate: "",
-        importDate: new Date().toISOString().split("T")[0], // Today's date
-        status: "Approved",
-      });
-      addForm.resetFields();
-      setSuccessMessage("Thêm vaccine cơ sở thành công");
-      setShowSuccessModal(true);
+      const response = await facilityVaccineApi.create(formData);
+      if (response.status === 201) {
+        setShowAddModal(false);
+        setFormData({
+          facilityId: user?.facilityId ?? 1,
+          vaccineId: 0,
+          price: 0,
+          availableQuantity: 0,
+          batchNumber: Math.floor(Math.random() * 900) + 100,
+          expiryDate: "",
+          importDate: new Date().toISOString().split("T")[0],
+          status: "active",
+        });
+        addForm.resetFields();
+        setSuccessMessage("Thêm vaccine cơ sở thành công");
+        setShowSuccessModal(true);
+        await fetchVaccines(); // Refresh data after successful creation
+        setCurrentPage(1); // Reset to first page to show new vaccine
+      } else {
+        setErrorMessage(response.message || "Lỗi khi tạo vaccine cơ sở");
+        setShowErrorModal(true);
+      }
     } catch (err: any) {
       setErrorMessage(err.message || "Lỗi khi tạo vaccine cơ sở");
       setShowErrorModal(true);
@@ -212,7 +218,7 @@ const VaccineManagement: React.FC = () => {
       batchNumber: Math.floor(Math.random() * 900) + 100, // Random 3-digit number
       expiryDate: "",
       importDate: new Date().toISOString().split("T")[0], // Today's date
-      status: "Approved",
+      status: "active",
     };
     setFormData(initialFormData);
     addForm.setFieldsValue({
