@@ -85,7 +85,7 @@ export default function ManagerLayout() {
               ${location.pathname === "/manager/survey-management" ? "bg-teal-100 text-teal-800 font-semibold" : "text-gray-700 hover:bg-teal-100 hover:text-teal-800"}`}
           >
             <File className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" />
-            Phiếu thăm khám
+            Bộ câu hỏi thăm khám
           </Link>
 
             <Link
@@ -94,7 +94,7 @@ export default function ManagerLayout() {
               ${location.pathname === "/manager/appointments" ? "bg-teal-100 text-teal-800 font-semibold" : "text-gray-700 hover:bg-teal-100 hover:text-teal-800"}`}
           >
             <ClockAlertIcon className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" />
-            Lịch tiêm
+            Lịch tiêm chủng
           </Link>
           
           <Link
@@ -112,7 +112,7 @@ export default function ManagerLayout() {
               ${location.pathname === "/manager/schedule-slots" ? "bg-teal-100 text-teal-800 font-semibold" : "text-gray-700 hover:bg-teal-100 hover:text-teal-800"}`}
           >
             <Calendar className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" />
-            Lịch tiêm chủng
+            Lịch làm việc
           </Link>
 
 

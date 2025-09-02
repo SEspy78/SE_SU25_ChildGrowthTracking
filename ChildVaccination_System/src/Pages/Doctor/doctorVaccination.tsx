@@ -619,13 +619,6 @@ export default function DoctorConfirmVaccination() {
           {!isCompletedStatus && !vaccinationConfirmed && !isCancelledStatus && isPaidStatus && (
             <>
               <button
-                onClick={() => setIsCancelModalVisible(true)}
-                disabled={submitting}
-                className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
-              >
-                Hủy lịch hẹn
-              </button>
-              <button
                 onClick={handleConfirmVaccination}
                 disabled={submitting || !hasAvailableVaccines || !facilityVaccineId || doseNum < 1}
                 className={`bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 ${submitting || !hasAvailableVaccines || !facilityVaccineId || doseNum < 1 ? "opacity-50 cursor-not-allowed" : ""}`}
