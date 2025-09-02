@@ -48,9 +48,9 @@ const VaccineManagement: React.FC = () => {
     vaccineId: 0,
     price: 0,
     availableQuantity: 0,
-    batchNumber: 0,
+    batchNumber: Math.floor(Math.random() * 900) + 100, // Random 3-digit number
     expiryDate: "",
-    importDate: "",
+    importDate: new Date().toISOString().split("T")[0], // Today's date
     status: "Approved",
   });
   const [addForm] = Form.useForm();
@@ -115,8 +115,8 @@ const VaccineManagement: React.FC = () => {
   }, [filterStatus, filterCategory, searchQuery]);
 
   const handleCreateVaccine = async () => {
-    if (formData.price < 0 || formData.availableQuantity < 0 || formData.batchNumber < 0) {
-      setErrorMessage("Giá, số lượng hoặc số lô không được nhỏ hơn 0");
+    if (formData.price < 0 || formData.availableQuantity < 0) {
+      setErrorMessage("Giá hoặc số lượng không được nhỏ hơn 0");
       setShowErrorModal(true);
       return;
     }
@@ -134,9 +134,9 @@ const VaccineManagement: React.FC = () => {
         vaccineId: 0,
         price: 0,
         availableQuantity: 0,
-        batchNumber: 0,
+        batchNumber: Math.floor(Math.random() * 900) + 100, // Random 3-digit number
         expiryDate: "",
-        importDate: "",
+        importDate: new Date().toISOString().split("T")[0], // Today's date
         status: "Approved",
       });
       addForm.resetFields();
@@ -150,8 +150,8 @@ const VaccineManagement: React.FC = () => {
 
   const handleUpdateVaccine = async () => {
     if (!selectedVaccine) return;
-    if (formData.price < 0 || formData.availableQuantity < 0 || formData.batchNumber < 0) {
-      setErrorMessage("Giá, số lượng hoặc số lô không được nhỏ hơn 0");
+    if (formData.price < 0 || formData.availableQuantity < 0) {
+      setErrorMessage("Giá hoặc số lượng không được nhỏ hơn 0");
       setShowErrorModal(true);
       return;
     }
@@ -193,7 +193,13 @@ const VaccineManagement: React.FC = () => {
       status: vaccine.status,
     };
     setFormData(updateData);
-    updateForm.setFieldsValue(updateData);
+    updateForm.setFieldsValue({
+      vaccineId: updateData.vaccineId,
+      price: updateData.price,
+      availableQuantity: updateData.availableQuantity,
+      expiryDate: updateData.expiryDate,
+      status: updateData.status,
+    });
     setShowUpdateModal(true);
   };
 
@@ -203,13 +209,19 @@ const VaccineManagement: React.FC = () => {
       vaccineId: 0,
       price: 0,
       availableQuantity: 0,
-      batchNumber: 0,
+      batchNumber: Math.floor(Math.random() * 900) + 100, // Random 3-digit number
       expiryDate: "",
-      importDate: "",
+      importDate: new Date().toISOString().split("T")[0], // Today's date
       status: "Approved",
     };
     setFormData(initialFormData);
-    addForm.setFieldsValue(initialFormData);
+    addForm.setFieldsValue({
+      vaccineId: initialFormData.vaccineId,
+      price: initialFormData.price,
+      availableQuantity: initialFormData.availableQuantity,
+      expiryDate: initialFormData.expiryDate,
+      status: initialFormData.status,
+    });
     setShowAddModal(true);
   };
 
@@ -321,7 +333,13 @@ const VaccineManagement: React.FC = () => {
           form={addForm}
           layout="vertical"
           onFinish={handleCreateVaccine}
-          initialValues={formData}
+          initialValues={{
+            vaccineId: formData.vaccineId,
+            price: formData.price,
+            availableQuantity: formData.availableQuantity,
+            expiryDate: formData.expiryDate,
+            status: formData.status,
+          }}
           onValuesChange={(_, values) => setFormData({ ...formData, ...values })}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -358,17 +376,9 @@ const VaccineManagement: React.FC = () => {
             </Form.Item>
 
             <Form.Item
-              label="Số lượng có sẵn"
+              label="Số lượng "
               name="availableQuantity"
               rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
-            >
-              <InputNumber min={0} className="w-full rounded-lg" />
-            </Form.Item>
-
-            <Form.Item
-              label="Số lô"
-              name="batchNumber"
-              rules={[{ required: true, message: "Vui lòng nhập số lô" }]}
             >
               <InputNumber min={0} className="w-full rounded-lg" />
             </Form.Item>
@@ -377,14 +387,6 @@ const VaccineManagement: React.FC = () => {
               label="Ngày hết hạn"
               name="expiryDate"
               rules={[{ required: true, message: "Vui lòng nhập ngày hết hạn" }]}
-            >
-              <Input type="date" className="rounded-lg" />
-            </Form.Item>
-
-            <Form.Item
-              label="Ngày nhập"
-              name="importDate"
-              rules={[{ required: true, message: "Vui lòng nhập ngày nhập" }]}
             >
               <Input type="date" className="rounded-lg" />
             </Form.Item>
@@ -439,7 +441,13 @@ const VaccineManagement: React.FC = () => {
           form={updateForm}
           layout="vertical"
           onFinish={handleUpdateVaccine}
-          initialValues={formData}
+          initialValues={{
+            vaccineId: formData.vaccineId,
+            price: formData.price,
+            availableQuantity: formData.availableQuantity,
+            expiryDate: formData.expiryDate,
+            status: formData.status,
+          }}
           onValuesChange={(_, values) => setFormData({ ...formData, ...values })}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -482,25 +490,9 @@ const VaccineManagement: React.FC = () => {
             </Form.Item>
 
             <Form.Item
-              label="Số lô"
-              name="batchNumber"
-              rules={[{ required: true, message: "Vui lòng nhập số lô" }]}
-            >
-              <InputNumber min={0} className="w-full rounded-lg" />
-            </Form.Item>
-
-            <Form.Item
               label="Ngày hết hạn"
               name="expiryDate"
               rules={[{ required: true, message: "Vui lòng nhập ngày hết hạn" }]}
-            >
-              <Input type="date" className="rounded-lg" />
-            </Form.Item>
-
-            <Form.Item
-              label="Ngày nhập"
-              name="importDate"
-              rules={[{ required: true, message: "Vui lòng nhập ngày nhập" }]}
             >
               <Input type="date" className="rounded-lg" />
             </Form.Item>
