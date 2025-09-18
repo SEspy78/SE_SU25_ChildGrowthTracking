@@ -1,7 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { getUserInfo } from "@/lib/storage";
 import VaccinationSteps from "@/Components/VaccinationStep";
-import { Button } from "@/Components/ui/button";
 import { diseaseApi } from "@/api/diseaseApi";
 import { useEffect, useState, useMemo } from "react";
 import { appointmentApi, orderApi, type Appointment, type FacilityScheduleResponse } from "@/api/appointmentAPI";
@@ -604,8 +603,22 @@ export default function HealthSurvey() {
       ),
     },
     {
-      title: "Giá",
-      key: "price",
+      title: "Đơn giá",
+      key: "unitPrice",
+      render: (_: any, record: any) => {
+        const selectedVaccineId = tempVaccineSelections[record.orderDetailId] || record.facilityVaccine.facilityVaccineId;
+        const vaccine = availableVaccines.find(v => v.facilityVaccineId === selectedVaccineId);
+        const price = vaccine ? vaccine.price : 0;
+        return (
+          <span className="text-gray-700 font-medium">
+            {price.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
+          </span>
+        );
+      },
+    },
+    {
+      title: "Tổng giá",
+      key: "totalPrice",
       render: (_: any, record: any) => {
         const selectedVaccineId = tempVaccineSelections[record.orderDetailId] || record.facilityVaccine.facilityVaccineId;
         const vaccine = availableVaccines.find(v => v.facilityVaccineId === selectedVaccineId);
@@ -722,7 +735,7 @@ export default function HealthSurvey() {
             <button
               key="close"
               onClick={() => setShowAdjustPackageModal(false)}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-full font-medium transition-colors duration-200"
+              className="bg-gray-200 hover:bg-gray-300 mr-2 text-gray-700 px-6 py-2 rounded-full font-medium transition-colors duration-200"
             >
               Đóng
             </button>,
@@ -1311,88 +1324,6 @@ export default function HealthSurvey() {
           </Collapse>
         )}
 
-        {!showSurveySelect && surveyAnswers && surveyAnswers.questions.length > 0 && (
-          <Collapse
-            activeKey={isAnswersVisible ? ["1"] : []}
-            className="mb-8 bg-white rounded-xl shadow-lg"
-            expandIcon={({ isActive }) => (
-              <CaretRightOutlined
-                rotate={isActive ? 90 : 0}
-                className="text-blue-600 text-lg"
-              />
-            )}
-            onChange={() => setIsAnswersVisible(!isAnswersVisible)}
-          >
-            <Collapse.Panel
-              header={
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-blue-700 mb-0">
-                    Câu trả lời thăm khám sức khỏe
-                  </h3>
-                  <span className="text-sm text-gray-500 font-medium">
-                    {surveyAnswers.questions.length} câu trả lời
-                  </span>
-                </div>
-              }
-              key="1"
-              className="p-8"
-            >
-              <div className="space-y-6">
-                <div className="bg-blue-50 rounded-xl p-6 flex items-center justify-between shadow-sm">
-                  <span className="text-blue-700 font-semibold text-lg">
-                    Tổng cộng: {surveyAnswers.questions.length} câu trả lời
-                  </span>
-                  <span className="text-sm text-gray-500">
-                    Cập nhật: {new Date(surveyAnswers.submittedAt).toLocaleDateString("vi-VN")}
-                  </span>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4">Thông tin sức khỏe</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <p><strong className="text-gray-700">Nhiệt độ cơ thể:</strong> {surveyAnswers.temperatureC || "0"}°C</p>
-                      <p><strong className="text-gray-700">Nhịp tim:</strong> {surveyAnswers.heartRateBpm || "0"} bpm</p>
-                      <p><strong className="text-gray-700">Huyết áp:</strong> {surveyAnswers.systolicBpmmHg || "0"}/{surveyAnswers.diastolicBpmmHg || "0"} mmHg</p>
-                    </div>
-                    <div className="space-y-3">
-                      <p><strong className="text-gray-700">Độ bão hòa oxy:</strong> {surveyAnswers.oxygenSatPercent || "0"}%</p>
-                      <p><strong className="text-gray-700">Ghi chú quyết định:</strong> {surveyAnswers.decisionNote || "Không có"}</p>
-                      <p><strong className="text-gray-700">Đồng ý:</strong> {surveyAnswers.consentObtained ? "Có" : "Không"}</p>
-                    </div>
-                  </div>
-                </div>
-                {surveyAnswers.questions.map((ans: QuestionResponse, idx: number) => (
-                  <div
-                    key={idx}
-                    className="bg-gray-50 rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200"
-                  >
-                    <div className="flex items-center mb-3">
-                      <svg
-                        className="w-6 h-6 mr-3 text-blue-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5v-2a2 2 0 012-2h10a2 2 0 012 2v2h-4m-6 0h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
-                        ></path>
-                      </svg>
-                      <span className="text-lg font-medium text-gray-800">{ans.questionText}</span>
-                    </div>
-                    <div className="mt-2">
-                      <span className="text-blue-700 font-medium">Trả lời: {ans.answerText}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Collapse.Panel>
-          </Collapse>
-        )}
-
         {!showSurveySelect && (!surveyAnswers || surveyAnswers.questions.length === 0) && (
           <div className="bg-gray-50 text-gray-600 p-6 rounded-xl flex items-center justify-center space-x-3 shadow-sm">
             <svg
@@ -1477,6 +1408,7 @@ interface VaccineProfileCardProps {
 const VaccineProfileCard: React.FC<VaccineProfileCardProps> = ({ vp, getVaccineName, getDiseaseName }) => {
   const [vaccineName, setVaccineName] = useState<string>(`ID: ${vp.vaccineId}`);
   const [diseaseName, setDiseaseName] = useState<string>(`Bệnh ID: ${vp.diseaseId}`);
+  const [numberOfDose, setNumberOfDose] = useState<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -1486,46 +1418,45 @@ const VaccineProfileCard: React.FC<VaccineProfileCardProps> = ({ vp, getVaccineN
     getDiseaseName(vp.diseaseId).then((name) => {
       if (mounted) setDiseaseName(name);
     });
+    vaccineApi
+      .getById(vp.vaccineId)
+      .then((v) => {
+        if (mounted) setNumberOfDose(v.numberOfDoses ?? null);
+      })
+      .catch(() => {
+        if (mounted) setNumberOfDose(null);
+      });
     return () => {
       mounted = false;
     };
   }, [vp.vaccineId, vp.diseaseId, getVaccineName, getDiseaseName]);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow duration-300">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-3">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 3.996a11.955 11.955 0 01-8.618 3.986A12.02 12.02 0 003 12c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-            </svg>
-            <span className="font-medium text-gray-600">Bệnh:</span>
-            <span className="ml-2 text-gray-800 font-semibold">{diseaseName}</span>
-          </div>
-          <div className="flex items-center">
-            <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-            </svg>
-            <span className="font-medium text-gray-600">Vắc xin:</span>
-            <span className="ml-2 text-gray-800 font-semibold">{vaccineName}</span>
-          </div>
-        </div>
-        <div className="space-y-3">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-            </svg>
-            <span className="font-medium text-gray-600">Liều:</span>
-            <span className="ml-2 text-gray-800">{vp.doseNum}</span>
-          </div>
-          <div className="flex items-center">
-            <svg className="w-5 h-5 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-            </svg>
-            <span className="font-medium text-gray-600">Ngày tiêm:</span>
-            <span className="ml-2 text-gray-800 font-semibold">{new Date(vp.actualDate).toLocaleDateString("vi-VN")}</span>
-          </div>
-        </div>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200">
+      <div className="space-y-2">
+        <p>
+          <strong className="text-gray-800 font-medium">Vắc xin:</strong>{" "}
+          <span className="text-gray-600">{vaccineName}</span>
+        </p>
+        <p>
+          <strong className="text-gray-800 font-medium">Bệnh:</strong>{" "}
+          <span className="text-gray-600">{diseaseName}</span>
+        </p>
+        <p>
+          <strong className="text-gray-800 font-medium">Liều:</strong>{" "}
+          <span className="text-gray-600">
+            {vp.doseNum}
+            {numberOfDose !== null ? `/${numberOfDose}` : ""}
+          </span>
+        </p>
+        <p>
+          <strong className="text-gray-800 font-medium">Ngày tiêm:</strong>{" "}
+          <span className="text-gray-600">{vp.actualDate?.slice(0, 10) || "-"}</span>
+        </p>
+        <p>
+          <strong className="text-gray-800 font-medium">Ghi chú:</strong>{" "}
+          <span className="text-gray-600">{vp.note || "Không"}</span>
+        </p>
       </div>
     </div>
   );
