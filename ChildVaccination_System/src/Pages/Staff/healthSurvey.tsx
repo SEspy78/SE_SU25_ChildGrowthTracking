@@ -8,7 +8,7 @@ import { surveyAPI, type Survey, type Question, type QuestionResponse } from "@/
 import { childprofileApi, type VaccineProfile } from "@/api/childInfomationAPI";
 import { facilityVaccineApi, vaccineApi, type FacilityVaccine } from "@/api/vaccineApi";
 import { Collapse, Select, message, Input, Checkbox, Modal, DatePicker, Table } from "antd";
-import { CaretRightOutlined } from "@ant-design/icons";
+import { CaretRightOutlined,CheckCircleFilled, CloseCircleFilled } from "@ant-design/icons";
 import dayjs from "dayjs";
 
 const { Option } = Select;
@@ -1010,6 +1010,112 @@ export default function HealthSurvey() {
             <span className="text-lg font-semibold">Đang đợi bác sĩ làm thăm khám</span>
           </div>
         )}
+        {user?.position === "Staff" && appointment.status === "Approval" && surveyAnswers && surveyAnswers.questions.length > 0 && (
+  <div className="bg-white rounded-2xl shadow-xl p-8 mb-10 transition-all duration-300 hover:shadow-2xl">
+    <h3 className="text-2xl font-bold text-gray-900 mb-6 border-b-2 border-blue-100 pb-4">
+      Kết quả khảo sát sức khỏe
+    </h3>
+    <h4 className="text-xl font-semibold text-gray-800 mb-6">Câu trả lời thăm khám sức khỏe</h4>
+    <ul className="space-y-5">
+      {surveyAnswers.questions.map((q: QuestionResponse) => (
+        <li
+          key={q.questionId}
+          className="bg-gray-50 rounded-lg p-6 shadow-sm hover:bg-gray-100 transition-colors duration-200"
+        >
+          <div className="flex items-start space-x-3">
+            <svg
+              className="w-6 h-6 text-blue-500 flex-shrink-0 mt-1"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5v-2a2 2 0 012-2h10a2 2 0 012 2v2h-4m-6 0h.01M12 3C7.029 3 3 7.029 3 12s4.029 9 9 9 9-4.029 9-9-4.029-9-9-9z"
+              />
+            </svg>
+            <div>
+              <span className="text-lg font-medium text-gray-900">{q.questionText}</span>
+              <p className="mt-2 text-gray-600 font-bold  text-lg">
+                {q.answerText || <span className="italic text-gray-400">Không có câu trả lời</span>}
+              </p>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+    <h4 className="text-xl font-semibold text-gray-800 mt-10 mb-6">Thông tin sức khỏe</h4>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-blue-50 rounded-lg p-6">
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            Nhiệt độ cơ thể (°C)
+          </label>
+          <p className="text-gray-600 text-base">
+            {surveyAnswers.temperatureC ? `${surveyAnswers.temperatureC} °C` : <span className="italic text-gray-400">Không có dữ liệu</span>}
+          </p>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            Nhịp tim (bpm)
+          </label>
+          <p className="text-gray-600 text-base">
+            {surveyAnswers.heartRateBpm ? `${surveyAnswers.heartRateBpm} bpm` : <span className="italic text-gray-400">Không có dữ liệu</span>}
+          </p>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            Huyết áp tâm thu (mmHg)
+          </label>
+          <p className="text-gray-600 text-base">
+            {surveyAnswers.systolicBpmmHg ? `${surveyAnswers.systolicBpmmHg} mmHg` : <span className="italic text-gray-400">Không có dữ liệu</span>}
+          </p>
+        </div>
+      </div>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            Huyết áp tâm trương (mmHg)
+          </label>
+          <p className="text-gray-600 text-base">
+            {surveyAnswers.diastolicBpmmHg ? `${surveyAnswers.diastolicBpmmHg} mmHg` : <span className="italic text-gray-400">Không có dữ liệu</span>}
+          </p>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            Độ bão hòa oxy (%)
+          </label>
+          <p className="text-gray-600 text-base">
+            {surveyAnswers.oxygenSatPercent ? `${surveyAnswers.oxygenSatPercent} %` : <span className="italic text-gray-400">Không có dữ liệu</span>}
+          </p>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            Ghi chú quyết định
+          </label>
+          <p className="text-gray-600 text-base">
+            {surveyAnswers.decisionNote || <span className="italic text-gray-400">Không có ghi chú</span>}
+          </p>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            Đã nhận được sự đồng ý
+          </label>
+          <p className="text-gray-600 text-base">
+            {surveyAnswers.consentObtained ? (
+              <span className="text-green-600 font-medium text-4xl"><CheckCircleFilled /></span>
+            ) : (
+              <span className="text-red-600 font-medium text-4xl"><CloseCircleFilled /></span>
+            )}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
         {(user?.position === "Doctor" || (user?.position === "Doctor" && appointment.order && appointment.status === "Pending")) && (
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
