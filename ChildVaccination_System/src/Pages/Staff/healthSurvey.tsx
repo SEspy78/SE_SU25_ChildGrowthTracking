@@ -553,13 +553,13 @@ export default function HealthSurvey() {
 
   const vaccineColumns = [
     {
-      title: "Tên bệnh",
+      title: "Bệnh",
       dataIndex: ["disease", "name"],
       key: "diseaseName",
       render: (text: string) => <span className="text-gray-700 font-medium">{text}</span>,
     },
     {
-      title: "Tên vắc xin",
+      title: "Vắc xin",
       dataIndex: ["facilityVaccine", "vaccine", "name"],
       key: "vaccineName",
       render: (_: any, record: any) => (
