@@ -617,7 +617,7 @@ export default function HealthSurvey() {
       },
     },
     {
-      title: "Tổng giá",
+      title: "Thành tiền",
       key: "totalPrice",
       render: (_: any, record: any) => {
         const selectedVaccineId = tempVaccineSelections[record.orderDetailId] || record.facilityVaccine.facilityVaccineId;
@@ -769,7 +769,7 @@ export default function HealthSurvey() {
                   }}
                 />
                 <div className="bg-blue-50 rounded-xl p-4 flex items-center justify-between shadow-sm">
-                  <span className="text-blue-700 font-semibold text-lg">Tổng giá gói vắc xin:</span>
+                  <span className="text-blue-700 font-semibold text-lg">Tổng tiền gói vắc xin:</span>
                   <span className="text-blue-700 font-semibold text-lg">
                     {totalPrice.toLocaleString("vi-VN", { style: "currency", currency: "VND" })}
                   </span>
