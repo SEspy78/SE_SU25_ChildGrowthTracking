@@ -189,7 +189,6 @@ export default function HealthSurvey() {
             message.error("Không tìm thấy hồ sơ vắc xin cho lịch hẹn này.");
           }
         } catch {
-          message.error("Không thể tải hồ sơ vắc xin của trẻ.");
         }
       };
       fetchChildVaccineProfile();
